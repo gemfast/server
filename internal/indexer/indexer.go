@@ -1,29 +1,35 @@
 package indexer
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"github.com/gscho/gemfast/internal/marshal"
 	"github.com/gscho/gemfast/internal/spec"
 	"io/fs"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"compress/gzip"
-	"io/ioutil"
-	"bytes"
+	"regexp"
 )
 
 type Indexer struct {
-	destDir            string
-	tmpDir             string
-	marshalIdx         string
-	quickDir           string
-	quickMarshalDir    string
-	quickIdx           string
-	latestIdx          string
-	specsIdx           string
-	latestSpecsIdx     string
-	prereleaseSpecsIdx string
+	destDir                string
+	dir                    string
+	marshalIdx             string
+	quickDir               string
+	quickMarshalDir        string
+	quickMarshalDirBase    string
+	quickIdx               string
+	latestIdx              string
+	specsIdx               string
+	latestSpecsIdx         string
+	prereleaseSpecsIdx     string
+	destSpecsIdx           string
+	destLatestSpecsIdx     string
+	destPrereleaseSpecsIdx string
+	files                  []string
 }
 
 func check(e error) {
@@ -34,26 +40,38 @@ func check(e error) {
 
 func New(destDir string) *Indexer {
 	marshalName := "Marshal.4.8"
-	i := Indexer{destDir: destDir}
-	i.tmpDir = i.mkTempDirs("gem_generate_index")
-	i.marshalIdx = marshalName
-	i.quickDir = fmt.Sprintf("%s/quick", i.tmpDir)
-	i.quickMarshalDir = fmt.Sprintf("%s/%s", i.quickDir, marshalName)
-	err := os.MkdirAll(i.quickMarshalDir, os.ModePerm)
-	check(err)
-	i.quickIdx = fmt.Sprintf("%s/index", i.quickDir)
-	i.latestIdx = fmt.Sprintf("%s/latest_index", i.quickDir)
-	i.specsIdx = "specs.4.8"
-	i.latestSpecsIdx = "latest_specs.4.8"
-	i.prereleaseSpecsIdx = "prerelease_specs.4.8"
-	return &i
+	indexer := Indexer{destDir: destDir}
+	indexer.dir = mkTempDir("gem_generate_index")
+	indexer.marshalIdx = fmt.Sprintf("%s/%s", indexer.dir, marshalName)
+	indexer.quickDir = fmt.Sprintf("%s/quick", indexer.dir)
+	indexer.quickMarshalDir = fmt.Sprintf("%s/%s", indexer.quickDir, marshalName)
+	indexer.quickMarshalDirBase = fmt.Sprintf("quick/%s", marshalName)
+	indexer.quickIdx = fmt.Sprintf("%s/index", indexer.quickDir)
+	indexer.latestIdx = fmt.Sprintf("%s/latest_index", indexer.quickDir)
+	indexer.specsIdx = fmt.Sprintf("%s/specs.4.8", indexer.dir)
+	indexer.latestSpecsIdx = fmt.Sprintf("%s/latest_specs.4.8", indexer.dir)
+	indexer.prereleaseSpecsIdx = fmt.Sprintf("%s/prerelease_specs.4.8", indexer.dir)
+	indexer.destSpecsIdx = fmt.Sprintf("%s/specs.4.8", indexer.destDir)
+	indexer.destLatestSpecsIdx = fmt.Sprintf("%s/latest_specs.4.8", indexer.destDir)
+	indexer.destPrereleaseSpecsIdx = fmt.Sprintf("%s/prerelease_specs.4.8", indexer.destDir)
+	indexer.files = []string{indexer.quickMarshalDir}
+	indexer.files = append(indexer.files, indexer.specsIdx)
+	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.specsIdx))
+	indexer.files = append(indexer.files, indexer.latestSpecsIdx)
+	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.latestSpecsIdx))
+	indexer.files = append(indexer.files, indexer.prereleaseSpecsIdx)
+	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.prereleaseSpecsIdx))
+	return &indexer
 }
 
-func (i Indexer) GenerateIndex() {
-	i.buildIndicies()
+func (indexer Indexer) GenerateIndex() {
+	indexer.mkTempDirs()
+	indexer.buildIndicies()
+	indexer.installIndicies()
+	defer os.RemoveAll(indexer.dir)
 }
 
-func (i Indexer) mkTempDirs(name string) (tmpdir string) {
+func mkTempDir(name string) (tmpdir string) {
 	dir, err := os.MkdirTemp("/tmp", name)
 	check(err)
 	fmt.Println("Temp dir name:", dir)
@@ -64,9 +82,14 @@ func (i Indexer) mkTempDirs(name string) (tmpdir string) {
 	return dir
 }
 
-func (i Indexer) gemList() []string {
+func (indexer Indexer) mkTempDirs() {
+	err := os.MkdirAll(indexer.quickMarshalDir, os.ModePerm)
+	check(err)
+}
+
+func (indexer Indexer) gemList() []string {
 	var gems []string
-	filepath.WalkDir(i.destDir, func(s string, d fs.DirEntry, e error) error {
+	filepath.WalkDir(indexer.destDir, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e
 		}
@@ -78,8 +101,7 @@ func (i Indexer) gemList() []string {
 	return gems
 }
 
-func (i Indexer) mapGemsToSpecs(gems []string) []*spec.Spec {
-	fmt.Println(gems)
+func mapGemsToSpecs(gems []string) []*spec.Spec {
 	var specs []*spec.Spec
 	var s *spec.Spec
 	for _, g := range gems {
@@ -133,14 +155,14 @@ func (i Indexer) mapGemsToSpecs(gems []string) []*spec.Spec {
 // 	}
 // }
 
-func (i Indexer) buildModernIndices(specs []*spec.Spec) {
+func (indexer Indexer) buildModernIndices(specs []*spec.Spec) {
 	pre, rel, latest := spec.PartitionSpecs(specs)
-	i.buildModernIndex(rel, i.specsIdx, "specs")
-	i.buildModernIndex(latest, i.latestSpecsIdx, "latest specs")
-	i.buildModernIndex(pre, i.prereleaseSpecsIdx, "prerelease specs")
+	buildModernIndex(rel, indexer.specsIdx, "specs")
+	buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs")
+	buildModernIndex(pre, indexer.prereleaseSpecsIdx, "prerelease specs")
 }
 
-func (i Indexer) buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
+func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 	file, err := os.OpenFile(
 		idxFile,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
@@ -159,33 +181,60 @@ func (i Indexer) buildModernIndex(specs []*spec.Spec, idxFile string, name strin
 	log.Printf("Wrote %d bytes.\n", bytesWritten)
 }
 
-func (i Indexer) compressIndicies() {
-	gzipFile(i.prereleaseSpecsIdx)
-	gzipFile(i.specsIdx)
-	gzipFile(i.latestSpecsIdx)
+func (indexer Indexer) compressIndicies() {
+	gzipFile(indexer.prereleaseSpecsIdx)
+	gzipFile(indexer.specsIdx)
+	gzipFile(indexer.latestSpecsIdx)
 }
 
 func gzipFile(src string) {
 	content, err := ioutil.ReadFile(src) // just pass the file name
 	if err != nil {
-	  panic(err)
+		panic(err)
 	}
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
 	defer gz.Close() //NOT SUFFICIENT, DON'T DEFER WRITER OBJECTS
 	if _, err := gz.Write(content); err != nil {
-	  panic(err)
+		panic(err)
 	}
 	// NEED TO CLOSE EXPLICITLY
 	if err := gz.Close(); err != nil {
-	  panic(err)
+		panic(err)
 	}
 	ioutil.WriteFile(fmt.Sprintf("%s.gz", src), b.Bytes(), 0666)
 }
 
-func (i Indexer) buildIndicies() {
-	specs := i.mapGemsToSpecs(i.gemList())
-	// i.buildMarshalGemspecs(specs)
-	i.buildModernIndices(specs)
-	i.compressIndicies()
+func (indexer Indexer) buildIndicies() {
+	specs := mapGemsToSpecs(indexer.gemList())
+	// indexer.buildMarshalGemspecs(specs)
+	indexer.buildModernIndices(specs)
+	indexer.compressIndicies()
+}
+
+func (indexer Indexer) installIndicies() {
+	destName := fmt.Sprintf("%s/%s", indexer.destDir, indexer.quickMarshalDirBase)
+	// FileUtils.mkdir_p File.dirname(dst_name), :verbose => verbose
+	fmt.Println(destName)
+	fmt.Println(filepath.Dir(destName))
+	err := os.MkdirAll(filepath.Dir(destName), os.ModePerm)
+	check(err)
+	// FileUtils.rm_rf dst_name, :verbose => verbose
+	err = os.RemoveAll(destName)
+	check(err)
+	// FileUtils.mv(@quick_marshal_dir, dst_name,
+	//              :verbose => verbose, :force => true)
+	err = os.Rename(indexer.quickMarshalDir, destName)
+	check(err)
+	indexer.files = indexer.files[1:]
+	reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
+	for _, file := range indexer.files {
+		file = reg.ReplaceAllString(file, "${1}")
+		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
+		destName = fmt.Sprintf("%s/%s", indexer.destDir, file)
+		err = os.RemoveAll(destName)
+		check(err)
+		err = os.Rename(srcName, destName)
+		check(err)
+	}
 }
