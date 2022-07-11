@@ -102,3 +102,16 @@ func DumpSpecs(specs []*spec.Spec) ([]byte) {
 	// }
 	// log.Printf("Wrote %d bytes.\n", bytesWritten)
 }
+
+func LoadSpecs(src []byte) ([]*spec.Spec) {
+	a2 := spec.Spec{Name: "a2", Version: "0.3.0", OriginalPlatform: "ruby"}
+	lb := spec.Spec{Name: "litterbox", Version: "0.4.0", OriginalPlatform: "ruby"}
+	mixlib := spec.Spec{Name: "mixlib-install", Version: "3.0.0", OriginalPlatform: "ruby"}
+	mixlib2 := spec.Spec{Name: "mixlib-install", Version: "3.12.19", OriginalPlatform: "ruby"}
+	var specs []*spec.Spec
+	specs = append(specs, &a2)
+	specs = append(specs, &lb)
+	specs = append(specs, &mixlib)
+	specs = append(specs, &mixlib2)
+	return specs
+}

@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 )
 
 type Indexer struct {
@@ -31,6 +32,11 @@ type Indexer struct {
 	destPrereleaseSpecsIdx string
 	files                  []string
 }
+
+const (
+	EPOCH = "1969-12-31T19:00:00-05:00"
+	RUBY_PLATFORM = "ruby"
+)
 
 func check(e error) {
 	if e != nil {
@@ -68,15 +74,12 @@ func (indexer Indexer) GenerateIndex() {
 	indexer.mkTempDirs()
 	indexer.buildIndicies()
 	indexer.installIndicies()
-	defer os.RemoveAll(indexer.dir)
 }
 
 func mkTempDir(name string) (tmpdir string) {
 	dir, err := os.MkdirTemp("/tmp", name)
 	check(err)
 	fmt.Println("Temp dir name:", dir)
-	// Makes the /tmp/gem_generate_index/quick/Marshal.4.8 directory
-	// defer os.RemoveAll(dir)
 	err = os.Chmod(dir, 0700)
 	check(err)
 	return dir
@@ -156,7 +159,7 @@ func mapGemsToSpecs(gems []string) []*spec.Spec {
 // }
 
 func (indexer Indexer) buildModernIndices(specs []*spec.Spec) {
-	pre, rel, latest := spec.PartitionSpecs(specs)
+	pre, rel, latest := spec.PartitionSpecs(specs, true)
 	buildModernIndex(rel, indexer.specsIdx, "specs")
 	buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs")
 	buildModernIndex(pre, indexer.prereleaseSpecsIdx, "prerelease specs")
@@ -214,16 +217,12 @@ func (indexer Indexer) buildIndicies() {
 
 func (indexer Indexer) installIndicies() {
 	destName := fmt.Sprintf("%s/%s", indexer.destDir, indexer.quickMarshalDirBase)
-	// FileUtils.mkdir_p File.dirname(dst_name), :verbose => verbose
 	fmt.Println(destName)
 	fmt.Println(filepath.Dir(destName))
 	err := os.MkdirAll(filepath.Dir(destName), os.ModePerm)
 	check(err)
-	// FileUtils.rm_rf dst_name, :verbose => verbose
 	err = os.RemoveAll(destName)
 	check(err)
-	// FileUtils.mv(@quick_marshal_dir, dst_name,
-	//              :verbose => verbose, :force => true)
 	err = os.Rename(indexer.quickMarshalDir, destName)
 	check(err)
 	indexer.files = indexer.files[1:]
@@ -237,4 +236,88 @@ func (indexer Indexer) installIndicies() {
 		err = os.Rename(srcName, destName)
 		check(err)
 	}
+	err = os.RemoveAll(indexer.dir)
+	check(err)
+}
+
+func updateSpecsIndex(updated []*spec.Spec, src string, dest string) {
+	// specs_index = Marshal.load Gem.read_binary(source)
+	var specsIdx []*spec.Spec
+	specsIdx = marshal.LoadSpecs([]byte(src))
+	for _, spec := range updated {
+		platform := spec.OriginalPlatform
+		if platform == "" {
+			spec.OriginalPlatform = RUBY_PLATFORM
+		}
+		specsIdx = append(specsIdx, spec)
+	}
+ 
+ 	file, err := os.OpenFile(
+		dest,
+		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
+		0666,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	dump := marshal.DumpSpecs(specsIdx)
+	bytesWritten, err := file.Write(dump)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Wrote %d bytes.\n", bytesWritten)
+}
+
+func (indexer Indexer) UpdateIndex() {
+	var updatedGems []string
+	indexer.mkTempDirs()
+	fi, err := os.Stat(indexer.destSpecsIdx)
+	check(err)
+	specsMtime := fi.ModTime()
+	newestMtime, err := time.Parse(time.RFC3339, EPOCH)
+	check(err)
+	for _, gem := range indexer.gemList() {
+		fi, err := os.Stat(gem)
+		check(err)
+		gemMtime := fi.ModTime()
+		if gemMtime.Unix() > newestMtime.Unix() {
+			newestMtime = gemMtime
+		}
+		if gemMtime.Unix() >= specsMtime.Unix() {
+			updatedGems = append(updatedGems, gem)
+		}
+	}
+
+	if len(updatedGems) == 0 {
+		fmt.Println("No new gems")
+		return
+	}
+
+	specs := mapGemsToSpecs(updatedGems)
+	pre, rel, _ := spec.PartitionSpecs(specs, false)
+
+  // indexer.buildMarshalGemspecs(specs)
+
+  updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx)
+  updateSpecsIndex(rel, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx)
+  updateSpecsIndex(pre, indexer.destPrereleaseSpecsIdx, indexer.prereleaseSpecsIdx)
+
+  indexer.compressIndicies()
+
+  reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
+  for _, file := range indexer.files {
+		file = reg.ReplaceAllString(file, "${1}")
+		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
+		destName := fmt.Sprintf("%s/%s", indexer.destDir, file)
+		err = os.RemoveAll(destName)
+		check(err)
+		err = os.Rename(srcName, destName)
+		check(err)
+		err = os.Chtimes(destName, newestMtime, newestMtime)
+		check(err)
+	}
+	err = os.RemoveAll(indexer.dir)
+	check(err)
 }

@@ -12,6 +12,7 @@ type Gem struct {
 
 func main() {
 	i := indexer.New("/var/gemfast")
-	i.GenerateIndex()
+	// i.GenerateIndex()
+	i.UpdateIndex()
 	// marshal.Marshal()
 }
