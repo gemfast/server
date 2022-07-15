@@ -3,11 +3,14 @@ package marshal
 import (
 	"bufio"
 	"bytes"
+	"fmt"
+
 	// "log"
 	// "os"
 	// "fmt"
-	"github.com/gscho/gemfast/internal/spec"
 	"io"
+
+	"github.com/gscho/gemfast/internal/spec"
 )
 
 const (
@@ -20,7 +23,7 @@ const (
 	//   FIXNUM_SIGN      = 'i'
 	RAWSTRING_SIGN = '"'
 	SYMBOL_SIGN    = ':'
-	// SYMBOL_LINK_SIGN = ';'
+	SYMBOL_LINK_SIGN = ';'
 	//   OBJECT_SIGN      = 'o'
 	//   OBJECT_LINK_SIGN = '@'
 	ARRAY_SIGN = '['
@@ -38,7 +41,11 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
 	buff.WriteByte(ARRAY_SIGN)
 	buff.WriteByte(byte(len(specs) + 5)) // Outer Array Len
-	for _, spec := range specs {
+	for idx, spec := range specs {
+		// if idx == 1 {
+		// 	break
+		// }
+		fmt.Println(idx)
 		buff.WriteByte(ARRAY_SIGN)
 		buff.WriteByte(8) // Inner Array Len (Always 3 for modern indicies)
 		s := spec.Name
@@ -49,9 +56,14 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 		buff.WriteByte(byte(l))
 		buff.WriteString(s)
 		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_SIGN)
-		buff.WriteByte(6)
-		buff.WriteString("E")
+		if idx == 0 {
+			buff.WriteByte(SYMBOL_SIGN)
+			buff.WriteByte(6)
+			buff.WriteString("E")
+		} else {
+			buff.WriteByte(SYMBOL_LINK_SIGN)
+			buff.WriteByte(0)
+		}
 		buff.WriteByte(TRUE_SIGN)
 
 		// Gem::Version.new("0.3.10")
@@ -59,18 +71,22 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 		v := spec.Version
 		l3 := len(cname) + 5
 		buff.Write([]byte{'U'})
-		buff.WriteByte(SYMBOL_SIGN)
-		buff.WriteByte(byte(l3))
-		buff.WriteString(cname)
+		if idx == 0 {
+			buff.WriteByte(SYMBOL_SIGN)
+			buff.WriteByte(byte(l3))
+			buff.WriteString(cname)
+		} else {
+			buff.WriteByte(SYMBOL_LINK_SIGN)
+			buff.WriteByte(6)
+		}
 		buff.WriteByte(ARRAY_SIGN)
 		buff.WriteByte(6) // Array Len
 		buff.Write([]byte{IVAR_SIGN, RAWSTRING_SIGN})
 		buff.WriteByte(byte(len(v) + 5))
 		buff.WriteString(v)
 		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_SIGN)
-		buff.WriteByte(6)
-		buff.WriteString("E")
+		buff.WriteByte(SYMBOL_LINK_SIGN)
+		buff.WriteByte(0)
 		buff.WriteByte(TRUE_SIGN)
 
 		// String "ruby"
@@ -80,9 +96,8 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 		buff.WriteByte(byte(l2))
 		buff.WriteString(s2)
 		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_SIGN)
-		buff.WriteByte(6)
-		buff.WriteString("E")
+		buff.WriteByte(SYMBOL_LINK_SIGN)
+		buff.WriteByte(0)
 		buff.WriteByte(TRUE_SIGN)
 	}
 
