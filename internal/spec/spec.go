@@ -130,7 +130,7 @@ func GunzipMetadata(path string) string {
 	return yaml
 }
 
-func New(gemfile string) *Spec {
+func FromFile(gemfile string) *Spec {
 	path_chunks := strings.Split(gemfile, "/")
 	full := path_chunks[len(path_chunks)-1]
 	ogName := strings.TrimSuffix(full, ".gem")
@@ -142,32 +142,41 @@ func New(gemfile string) *Spec {
 	if err != nil {
 		panic(err)
 	}
-	s := Spec{OriginalName: ogName, OriginalPlatform: metadata.Platform, FullName: full, Name: metadata.Name, Version: metadata.Version.Version, PreRelease: false, LoadedFrom: full}
-	fmt.Println(s)
+	s := Spec{
+		OriginalName:     ogName,
+		OriginalPlatform: metadata.Platform,
+		FullName:         full,
+		Name:             metadata.Name,
+		Version:          metadata.Version.Version,
+		PreRelease:       false,
+		LoadedFrom:       full,
+	}
 	return &s
 }
 
-func PartitionSpecs(specs []*Spec, inc_latest bool) ([]*Spec, []*Spec, []*Spec) {
+func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
 	var prerelease []*Spec
 	var released []*Spec
 	var latest []*Spec
-	hash := make(map[string][]*Spec)
+	hash := make(map[string]*Spec)
 	for _, s := range specs {
 		match, _ := regexp.MatchString("[a-zA-Z]", s.Version)
 		if match {
 			prerelease = append(prerelease, s)
 		} else {
 			released = append(released, s)
-			if inc_latest {
-				hash[s.Name] = append(hash[s.Name], s)
+			if hash[s.Name] != nil {
+				if hash[s.Name].Version < s.Version {
+					hash[s.Name] = s
+				}
+			} else {
+				hash[s.Name] = s
 			}
 		}
 	}
 
-	if inc_latest {
-		for _, v := range hash {
-			latest = append(latest, v[len(v)-1])
-		}
+	for _, v := range hash {
+		latest = append(latest, v)
 	}
 	return prerelease, released, latest
 }

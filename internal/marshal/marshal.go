@@ -1,10 +1,13 @@
 package marshal
 
 import (
+	"bufio"
 	"bytes"
 	// "log"
 	// "os"
+	// "fmt"
 	"github.com/gscho/gemfast/internal/spec"
+	"io"
 )
 
 const (
@@ -30,12 +33,12 @@ const (
 //   MODULE_SIGN      = 'm'
 )
 
-func DumpSpecs(specs []*spec.Spec) ([]byte) {
+func DumpSpecs(specs []*spec.Spec) []byte {
 	buff := bytes.NewBuffer(nil)
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
 	buff.WriteByte(ARRAY_SIGN)
 	buff.WriteByte(byte(len(specs) + 5)) // Outer Array Len
-	for _, spec := range(specs) {
+	for _, spec := range specs {
 		buff.WriteByte(ARRAY_SIGN)
 		buff.WriteByte(8) // Inner Array Len (Always 3 for modern indicies)
 		s := spec.Name
@@ -103,15 +106,94 @@ func DumpSpecs(specs []*spec.Spec) ([]byte) {
 	// log.Printf("Wrote %d bytes.\n", bytesWritten)
 }
 
-func LoadSpecs(src []byte) ([]*spec.Spec) {
-	a2 := spec.Spec{Name: "a2", Version: "0.3.0", OriginalPlatform: "ruby"}
-	lb := spec.Spec{Name: "litterbox", Version: "0.4.0", OriginalPlatform: "ruby"}
-	mixlib := spec.Spec{Name: "mixlib-install", Version: "3.0.0", OriginalPlatform: "ruby"}
-	mixlib2 := spec.Spec{Name: "mixlib-install", Version: "3.12.19", OriginalPlatform: "ruby"}
+func LoadSpecs(src io.Reader) []*spec.Spec {
 	var specs []*spec.Spec
-	specs = append(specs, &a2)
-	specs = append(specs, &lb)
-	specs = append(specs, &mixlib)
-	specs = append(specs, &mixlib2)
+	reader := bufio.NewReader(src)
+	_, err := reader.ReadByte() // Major version
+	_, err = reader.ReadByte()  // Minor version
+	if err != nil {
+		panic(err)
+	}
+	b, err := reader.ReadByte()     // Array sig
+	osize, err := reader.ReadByte() // Outer Array Len
+	osize = osize - 5
+	i := 1
+	for i < int(osize) {
+		b, err = reader.ReadByte() // Array sign
+		b, err = reader.ReadByte() // Inner array len
+
+		b, err = reader.ReadByte()       // IVAR
+		b, err = reader.ReadByte()       // RAWSTRING
+		strlen, err := reader.ReadByte() // String length
+
+		strlen = strlen - 5
+		if err != nil {
+			panic(err)
+		}
+		j := 0
+		var nameBytes []byte
+		for j < int(strlen) {
+			b, err = reader.ReadByte()
+			nameBytes = append(nameBytes, b)
+			j++
+		}
+		b, err = reader.ReadByte() // 1
+		b, err = reader.ReadByte() // Symbol sign
+		b, err = reader.ReadByte() // 1
+		b, err = reader.ReadByte() // E
+		b, err = reader.ReadByte() // TRUE sign
+		// Version string seciton //
+		b, err = reader.ReadByte()      // U
+		b, err = reader.ReadByte()      // Symbol sign
+		strlen, err = reader.ReadByte() // Length of string
+		strlen = strlen - 5
+		k := 0
+		for k < int(strlen) {
+			b, err = reader.ReadByte()
+			k++
+		}
+		b, err = reader.ReadByte()      // Array sign
+		b, err = reader.ReadByte()      // Array len (1)
+		b, err = reader.ReadByte()      // IVAR
+		b, err = reader.ReadByte()      // RAWSTRING
+		strlen, err = reader.ReadByte() // Length of version string
+		strlen = strlen - 5
+		var versionBytes []byte
+		k = 0
+		for k < int(strlen) {
+			b, err = reader.ReadByte()
+			versionBytes = append(versionBytes, b)
+			k++
+		}
+		b, err = reader.ReadByte()      // 1
+		b, err = reader.ReadByte()      // Symbol sign
+		b, err = reader.ReadByte()      // 1
+		b, err = reader.ReadByte()      // E
+		b, err = reader.ReadByte()      // TRUE sign
+		b, err = reader.ReadByte()      // IVAR
+		b, err = reader.ReadByte()      // RAWSTR
+		strlen, err = reader.ReadByte() // 1
+		strlen = strlen - 5
+		var platformBytes []byte
+		k = 0
+		for k < int(strlen) {
+			b, err = reader.ReadByte()
+			platformBytes = append(platformBytes, b)
+			k++
+		}
+		b, err = reader.ReadByte() // 1
+		b, err = reader.ReadByte() // Symbol sign
+		b, err = reader.ReadByte() // 1
+		b, err = reader.ReadByte() // E
+		b, err = reader.ReadByte() // TRUE sign
+
+		spec := spec.Spec{
+			Name:             string(nameBytes),
+			Version:          string(versionBytes),
+			OriginalPlatform: string(platformBytes),
+		}
+		specs = append(specs, &spec)
+		i++
+	}
 	return specs
 }

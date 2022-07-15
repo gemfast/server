@@ -3,16 +3,20 @@ package indexer
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/sha1"
 	"fmt"
-	"github.com/gscho/gemfast/internal/marshal"
-	"github.com/gscho/gemfast/internal/spec"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"time"
+
+	"github.com/gscho/gemfast/internal/marshal"
+	"github.com/gscho/gemfast/internal/spec"
 )
 
 type Indexer struct {
@@ -34,7 +38,7 @@ type Indexer struct {
 }
 
 const (
-	EPOCH = "1969-12-31T19:00:00-05:00"
+	EPOCH         = "1969-12-31T19:00:00-05:00"
 	RUBY_PLATFORM = "ruby"
 )
 
@@ -114,7 +118,7 @@ func mapGemsToSpecs(gems []string) []*spec.Spec {
 			fmt.Println("Skipping zero-length gem")
 			continue
 		} else {
-			s = spec.New(g)
+			s = spec.FromFile(g)
 			specs = append(specs, s)
 		}
 	}
@@ -159,7 +163,7 @@ func mapGemsToSpecs(gems []string) []*spec.Spec {
 // }
 
 func (indexer Indexer) buildModernIndices(specs []*spec.Spec) {
-	pre, rel, latest := spec.PartitionSpecs(specs, true)
+	pre, rel, latest := spec.PartitionSpecs(specs)
 	buildModernIndex(rel, indexer.specsIdx, "specs")
 	buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs")
 	buildModernIndex(pre, indexer.prereleaseSpecsIdx, "prerelease specs")
@@ -202,7 +206,8 @@ func gzipFile(src string) {
 		panic(err)
 	}
 	// NEED TO CLOSE EXPLICITLY
-	if err := gz.Close(); err != nil {
+	err = gz.Close()
+	if err != nil {
 		panic(err)
 	}
 	ioutil.WriteFile(fmt.Sprintf("%s.gz", src), b.Bytes(), 0666)
@@ -240,10 +245,20 @@ func (indexer Indexer) installIndicies() {
 	check(err)
 }
 
-func updateSpecsIndex(updated []*spec.Spec, src string, dest string) {
-	// specs_index = Marshal.load Gem.read_binary(source)
+func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string) {
 	var specsIdx []*spec.Spec
-	specsIdx = marshal.LoadSpecs([]byte(src))
+	file, err := os.Open(src)
+	check(err)
+	defer file.Close()
+
+	var fileReader io.ReadCloser = file
+	output, err := ioutil.ReadAll(fileReader)
+	check(err)
+	buff := bytes.NewBuffer(output)
+
+	specsIdx = marshal.LoadSpecs(buff)
+	fmt.Println(specsIdx[0])
+	os.Exit(0)
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
 		if platform == "" {
@@ -251,8 +266,43 @@ func updateSpecsIndex(updated []*spec.Spec, src string, dest string) {
 		}
 		specsIdx = append(specsIdx, spec)
 	}
- 
- 	file, err := os.OpenFile(
+
+	var uniqSpecsIdx []*spec.Spec
+	if src == indexer.destLatestSpecsIdx {
+		m := make(map[string]*spec.Spec)
+		for _, spec := range specsIdx {
+			if m[spec.Name] != nil {
+				if m[spec.Name].Version < spec.Version {
+					m[spec.Name] = spec
+				}
+			} else {
+				m[spec.Name] = spec
+			}
+		}
+		for _, v := range m {
+			uniqSpecsIdx = append(uniqSpecsIdx, v)
+		}
+	} else {
+		m := make(map[string]int)
+		for _, spec := range specsIdx {
+			h := sha1.New()
+			specId := spec.Name + spec.Version + spec.OriginalPlatform
+			h.Write([]byte(specId))
+			bs := string(h.Sum(nil))
+			m[bs] += 1
+			if m[bs] == 1 {
+				uniqSpecsIdx = append(uniqSpecsIdx, spec)
+			}
+		}
+	}
+
+	sort.Slice(uniqSpecsIdx, func(i, j int) bool {
+		l := uniqSpecsIdx[i].Name + uniqSpecsIdx[i].Version + uniqSpecsIdx[i].OriginalPlatform
+		r := uniqSpecsIdx[j].Name + uniqSpecsIdx[j].Version + uniqSpecsIdx[j].OriginalPlatform
+		return l < r
+	})
+
+	file, err = os.OpenFile(
 		dest,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
 		0666,
@@ -262,7 +312,7 @@ func updateSpecsIndex(updated []*spec.Spec, src string, dest string) {
 	}
 	defer file.Close()
 
-	dump := marshal.DumpSpecs(specsIdx)
+	dump := marshal.DumpSpecs(uniqSpecsIdx)
 	bytesWritten, err := file.Write(dump)
 	if err != nil {
 		log.Fatal(err)
@@ -271,6 +321,7 @@ func updateSpecsIndex(updated []*spec.Spec, src string, dest string) {
 }
 
 func (indexer Indexer) UpdateIndex() {
+	defer os.RemoveAll(indexer.dir)
 	var updatedGems []string
 	indexer.mkTempDirs()
 	fi, err := os.Stat(indexer.destSpecsIdx)
@@ -285,7 +336,7 @@ func (indexer Indexer) UpdateIndex() {
 		if gemMtime.Unix() > newestMtime.Unix() {
 			newestMtime = gemMtime
 		}
-		if gemMtime.Unix() >= specsMtime.Unix() {
+		if gemMtime.Unix() > specsMtime.Unix() {
 			updatedGems = append(updatedGems, gem)
 		}
 	}
@@ -296,18 +347,18 @@ func (indexer Indexer) UpdateIndex() {
 	}
 
 	specs := mapGemsToSpecs(updatedGems)
-	pre, rel, _ := spec.PartitionSpecs(specs, false)
+	_, _, latest := spec.PartitionSpecs(specs)
 
-  // indexer.buildMarshalGemspecs(specs)
+	// indexer.buildMarshalGemspecs(specs)
 
-  updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx)
-  updateSpecsIndex(rel, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx)
-  updateSpecsIndex(pre, indexer.destPrereleaseSpecsIdx, indexer.prereleaseSpecsIdx)
+	// indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx)
+	indexer.updateSpecsIndex(latest, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx)
+	// indexer.updateSpecsIndex(pre, indexer.destPrereleaseSpecsIdx, indexer.prereleaseSpecsIdx)
 
-  indexer.compressIndicies()
+	indexer.compressIndicies()
 
-  reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
-  for _, file := range indexer.files {
+	reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
+	for _, file := range indexer.files {
 		file = reg.ReplaceAllString(file, "${1}")
 		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
 		destName := fmt.Sprintf("%s/%s", indexer.destDir, file)
@@ -318,6 +369,4 @@ func (indexer Indexer) UpdateIndex() {
 		err = os.Chtimes(destName, newestMtime, newestMtime)
 		check(err)
 	}
-	err = os.RemoveAll(indexer.dir)
-	check(err)
 }
