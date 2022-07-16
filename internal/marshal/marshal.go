@@ -3,11 +3,6 @@ package marshal
 import (
 	"bufio"
 	"bytes"
-	"fmt"
-
-	// "log"
-	// "os"
-	// "fmt"
 	"io"
 
 	"github.com/gscho/gemfast/internal/spec"
@@ -21,11 +16,11 @@ const (
 	TRUE_SIGN = 'T'
 	//   FALSE_SIGN       = 'F'
 	//   FIXNUM_SIGN      = 'i'
-	RAWSTRING_SIGN = '"'
-	SYMBOL_SIGN    = ':'
+	RAWSTRING_SIGN   = '"'
+	SYMBOL_SIGN      = ':'
 	SYMBOL_LINK_SIGN = ';'
 	//   OBJECT_SIGN      = 'o'
-	//   OBJECT_LINK_SIGN = '@'
+	  OBJECT_LINK_SIGN = '@'
 	ARRAY_SIGN = '['
 	IVAR_SIGN  = 'I'
 	//   HASH_SIGN        = '{'
@@ -42,10 +37,6 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	buff.WriteByte(ARRAY_SIGN)
 	buff.WriteByte(byte(len(specs) + 5)) // Outer Array Len
 	for idx, spec := range specs {
-		// if idx == 1 {
-		// 	break
-		// }
-		fmt.Println(idx)
 		buff.WriteByte(ARRAY_SIGN)
 		buff.WriteByte(8) // Inner Array Len (Always 3 for modern indicies)
 		s := spec.Name
@@ -102,40 +93,24 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	}
 
 	return buff.Bytes()
-	// // Open a new file for writing only
-	// file, err := os.OpenFile(
-	// 	"test.txt",
-	// 	os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-	// 	0666,
-	// )
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer file.Close()
-
-	// // Write bytes to file
-	// bytesWritten, err := file.Write(buff.Bytes())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// log.Printf("Wrote %d bytes.\n", bytesWritten)
 }
 
 func LoadSpecs(src io.Reader) []*spec.Spec {
 	var specs []*spec.Spec
 	reader := bufio.NewReader(src)
-	_, err := reader.ReadByte() // Major version
-	_, err = reader.ReadByte()  // Minor version
+	b, err := reader.ReadByte() // Major version
+	b, err = reader.ReadByte()  // Minor version
 	if err != nil {
 		panic(err)
 	}
-	b, err := reader.ReadByte()     // Array sig
+	b, err = reader.ReadByte()      // Array sign
 	osize, err := reader.ReadByte() // Outer Array Len
 	osize = osize - 5
-	i := 1
+	i := 0
+	j := 0
 	for i < int(osize) {
 		b, err = reader.ReadByte() // Array sign
-		b, err = reader.ReadByte() // Inner array len
+		b, err = reader.ReadByte() // Inner array len (3)
 
 		b, err = reader.ReadByte()       // IVAR
 		b, err = reader.ReadByte()       // RAWSTRING
@@ -145,61 +120,73 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 		if err != nil {
 			panic(err)
 		}
-		j := 0
+		j = 0
 		var nameBytes []byte
 		for j < int(strlen) {
 			b, err = reader.ReadByte()
 			nameBytes = append(nameBytes, b)
 			j++
 		}
-		b, err = reader.ReadByte() // 1
+		b, err = reader.ReadByte() // 6
 		b, err = reader.ReadByte() // Symbol sign
-		b, err = reader.ReadByte() // 1
-		b, err = reader.ReadByte() // E
-		b, err = reader.ReadByte() // TRUE sign
-		// Version string seciton //
-		b, err = reader.ReadByte()      // U
-		b, err = reader.ReadByte()      // Symbol sign
-		strlen, err = reader.ReadByte() // Length of string
-		strlen = strlen - 5
-		k := 0
-		for k < int(strlen) {
-			b, err = reader.ReadByte()
-			k++
+		if b == SYMBOL_LINK_SIGN {
+			b, err = reader.ReadByte() // 0
+		} else {
+			b, err = reader.ReadByte() // 6
+			b, err = reader.ReadByte() // E
 		}
+		b, err = reader.ReadByte() // TRUE sign
+
+		// Version string seciton //
+		b, err = reader.ReadByte() // U
+		b, err = reader.ReadByte() // Symbol sign
+		if b == SYMBOL_LINK_SIGN {
+			b, err = reader.ReadByte() // 0
+		} else {
+			strlen, err = reader.ReadByte() // Length of string
+			strlen = strlen - 5
+			j = 0
+			for j < int(strlen) {
+				b, err = reader.ReadByte()
+				j++
+			}
+		}
+
 		b, err = reader.ReadByte()      // Array sign
-		b, err = reader.ReadByte()      // Array len (1)
+		b, err = reader.ReadByte()      // Array len (6 aka 1)
 		b, err = reader.ReadByte()      // IVAR
 		b, err = reader.ReadByte()      // RAWSTRING
 		strlen, err = reader.ReadByte() // Length of version string
 		strlen = strlen - 5
 		var versionBytes []byte
-		k = 0
-		for k < int(strlen) {
+		j = 0
+		for j < int(strlen) {
 			b, err = reader.ReadByte()
 			versionBytes = append(versionBytes, b)
-			k++
+			j++
 		}
-		b, err = reader.ReadByte()      // 1
-		b, err = reader.ReadByte()      // Symbol sign
-		b, err = reader.ReadByte()      // 1
-		b, err = reader.ReadByte()      // E
-		b, err = reader.ReadByte()      // TRUE sign
+		b, err = reader.ReadByte() // 1
+		b, err = reader.ReadByte() // Symbol Link sign
+		b, err = reader.ReadByte() // 0
+		// b, err = reader.ReadByte()      // E
+		b, err = reader.ReadByte() // TRUE sign
+
+		//Platform//
 		b, err = reader.ReadByte()      // IVAR
 		b, err = reader.ReadByte()      // RAWSTR
-		strlen, err = reader.ReadByte() // 1
+		strlen, err = reader.ReadByte() // length of platform string
 		strlen = strlen - 5
 		var platformBytes []byte
-		k = 0
-		for k < int(strlen) {
+		j = 0
+		for j < int(strlen) {
 			b, err = reader.ReadByte()
 			platformBytes = append(platformBytes, b)
-			k++
+			j++
 		}
-		b, err = reader.ReadByte() // 1
-		b, err = reader.ReadByte() // Symbol sign
-		b, err = reader.ReadByte() // 1
-		b, err = reader.ReadByte() // E
+		b, err = reader.ReadByte() // 6
+		b, err = reader.ReadByte() // Symbol link sign
+		b, err = reader.ReadByte() // 0
+		// b, err = reader.ReadByte() // E
 		b, err = reader.ReadByte() // TRUE sign
 
 		spec := spec.Spec{

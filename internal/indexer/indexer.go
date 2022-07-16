@@ -252,13 +252,10 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 	defer file.Close()
 
 	var fileReader io.ReadCloser = file
-	output, err := ioutil.ReadAll(fileReader)
-	check(err)
-	buff := bytes.NewBuffer(output)
+	out, err := ioutil.ReadAll(fileReader)
+	buff := bytes.NewBuffer(out)
 
 	specsIdx = marshal.LoadSpecs(buff)
-	fmt.Println(specsIdx[0])
-	os.Exit(0)
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
 		if platform == "" {
