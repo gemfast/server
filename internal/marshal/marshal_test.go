@@ -1,11 +1,11 @@
 package marshal
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/hex"
 	"testing"
 
-	"github.com/gscho/gemfast/internal/marshal"
 	"github.com/gscho/gemfast/internal/spec"
 )
 
@@ -28,7 +28,7 @@ func TestDumpSpecs(t *testing.T) {
 		OriginalPlatform: "ruby",
 	}
 	specs := []*spec.Spec{&spec1, &spec2, &spec3}
-	b := marshal.DumpSpecs(specs)
+	b := DumpSpecs(specs)
 	t.Log(hex.EncodeToString(b))
 	if hex.EncodeToString(b) != rubyResult {
 		t.Error("Dump does not match ruby result")
@@ -53,7 +53,7 @@ func TestDumpSpecsWithSameName(t *testing.T) {
 		OriginalPlatform: "ruby",
 	}
 	specs := []*spec.Spec{&spec1, &spec2, &spec3}
-	b := marshal.DumpSpecs(specs)
+	b := DumpSpecs(specs)
 	t.Log(hex.EncodeToString(b))
 	if hex.EncodeToString(b) != rubyResult {
 		t.Error("Dump does not match ruby result")
@@ -64,7 +64,7 @@ func TestLoadSpecs(t *testing.T) {
 	rubyResult := "04085b085b0849220b646576697365063a064554553a1147656d3a3a56657273696f6e5b0649220a342e372e32063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220c332e31322e3139063b005449220972756279063b00545b084922076132063b0054553b065b0649220a302e332e30063b005449220972756279063b0054"
 	rubyBytes, _ := hex.DecodeString(rubyResult)
 	buff := bytes.NewBuffer(rubyBytes)
-	specs := marshal.LoadSpecs(buff)
+	specs := LoadSpecs(buff)
 	t.Log("Loaded specs length: ", len(specs))
 	if len(specs) != 3 {
 		t.Error("Loaded specs length does not match ruby")
@@ -95,5 +95,16 @@ func TestLoadSpecs(t *testing.T) {
 	}
 	if specs[2].OriginalPlatform != "ruby" {
 		t.Errorf("Expected 'ruby', got: %s", specs[2].OriginalPlatform)
+	}
+}
+
+func TestReadInt(t *testing.T){
+	rubyResult := "035ca002"
+	rubyBytes, _ := hex.DecodeString(rubyResult)
+	buff := bytes.NewBuffer(rubyBytes)
+	r := bufio.NewReader(buff)
+	l, _ := readInt(r)
+	if l != 172124 {
+		t.Errorf("Error, expected '172124', got: %b ", l)
 	}
 }

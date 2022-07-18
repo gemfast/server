@@ -344,13 +344,13 @@ func (indexer Indexer) UpdateIndex() {
 	}
 
 	specs := mapGemsToSpecs(updatedGems)
-	_, _, latest := spec.PartitionSpecs(specs)
+	rel, pre, latest := spec.PartitionSpecs(specs)
 
 	// indexer.buildMarshalGemspecs(specs)
 
-	// indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx)
+	indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx)
 	indexer.updateSpecsIndex(latest, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx)
-	// indexer.updateSpecsIndex(pre, indexer.destPrereleaseSpecsIdx, indexer.prereleaseSpecsIdx)
+	indexer.updateSpecsIndex(pre, indexer.destPrereleaseSpecsIdx, indexer.prereleaseSpecsIdx)
 
 	indexer.compressIndicies()
 
