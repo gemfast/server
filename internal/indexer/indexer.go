@@ -245,7 +245,7 @@ func (indexer Indexer) installIndicies() {
 	check(err)
 }
 
-func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string) {
+func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string, ch chan<-int) {
 	var specsIdx []*spec.Spec
 	file, err := os.Open(src)
 	check(err)
@@ -315,6 +315,7 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 		log.Fatal(err)
 	}
 	log.Printf("Wrote %d bytes.\n", bytesWritten)
+	ch<-bytesWritten
 }
 
 func (indexer Indexer) UpdateIndex() {
@@ -344,13 +345,18 @@ func (indexer Indexer) UpdateIndex() {
 	}
 
 	specs := mapGemsToSpecs(updatedGems)
-	rel, pre, latest := spec.PartitionSpecs(specs)
+	pre, rel, latest := spec.PartitionSpecs(specs)
 
 	// indexer.buildMarshalGemspecs(specs)
 
-	indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx)
-	indexer.updateSpecsIndex(latest, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx)
-	indexer.updateSpecsIndex(pre, indexer.destPrereleaseSpecsIdx, indexer.prereleaseSpecsIdx)
+	ch := make(chan int, 3)
+	go indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx, ch)
+	go indexer.updateSpecsIndex(latest, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx, ch)
+	go indexer.updateSpecsIndex(pre, indexer.destPrereleaseSpecsIdx, indexer.prereleaseSpecsIdx, ch)
+
+	<-ch
+	<-ch
+	<-ch
 
 	indexer.compressIndicies()
 
