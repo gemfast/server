@@ -154,6 +154,10 @@ func FromFile(gemfile string) *Spec {
 	return &s
 }
 
+// func FromIncomingGem() *Spec {
+	
+// }
+
 func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
 	var prerelease []*Spec
 	var released []*Spec

@@ -36,6 +36,7 @@ const (
 //   MODULE_SIGN      = 'm'
 )
 
+// TODO: implement object links
 func DumpSpecs(specs []*spec.Spec) ([]byte) {
 	buff := bytes.NewBuffer(nil)
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
