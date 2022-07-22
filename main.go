@@ -48,5 +48,28 @@ func main() {
 		i.UpdateIndex()
 		c.String(http.StatusOK, "derpydo")
 	})
+	// geminabox compat
+	r.POST("/upload", func(c *gin.Context) {
+		file, err := c.FormFile("file")
+		if err != nil {
+			panic(err)
+		}
+		tmpfile, err := ioutil.TempFile("/tmp", "*.gem")
+		if err != nil {
+		    panic(err)
+		}
+		defer os.Remove(tmpfile.Name())
+
+		// Upload the file to specific dst.
+		c.SaveUploadedFile(file, tmpfile.Name())
+
+		s := spec.FromFile(tmpfile.Name())
+		err = os.Rename(tmpfile.Name(), fmt.Sprintf("/var/gemfast/%s-%s.gem", s.Name, s.Version))
+		if err != nil {
+			panic(err)
+		}
+		i.UpdateIndex()
+		c.String(http.StatusOK, "derpydo")
+	})
 	r.Run()
 }
