@@ -40,16 +40,17 @@ func DumpSpecs(specs []*spec.Spec) ([]byte) {
 	buff := bytes.NewBuffer(nil)
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
 	buff.WriteByte(ARRAY_SIGN)
-	buff.WriteByte(byte(len(specs) + 5)) // Outer Array Len
+	encInt(buff, len(specs))
+	// buff.WriteByte(byte(len(specs) + 5)) // Outer Array Len
 	for idx, spec := range specs {
 		buff.WriteByte(ARRAY_SIGN)
 		buff.WriteByte(8) // Inner Array Len (Always 3 for modern indicies)
 		s := spec.Name
-		l := len(s) + 5
+		// l := len(s) + 5
 
 		// String "chef-ruby-lvm-attrib"
 		buff.Write([]byte{IVAR_SIGN, RAWSTRING_SIGN})
-		buff.WriteByte(byte(l))
+		encInt(buff, len(s))
 		buff.WriteString(s)
 		buff.WriteByte(6)
 		if idx == 0 {
@@ -65,11 +66,11 @@ func DumpSpecs(specs []*spec.Spec) ([]byte) {
 		// Gem::Version.new("0.3.10")
 		cname := "Gem::Version"
 		v := spec.Version
-		l3 := len(cname) + 5
+		// l3 := len(cname) + 5
 		buff.Write([]byte{'U'})
 		if idx == 0 {
 			buff.WriteByte(SYMBOL_SIGN)
-			buff.WriteByte(byte(l3))
+			encInt(buff, len(cname))
 			buff.WriteString(cname)
 		} else {
 			buff.WriteByte(SYMBOL_LINK_SIGN)
@@ -78,7 +79,8 @@ func DumpSpecs(specs []*spec.Spec) ([]byte) {
 		buff.WriteByte(ARRAY_SIGN)
 		buff.WriteByte(6) // Array Len
 		buff.Write([]byte{IVAR_SIGN, RAWSTRING_SIGN})
-		buff.WriteByte(byte(len(v) + 5))
+		// buff.WriteByte(byte(len(v) + 5))
+		encInt(buff, len(v))
 		buff.WriteString(v)
 		buff.WriteByte(6)
 		buff.WriteByte(SYMBOL_LINK_SIGN)
@@ -87,9 +89,10 @@ func DumpSpecs(specs []*spec.Spec) ([]byte) {
 
 		// String "ruby"
 		s2 := spec.OriginalPlatform
-		l2 := len(s2) + 5
+		// l2 := len(s2) + 5
 		buff.Write([]byte{IVAR_SIGN, RAWSTRING_SIGN})
-		buff.WriteByte(byte(l2))
+		// buff.WriteByte(byte(l2))
+		encInt(buff, len(s2))
 		buff.WriteString(s2)
 		buff.WriteByte(6)
 		buff.WriteByte(SYMBOL_LINK_SIGN)
@@ -350,4 +353,49 @@ func readInt(r *bufio.Reader) (int, error) {
 		}
 	}
 	return result, nil
+}
+
+func encInt(buff *bytes.Buffer , i int) error {
+	var len int
+
+	if i == 0 {
+		return buff.WriteByte(0)
+	} else if 0 < i && i < 123 {
+		return buff.WriteByte(byte(i + 5))
+	} else if -124 < i && i <= -1 {
+		return buff.WriteByte(byte(i - 5))
+	} else if 122 < i && i <= 0xff {
+		len = 1
+	} else if 0xff < i && i <= 0xffff {
+		len = 2
+	} else if 0xffff < i && i <= 0xffffff {
+		len = 3
+	} else if 0xffffff < i && i <= 0x3fffffff {
+		//for compatibility with 32bit Ruby, Fixnum should be less than 1073741824
+		len = 4
+	} else if -0x100 <= i && i < -123 {
+		len = -1
+	} else if -0x10000 <= i && i < -0x100 {
+		len = -2
+	} else if -0x1000000 <= i && i < -0x100000 {
+		len = -3
+	} else if -0x40000000 <= i && i < -0x1000000 {
+		//for compatibility with 32bit Ruby, Fixnum should be greater than -1073741825
+		len = -4
+	}
+
+	if err := buff.WriteByte(byte(len)); err != nil {
+		return err
+	}
+	if len < 0 {
+		len = -len
+	}
+
+	for c := 0; c < len; c++ {
+		if err := buff.WriteByte(byte(i >> uint(8*c) & 0xff)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

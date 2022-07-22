@@ -190,8 +190,8 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 
 func (indexer Indexer) compressIndicies() {
 	gzipFile(indexer.prereleaseSpecsIdx)
-	gzipFile(indexer.specsIdx)
 	gzipFile(indexer.latestSpecsIdx)
+	gzipFile(indexer.specsIdx)
 }
 
 func gzipFile(src string) {
@@ -256,6 +256,7 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 	buff := bytes.NewBuffer(out)
 
 	specsIdx = marshal.LoadSpecs(buff)
+	fmt.Println(len(specsIdx))
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
 		if platform == "" {
@@ -292,7 +293,7 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 			}
 		}
 	}
-
+	
 	sort.Slice(uniqSpecsIdx, func(i, j int) bool {
 		l := uniqSpecsIdx[i].Name + uniqSpecsIdx[i].Version + uniqSpecsIdx[i].OriginalPlatform
 		r := uniqSpecsIdx[j].Name + uniqSpecsIdx[j].Version + uniqSpecsIdx[j].OriginalPlatform
