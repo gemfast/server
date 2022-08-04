@@ -3,6 +3,9 @@ package marshal
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
+
+	// "encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -17,27 +20,373 @@ const (
 	SUPPORTED_MAJOR_VERSION = 4
 	SUPPORTED_MINOR_VERSION = 8
 
-	//   NIL_SIGN         = '0'
-	TRUE_SIGN = 'T'
-	//   FALSE_SIGN       = 'F'
-	//   FIXNUM_SIGN      = 'i'
+	NIL_SIGN         = '0'
+	TRUE_SIGN        = 'T'
+	FALSE_SIGN       = 'F'
+	FIXNUM_SIGN      = 'i'
 	RAWSTRING_SIGN   = '"'
 	SYMBOL_SIGN      = ':'
 	SYMBOL_LINK_SIGN = ';'
-	//   OBJECT_SIGN      = 'o'
+	OBJECT_SIGN      = 'o'
 	OBJECT_LINK_SIGN = '@'
-	ARRAY_SIGN = '['
-	IVAR_SIGN  = 'I'
-	//   HASH_SIGN        = '{'
+	ARRAY_SIGN       = '['
+	IVAR_SIGN        = 'I'
+	HASH_SIGN        = '{'
 	//   BIGNUM_SIGN      = 'l'
 	//   REGEXP_SIGN      = '/'
-	CLASS_SIGN = 'c'
-
-//   MODULE_SIGN      = 'm'
+	CLASS_SIGN              = 'c'
+	USER_CLASS_SIGN					= 'C'
+	USER_DEFINED_SIGN       = 'u'
+	USER_MARSHAL_SIGN       = 'U'
+	EXTENDED_BY_MODULE_SIGN = 'e'
+	MODULE_SIGN             = 'm'
+	EMPTY_STRING = 26
 )
 
+func DumpGemspecGemfast() []byte {
+	buff := bytes.NewBuffer(nil)
+	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
+	buff.WriteByte(OBJECT_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 18)
+	buff.WriteString("Gem::Specification")
+	encInt(buff, 15) // Number of instance variables
+
+	// Name
+	buff.WriteByte(SYMBOL_SIGN)
+	buff.WriteByte(10)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("name")
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 7)
+	buff.WriteString("compose")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_SIGN)
+	buff.WriteByte(6)
+	buff.WriteByte('E')
+	buff.WriteByte(TRUE_SIGN)
+
+  // Version
+	buff.WriteByte(SYMBOL_SIGN)
+	buff.WriteByte(13)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("version")
+	buff.WriteByte(USER_MARSHAL_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 12)
+	buff.WriteString("Gem::Version")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 5)
+	buff.WriteString("0.1.0")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Summary
+	buff.WriteByte(SYMBOL_SIGN)
+	buff.WriteByte(13)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("summary")
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 53)
+	buff.WriteString("Write a short summary, because RubyGems requires one.")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Required Ruby Version
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 22) //Length of symbol + 1 for the '@' character
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("required_ruby_version")
+	buff.WriteByte(USER_MARSHAL_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 16)
+	buff.WriteString("Gem::Requirement")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 2)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 2)
+	buff.WriteString(">=")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+	buff.WriteByte(USER_MARSHAL_SIGN)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(9)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 5)
+	buff.WriteString("2.6.0")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Required Rubygems Version
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 26) //Length of symbol + 1 for the '@' character
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("required_rubygems_version")
+	buff.WriteByte(USER_MARSHAL_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 16)
+	buff.WriteString("Gem::Requirement")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 2)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 2)
+	buff.WriteString(">=")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+	buff.WriteByte(USER_MARSHAL_SIGN)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(9)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 5)
+	buff.WriteString("3.3.3")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+	
+
+	// Original Platform
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 18) //Length of symbol + 1 for the '@' character
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("original_platform")
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 4)
+	buff.WriteString("ruby")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Email
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 6)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("email")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1) // Length of array
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 26)
+	buff.WriteString("greg.c.schofield@gmail.com")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Authors
+	buff.WriteByte(SYMBOL_SIGN)
+	buff.WriteByte(13)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("authors")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1) // Length of array
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 17)
+	buff.WriteString("Gregory Schofield")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Description
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 12) //Length of symbol + 1 for the '@' character
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("description")
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 47)
+	buff.WriteString("Write a longer description or delete this line.")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Homepage
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 9) //Length of symbol + 1 for the '@' character
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("homepage")
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 40)
+	buff.WriteString("https://github.com/gscho/habitat-compose")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Licenses
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 9)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("licenses")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1) // Length of array
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 3)
+	buff.WriteString("MIT")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Require Paths
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 14)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("require_paths")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1) // Length of array
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 3)
+	buff.WriteString("lib")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	// Specification Version
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 22) //Length of symbol + 1 for the '@' character
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("specification_version")
+	buff.WriteByte(FIXNUM_SIGN)
+	encInt(buff, 4) //specification version value
+
+	// Dependencies
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 13)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("dependencies")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1) // Length of array
+
+	buff.WriteByte(OBJECT_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 15)
+	buff.WriteString("Gem::Dependency")
+	buff.WriteByte(10)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(6)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 9)
+	buff.WriteString("file-tail")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 12)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("requirement")
+	buff.WriteByte(USER_MARSHAL_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 16)
+	buff.WriteString("Gem::Requirement")
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 2)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 2)
+	buff.WriteString("~>")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	encInt(buff, 2) // Index of the link
+	buff.WriteByte(TRUE_SIGN)
+	buff.WriteByte(USER_MARSHAL_SIGN)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	encInt(buff, 4)
+	buff.WriteByte(ARRAY_SIGN)
+	encInt(buff, 1)
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 3)
+	buff.WriteString("1.2")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 5)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("type")
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 7)
+	buff.WriteString("runtime")
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 11)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("prerelease")
+	buff.WriteByte(FALSE_SIGN)
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 21)
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("version_requirements")
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteByte(EMPTY_STRING)
+
+	// Rubygems version
+	buff.WriteByte(SYMBOL_SIGN)
+	encInt(buff, 17) //Length of symbol + 1 for the '@' character
+	buff.WriteByte(OBJECT_LINK_SIGN)
+	buff.WriteString("rubygems_version")
+	buff.WriteByte(IVAR_SIGN)
+	buff.WriteByte(RAWSTRING_SIGN)
+	encInt(buff, 5)
+	buff.WriteString("3.3.3")
+	buff.WriteByte(6)
+	buff.WriteByte(SYMBOL_LINK_SIGN)
+	buff.WriteByte(7)
+	buff.WriteByte(TRUE_SIGN)
+
+	fmt.Println(hex.EncodeToString(buff.Bytes()))
+	return buff.Bytes()
+}
+
 // TODO: implement object links
-func DumpSpecs(specs []*spec.Spec) ([]byte) {
+func DumpSpecs(specs []*spec.Spec) []byte {
 	buff := bytes.NewBuffer(nil)
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
 	buff.WriteByte(ARRAY_SIGN)
@@ -65,14 +414,14 @@ func DumpSpecs(specs []*spec.Spec) ([]byte) {
 		buff.WriteByte(TRUE_SIGN)
 
 		// Gem::Version.new("0.3.10")
-		cname := "Gem::Version"
+		class := "Gem::Version"
 		v := spec.Version
-		// l3 := len(cname) + 5
-		buff.Write([]byte{'U'})
+		// l3 := len(class) + 5
+		buff.WriteByte(USER_MARSHAL_SIGN)
 		if idx == 0 {
 			buff.WriteByte(SYMBOL_SIGN)
-			encInt(buff, len(cname))
-			buff.WriteString(cname)
+			encInt(buff, len(class))
+			buff.WriteString(class)
 		} else {
 			buff.WriteByte(SYMBOL_LINK_SIGN)
 			buff.WriteByte(6)
@@ -115,8 +464,8 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 	if err != nil {
 		panic(err)
 	}
-	_, err = reader.ReadByte()      // Array sign
-	
+	_, err = reader.ReadByte() // Array sign
+
 	osize, err := readInt(reader) // Outer Array Len
 	i := 0
 	for i < int(osize) {
@@ -145,7 +494,7 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 		if err != nil {
 			log.WithFields(log.Fields{"index": i, "platform": platform}).Error("readPlatform failed to parse a string")
 			panic(err)
-		}				
+		}
 		olinktbl = append(olinktbl, []byte{'['})
 
 		spec := spec.Spec{
@@ -162,7 +511,7 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 }
 
 func readName(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (string, error) {
-	b, err := r.ReadByte()       // IVAR
+	b, err := r.ReadByte() // IVAR
 	if b == OBJECT_LINK_SIGN {
 		return readObjectLink(r, olinktbl)
 	}
@@ -170,7 +519,7 @@ func readName(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (string, 
 		log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted IVAR_SIGN")
 		return string(b), errors.New("")
 	}
-	b, err = r.ReadByte()       // RAWSTRING
+	b, err = r.ReadByte() // RAWSTRING
 	if b != RAWSTRING_SIGN {
 		log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted RAWSTRING_SIGN")
 		return string(b), errors.New("")
@@ -239,18 +588,18 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 		*olinktbl = append(*olinktbl, tmp)
 	}
 
-	b, err = r.ReadByte()      // Array sign
+	b, err = r.ReadByte() // Array sign
 	if b != ARRAY_SIGN {
 		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted ARRAY_SIGN")
 		return string(b), errors.New("")
 	}
-	b, err = r.ReadByte()      // Array len (6 aka 1)
-	b, err = r.ReadByte()      // IVAR
+	b, err = r.ReadByte() // Array len (6 aka 1)
+	b, err = r.ReadByte() // IVAR
 	if b != IVAR_SIGN {
 		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted IVAR_SIGN")
 		return string(b), errors.New("")
 	}
-	b, err = r.ReadByte()      // RAWSTRING
+	b, err = r.ReadByte() // RAWSTRING
 	if b != RAWSTRING_SIGN {
 		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted RAWSTRING_SIGN")
 		return string(b), errors.New("")
@@ -281,7 +630,7 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 }
 
 func readPlatform(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (string, error) {
-	b, err := r.ReadByte()      // IVAR
+	b, err := r.ReadByte() // IVAR
 	if b == OBJECT_LINK_SIGN {
 		return readObjectLink(r, olinktbl)
 	}
@@ -289,7 +638,7 @@ func readPlatform(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (stri
 		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted IVAR_SIGN")
 		return string(b), errors.New("")
 	}
-	b, err = r.ReadByte()      // RAWSTR
+	b, err = r.ReadByte() // RAWSTR
 	if b != RAWSTRING_SIGN {
 		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted RAWSTRING_SIGN")
 		return string(b), errors.New("")
@@ -323,7 +672,7 @@ func readObjectLink(r *bufio.Reader, olinktbl *[][]byte) (string, error) {
 	idx, err := readInt(r)
 	idx = idx - 1 // First index is 1
 	tmp := (*olinktbl)[idx]
-	return string(tmp), err 
+	return string(tmp), err
 }
 
 func readInt(r *bufio.Reader) (int, error) {
@@ -356,7 +705,7 @@ func readInt(r *bufio.Reader) (int, error) {
 	return result, nil
 }
 
-func encInt(buff *bytes.Buffer , i int) error {
+func encInt(buff *bytes.Buffer, i int) error {
 	var len int
 
 	if i == 0 {
