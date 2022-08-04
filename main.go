@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/gscho/gemfast/internal/indexer"
 	"github.com/gscho/gemfast/internal/spec"
 )
@@ -46,7 +45,7 @@ func main() {
 			panic(err)
 		}
 		i.UpdateIndex()
-		c.String(http.StatusOK, "derpydo")
+		c.String(http.StatusOK, "Uploaded successfully")
 	})
 	// geminabox compat
 	r.POST("/upload", func(c *gin.Context) {
@@ -69,7 +68,7 @@ func main() {
 			panic(err)
 		}
 		i.UpdateIndex()
-		c.String(http.StatusOK, "derpydo")
+		c.String(http.StatusOK, "Uploaded successfully")
 	})
 	r.Run()
 }
