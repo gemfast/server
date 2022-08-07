@@ -12,13 +12,6 @@ import (
 	"strings"
 )
 
-// spec.original_name
-// spec.version.prerelease?
-// spec.original_platform
-// spec.full_name # used for logging
-// spec.name
-// spec.version (This is an object of type Gem::Version)
-
 type Spec struct {
 	OriginalName     string
 	OriginalPlatform string
@@ -29,12 +22,41 @@ type Spec struct {
 	LoadedFrom       string
 }
 
-type gemMetadata struct {
+type NestedGemRequirement interface {}
+
+type VersionContraint struct {
+	Constraint string
+	Version string
+}
+
+type GemRequirement struct {
+	Requirements []NestedGemRequirement `yaml:"requirements"`
+	VersionConstraints []VersionContraint
+}
+
+type GemDependency struct {
+	Name string `yaml:"name"`
+	Prerelease bool `yaml:"prerelease"`
+	Type string `yaml:"type"`
+	Requirement GemRequirement `yaml:"requirement"`
+}
+
+type GemMetadata struct {
 	Name     string `yaml:"name"`
 	Platform string `yaml:"platform"`
 	Version  struct {
 		Version string `yaml:"version"`
 	}
+	Authors []string `yaml:"authors"`
+	Email []string `yaml:"email"`
+	Summary string `yaml:"summary"`
+	Description string `yaml:"description"`
+	Homepage string `yaml:"homepage"`
+	SpecVersion int `yaml:"specification_version"`
+	RequirePaths []string `yaml:"require_paths"`
+	Licenses []string `yaml:"licenses"`
+	RubygemsVersion string `yaml:"rubygems_version"`
+	Dependencies []GemDependency `yaml:"dependencies"`
 }
 
 func untar(full_name string, gemfile string) string {
@@ -130,6 +152,47 @@ func GunzipMetadata(path string) string {
 	return yaml
 }
 
+func ParseGemMetadata(yamlBytes []byte) (GemMetadata) {
+	var metadata GemMetadata
+	err := yaml.Unmarshal(yamlBytes, &metadata)
+	if err != nil {
+		panic(err)
+	}
+	var c string
+	var v string
+	for i, dep := range metadata.Dependencies {
+		for _, req := range dep.Requirement.Requirements {
+			switch t := req.(type){
+				case []interface{}: {
+	      	for _, entry := range t {
+	      		if fmt.Sprintf("%T", entry) == "string" {
+	      		  c = fmt.Sprintf("%s", entry)
+	      	  } else {
+	      	  	vmap := entry.(map[string]interface{})
+	      	  	v = fmt.Sprintf("%s", vmap["version"])
+	      	  	 
+	      	  }
+	      	  if c != "" && v != "" {
+	      	  	
+		      	  vc := VersionContraint{
+	      	  		Constraint: c,
+	      	  		Version: v,
+	      	  	}
+		      	  dep.Requirement.VersionConstraints = append(dep.Requirement.VersionConstraints, vc)
+		      	  c = ""
+		      	  v = ""
+		      	}
+	      	}
+	      }
+	      default:
+	        panic("LOL")
+	    }
+		}
+		metadata.Dependencies[i] = dep
+	}
+	return metadata
+}
+
 func FromFile(gemfile string) *Spec {
 	path_chunks := strings.Split(gemfile, "/")
 	full := path_chunks[len(path_chunks)-1]
@@ -137,11 +200,7 @@ func FromFile(gemfile string) *Spec {
 	tmpdir := untar(full, gemfile)
 	defer os.RemoveAll(tmpdir)
 	res := GunzipMetadata(tmpdir)
-	var metadata gemMetadata
-	err := yaml.Unmarshal([]byte(res), &metadata)
-	if err != nil {
-		panic(err)
-	}
+	metadata := ParseGemMetadata([]byte(res))
 	s := Spec{
 		OriginalName:     ogName,
 		OriginalPlatform: metadata.Platform,
