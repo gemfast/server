@@ -8,14 +8,12 @@ import (
 )
 
 func TestParseGemMetadata(t *testing.T) {
-	res, err := os.ReadFile("../../test/metadata.yml")
+	res, err := os.ReadFile("../../test/devise-metadata.yml")
 	if err != nil {
 		panic(err)
 	}
-	metadata := parseGemMetadata([]byte(res))
-	for _, dep := range metadata.Dependencies {
-		fmt.Println(dep.Requirement.VersionContraints)
-	}
+	metadata := ParseGemMetadata([]byte(res))
+	fmt.Println(metadata.Emails)
 	// fmt.Println(fmt.Sprintf("%T", metadata.Dependencies[1].Requirement.Requirements))
 	// var arg string
 	// var ver string

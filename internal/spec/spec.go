@@ -20,43 +20,7 @@ type Spec struct {
 	Version          string
 	PreRelease       bool
 	LoadedFrom       string
-}
-
-type NestedGemRequirement interface {}
-
-type VersionContraint struct {
-	Constraint string
-	Version string
-}
-
-type GemRequirement struct {
-	Requirements []NestedGemRequirement `yaml:"requirements"`
-	VersionConstraints []VersionContraint
-}
-
-type GemDependency struct {
-	Name string `yaml:"name"`
-	Prerelease bool `yaml:"prerelease"`
-	Type string `yaml:"type"`
-	Requirement GemRequirement `yaml:"requirement"`
-}
-
-type GemMetadata struct {
-	Name     string `yaml:"name"`
-	Platform string `yaml:"platform"`
-	Version  struct {
-		Version string `yaml:"version"`
-	}
-	Authors []string `yaml:"authors"`
-	Email []string `yaml:"email"`
-	Summary string `yaml:"summary"`
-	Description string `yaml:"description"`
-	Homepage string `yaml:"homepage"`
-	SpecVersion int `yaml:"specification_version"`
-	RequirePaths []string `yaml:"require_paths"`
-	Licenses []string `yaml:"licenses"`
-	RubygemsVersion string `yaml:"rubygems_version"`
-	Dependencies []GemDependency `yaml:"dependencies"`
+	GemMetadata GemMetadata
 }
 
 func untar(full_name string, gemfile string) string {
@@ -158,6 +122,20 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata) {
 	if err != nil {
 		panic(err)
 	}
+	// var email string
+	switch t := metadata.Email.(type){
+		case []interface{}: {
+			for _, entry := range t {
+				metadata.Emails = append(metadata.Emails, entry.(string))
+			}
+		}
+		case interface{}: {
+			metadata.Emails = append(metadata.Emails, t.(string))
+		}
+		default:
+			panic(fmt.Sprintf("Unknown type: %T for email", t))
+	}
+
 	var c string
 	var v string
 	for i, dep := range metadata.Dependencies {
@@ -173,7 +151,6 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata) {
 	      	  	 
 	      	  }
 	      	  if c != "" && v != "" {
-	      	  	
 		      	  vc := VersionContraint{
 	      	  		Constraint: c,
 	      	  		Version: v,
@@ -185,7 +162,7 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata) {
 	      	}
 	      }
 	      default:
-	        panic("LOL")
+					panic(fmt.Sprintf("Unknown type: %T for gem requirement requirements", t))
 	    }
 		}
 		metadata.Dependencies[i] = dep
@@ -209,13 +186,10 @@ func FromFile(gemfile string) *Spec {
 		Version:          metadata.Version.Version,
 		PreRelease:       false,
 		LoadedFrom:       full,
+		GemMetadata: metadata,
 	}
 	return &s
 }
-
-// func FromIncomingGem() *Spec {
-	
-// }
 
 func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
 	var prerelease []*Spec

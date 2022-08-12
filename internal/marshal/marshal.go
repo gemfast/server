@@ -3,7 +3,6 @@ package marshal
 import (
 	"bufio"
 	"bytes"
-	"encoding/hex"
 
 	// "encoding/hex"
 	"errors"
@@ -52,7 +51,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteString("Gem::Specification")
 	// encInt(buff, 17)
 	// buff.WriteString("MyModule::MyClass")
-	encInt(buff, 15) // Number of instance variables
+	encInt(buff, meta.NumInstanceVars()) // Number of instance variables
 
 	// Name
 	buff.WriteByte(SYMBOL_SIGN)
@@ -202,9 +201,9 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(OBJECT_LINK_SIGN)
 	buff.WriteString("email")
 	buff.WriteByte(ARRAY_SIGN)
-	arrlen := len(meta.Email)
+	arrlen := len(meta.Emails)
 	encInt(buff, arrlen) // Length of array
-	for _, email := range meta.Email {
+	for _, email := range meta.Emails {
 		buff.WriteByte(IVAR_SIGN)
 		buff.WriteByte(RAWSTRING_SIGN)
 		strlen = len(email)
@@ -356,7 +355,8 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 		for _, vc := range dep.Requirement.VersionConstraints {
 			buff.WriteByte(IVAR_SIGN)
 			buff.WriteByte(RAWSTRING_SIGN)
-			encInt(buff, 2)
+			strlen = len(vc.Constraint)
+			encInt(buff, strlen)
 			buff.WriteString(vc.Constraint)
 			buff.WriteByte(6)
 			buff.WriteByte(SYMBOL_LINK_SIGN)
@@ -417,7 +417,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(7)
 	buff.WriteByte(TRUE_SIGN)
 
-	fmt.Println(hex.EncodeToString(buff.Bytes()))
+	// fmt.Println(hex.EncodeToString(buff.Bytes()))
 	return buff.Bytes()
 }
 
