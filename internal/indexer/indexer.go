@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	cfg "github.com/gscho/gemfast/internal/config"
 	"github.com/gscho/gemfast/internal/marshal"
 	"github.com/gscho/gemfast/internal/spec"
+	"github.com/spf13/viper"
 
 	"github.com/rs/zerolog/log"
 )
@@ -48,7 +48,7 @@ const (
 	RUBY_PLATFORM = "ruby"
 )
 
-var indexer *Indexer
+var indexer Indexer
 
 func check(e error) {
 	if e != nil {
@@ -56,19 +56,18 @@ func check(e error) {
 	}
 }
 
-func init() {
-	gemfastDir := fmt.Sprintf("%s", cfg.Get("dir"))
-	indexer = new(gemfastDir)
-}
-
-func Get() (*Indexer) {
+func Get() (Indexer) {
 	return indexer
 }
 
-func new(destDir string) *Indexer {
+func InitIndexer() (error) {
+	gemfastDir := fmt.Sprintf("%s", viper.Get("dir"))
 	marshalName := "Marshal.4.8"
-	indexer := Indexer{destDir: destDir}
-	indexer.dir = mkTempDir("gem_generate_index")
+	indexer = Indexer{destDir: gemfastDir}
+	tmpdir, err := mkTempDir("gem_generate_index"); if err != nil {
+		return err
+	}
+	indexer.dir = tmpdir
 	indexer.marshalIdx = fmt.Sprintf("%s/%s", indexer.dir, marshalName)
 	indexer.quickDir = fmt.Sprintf("%s/quick", indexer.dir)
 	indexer.quickMarshalDir = fmt.Sprintf("%s/%s", indexer.quickDir, marshalName)
@@ -87,7 +86,7 @@ func new(destDir string) *Indexer {
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.latestSpecsIdx))
 	indexer.files = append(indexer.files, indexer.prereleaseSpecsIdx)
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.prereleaseSpecsIdx))
-	return &indexer
+	return nil
 }
 
 func (indexer Indexer) GenerateIndex() {
@@ -96,19 +95,17 @@ func (indexer Indexer) GenerateIndex() {
 	indexer.installIndicies()
 }
 
-func mkTempDir(name string) (string) {
-	if dir, err := os.MkdirTemp("/tmp", name); err != nil {
+func mkTempDir(name string) (string, error) {
+	dir, err := os.MkdirTemp("/tmp", name); if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
-		panic(err)
-	} else {
-		log.Debug().Msg(fmt.Sprintf("created tmpdir %s", dir))
-		err = os.Chmod(dir, 0700)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to create tmpdir")
-			panic(err)
-		}
-		return dir
+		return dir, err
 	}
+	log.Debug().Msg(fmt.Sprintf("created tmpdir %s", dir))
+	err = os.Chmod(dir, 0700)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create tmpdir")
+	}
+	return dir, err
 }
 
 func (indexer Indexer) mkTempDirs() {

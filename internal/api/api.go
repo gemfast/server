@@ -7,28 +7,28 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	cfg "github.com/gscho/gemfast/internal/config"
 	"github.com/gscho/gemfast/internal/indexer"
 	"github.com/gscho/gemfast/internal/spec"
+	"github.com/spf13/viper"
 )
 
 func head(c *gin.Context) {}
 
 func getGemspecRz(c *gin.Context) {
 	fileName := c.Param("gemspec.rz")
-	filePath := fmt.Sprintf("%s/quick/Marshal.4.8/%s", cfg.Get("dir"), fileName)
+	filePath := fmt.Sprintf("%s/quick/Marshal.4.8/%s", viper.Get("dir"), fileName)
 	c.FileAttachment(filePath, fileName)
 }
 
 func getGem(c *gin.Context) {
 	fileName := c.Param("gem")
-	filePath := fmt.Sprintf("%s/%s", cfg.Get("dir"), fileName)
+	filePath := fmt.Sprintf("%s/%s", viper.Get("dir"), fileName)
 	c.FileAttachment(filePath, fileName)
 }
 
 func saveAndReindex(tmpfile *os.File) (error) {
 	s := spec.FromFile(tmpfile.Name())
-	filePath := fmt.Sprintf("%s/%s-%s.gem", cfg.Get("dir"), s.Name, s.Version)
+	filePath := fmt.Sprintf("%s/%s-%s.gem", viper.Get("dir"), s.Name, s.Version)
 	err := os.Rename(tmpfile.Name(), filePath)
 	go indexer.Get().UpdateIndex()
 	return err
