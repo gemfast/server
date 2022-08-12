@@ -1,0 +1,224 @@
+--- !ruby/object:Gem::Specification
+name: devise
+version: !ruby/object:Gem::Version
+  version: 4.7.1
+platform: ruby
+authors:
+- José Valim
+- Carlos Antônio
+autorequire: 
+bindir: bin
+cert_chain: []
+date: 2019-09-06 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: warden
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: 1.2.3
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: 1.2.3
+- !ruby/object:Gem::Dependency
+  name: orm_adapter
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '0.1'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '0.1'
+- !ruby/object:Gem::Dependency
+  name: bcrypt
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '3.0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '3.0'
+- !ruby/object:Gem::Dependency
+  name: railties
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 4.1.0
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 4.1.0
+- !ruby/object:Gem::Dependency
+  name: responders
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: Flexible authentication solution for Rails with Warden
+email: contact@plataformatec.com.br
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- CHANGELOG.md
+- MIT-LICENSE
+- README.md
+- app/controllers/devise/confirmations_controller.rb
+- app/controllers/devise/omniauth_callbacks_controller.rb
+- app/controllers/devise/passwords_controller.rb
+- app/controllers/devise/registrations_controller.rb
+- app/controllers/devise/sessions_controller.rb
+- app/controllers/devise/unlocks_controller.rb
+- app/controllers/devise_controller.rb
+- app/helpers/devise_helper.rb
+- app/mailers/devise/mailer.rb
+- app/views/devise/confirmations/new.html.erb
+- app/views/devise/mailer/confirmation_instructions.html.erb
+- app/views/devise/mailer/email_changed.html.erb
+- app/views/devise/mailer/password_change.html.erb
+- app/views/devise/mailer/reset_password_instructions.html.erb
+- app/views/devise/mailer/unlock_instructions.html.erb
+- app/views/devise/passwords/edit.html.erb
+- app/views/devise/passwords/new.html.erb
+- app/views/devise/registrations/edit.html.erb
+- app/views/devise/registrations/new.html.erb
+- app/views/devise/sessions/new.html.erb
+- app/views/devise/shared/_error_messages.html.erb
+- app/views/devise/shared/_links.html.erb
+- app/views/devise/unlocks/new.html.erb
+- config/locales/en.yml
+- lib/devise.rb
+- lib/devise/controllers/helpers.rb
+- lib/devise/controllers/rememberable.rb
+- lib/devise/controllers/scoped_views.rb
+- lib/devise/controllers/sign_in_out.rb
+- lib/devise/controllers/store_location.rb
+- lib/devise/controllers/url_helpers.rb
+- lib/devise/delegator.rb
+- lib/devise/encryptor.rb
+- lib/devise/failure_app.rb
+- lib/devise/hooks/activatable.rb
+- lib/devise/hooks/csrf_cleaner.rb
+- lib/devise/hooks/forgetable.rb
+- lib/devise/hooks/lockable.rb
+- lib/devise/hooks/proxy.rb
+- lib/devise/hooks/rememberable.rb
+- lib/devise/hooks/timeoutable.rb
+- lib/devise/hooks/trackable.rb
+- lib/devise/mailers/helpers.rb
+- lib/devise/mapping.rb
+- lib/devise/models.rb
+- lib/devise/models/authenticatable.rb
+- lib/devise/models/confirmable.rb
+- lib/devise/models/database_authenticatable.rb
+- lib/devise/models/lockable.rb
+- lib/devise/models/omniauthable.rb
+- lib/devise/models/recoverable.rb
+- lib/devise/models/registerable.rb
+- lib/devise/models/rememberable.rb
+- lib/devise/models/timeoutable.rb
+- lib/devise/models/trackable.rb
+- lib/devise/models/validatable.rb
+- lib/devise/modules.rb
+- lib/devise/omniauth.rb
+- lib/devise/omniauth/config.rb
+- lib/devise/omniauth/url_helpers.rb
+- lib/devise/orm/active_record.rb
+- lib/devise/orm/mongoid.rb
+- lib/devise/parameter_filter.rb
+- lib/devise/parameter_sanitizer.rb
+- lib/devise/rails.rb
+- lib/devise/rails/routes.rb
+- lib/devise/rails/warden_compat.rb
+- lib/devise/secret_key_finder.rb
+- lib/devise/strategies/authenticatable.rb
+- lib/devise/strategies/base.rb
+- lib/devise/strategies/database_authenticatable.rb
+- lib/devise/strategies/rememberable.rb
+- lib/devise/test/controller_helpers.rb
+- lib/devise/test/integration_helpers.rb
+- lib/devise/test_helpers.rb
+- lib/devise/time_inflector.rb
+- lib/devise/token_generator.rb
+- lib/devise/version.rb
+- lib/generators/active_record/devise_generator.rb
+- lib/generators/active_record/templates/migration.rb
+- lib/generators/active_record/templates/migration_existing.rb
+- lib/generators/devise/controllers_generator.rb
+- lib/generators/devise/devise_generator.rb
+- lib/generators/devise/install_generator.rb
+- lib/generators/devise/orm_helpers.rb
+- lib/generators/devise/views_generator.rb
+- lib/generators/mongoid/devise_generator.rb
+- lib/generators/templates/README
+- lib/generators/templates/controllers/README
+- lib/generators/templates/controllers/confirmations_controller.rb
+- lib/generators/templates/controllers/omniauth_callbacks_controller.rb
+- lib/generators/templates/controllers/passwords_controller.rb
+- lib/generators/templates/controllers/registrations_controller.rb
+- lib/generators/templates/controllers/sessions_controller.rb
+- lib/generators/templates/controllers/unlocks_controller.rb
+- lib/generators/templates/devise.rb
+- lib/generators/templates/markerb/confirmation_instructions.markerb
+- lib/generators/templates/markerb/email_changed.markerb
+- lib/generators/templates/markerb/password_change.markerb
+- lib/generators/templates/markerb/reset_password_instructions.markerb
+- lib/generators/templates/markerb/unlock_instructions.markerb
+- lib/generators/templates/simple_form_for/confirmations/new.html.erb
+- lib/generators/templates/simple_form_for/passwords/edit.html.erb
+- lib/generators/templates/simple_form_for/passwords/new.html.erb
+- lib/generators/templates/simple_form_for/registrations/edit.html.erb
+- lib/generators/templates/simple_form_for/registrations/new.html.erb
+- lib/generators/templates/simple_form_for/sessions/new.html.erb
+- lib/generators/templates/simple_form_for/unlocks/new.html.erb
+homepage: https://github.com/plataformatec/devise
+licenses:
+- MIT
+metadata: {}
+post_install_message: 
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.1.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.0.6
+signing_key: 
+specification_version: 4
+summary: Flexible authentication solution for Rails with Warden
+test_files: []

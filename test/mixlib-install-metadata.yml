@@ -1,0 +1,125 @@
+--- !ruby/object:Gem::Specification
+name: mixlib-install
+version: !ruby/object:Gem::Version
+  version: 3.12.19
+platform: ruby
+authors:
+- Thom May
+- Patrick Wright
+autorequire: 
+bindir: bin
+cert_chain: []
+date: 2022-06-01 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: mixlib-shellout
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+- !ruby/object:Gem::Dependency
+  name: mixlib-versioning
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+- !ruby/object:Gem::Dependency
+  name: thor
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: 
+email:
+- thom@chef.io
+- patrick@chef.io
+executables:
+- mixlib-install
+extensions: []
+extra_rdoc_files: []
+files:
+- Gemfile
+- LICENSE
+- Rakefile
+- bin/mixlib-install
+- lib/mixlib/install.rb
+- lib/mixlib/install/artifact_info.rb
+- lib/mixlib/install/backend.rb
+- lib/mixlib/install/backend/base.rb
+- lib/mixlib/install/backend/package_router.rb
+- lib/mixlib/install/cli.rb
+- lib/mixlib/install/dist.rb
+- lib/mixlib/install/generator.rb
+- lib/mixlib/install/generator/base.rb
+- lib/mixlib/install/generator/bourne.rb
+- lib/mixlib/install/generator/bourne/scripts/check_product.sh
+- lib/mixlib/install/generator/bourne/scripts/fetch_metadata.sh.erb
+- lib/mixlib/install/generator/bourne/scripts/fetch_package.sh
+- lib/mixlib/install/generator/bourne/scripts/helpers.sh.erb
+- lib/mixlib/install/generator/bourne/scripts/install_package.sh
+- lib/mixlib/install/generator/bourne/scripts/platform_detection.sh
+- lib/mixlib/install/generator/bourne/scripts/proxy_env.sh
+- lib/mixlib/install/generator/bourne/scripts/script_cli_parameters.sh.erb
+- lib/mixlib/install/generator/powershell.rb
+- lib/mixlib/install/generator/powershell/scripts/get_project_metadata.ps1.erb
+- lib/mixlib/install/generator/powershell/scripts/helpers.ps1.erb
+- lib/mixlib/install/generator/powershell/scripts/install_project.ps1.erb
+- lib/mixlib/install/generator/powershell/scripts/platform_detection.ps1
+- lib/mixlib/install/options.rb
+- lib/mixlib/install/product.rb
+- lib/mixlib/install/product_matrix.rb
+- lib/mixlib/install/script_generator.rb
+- lib/mixlib/install/util.rb
+- lib/mixlib/install/version.rb
+- mixlib-install.gemspec
+- support/install_command.ps1
+- support/install_command.sh
+homepage: https://github.com/chef/mixlib-install
+licenses:
+- Apache-2.0
+metadata: {}
+post_install_message: 
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.1.4
+signing_key: 
+specification_version: 4
+summary: A library for interacting with Chef Software Inc's software distribution
+  systems.
+test_files: []
