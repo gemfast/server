@@ -1,9 +1,9 @@
 package main
 
 import (
-	"net/http"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -23,7 +23,14 @@ func main() {
 	r.StaticFile("/specs.4.8.gz", "/var/gemfast/specs.4.8.gz")
 	r.StaticFile("/latest_specs.4.8.gz", "/var/gemfast/latest_specs.4.8.gz")
 	r.StaticFile("/prerelease_specs.4.8.gz", "/var/gemfast/prerelease_specs.4.8.gz")
-	// r.StaticFile("/quick/Marshal.4.8/mixlib-install-3.0.0.gemspec.rz", "/var/gemfast/quick/Marshal.4.8/mixlib-install-3.0.0.gemspec.rz")
+	r.GET("/quick/Marshal.4.8/*gemspec.rz", func(c *gin.Context) {
+		fname := c.Param("gemspec.rz")
+		c.FileAttachment(fmt.Sprintf("/var/gemfast/quick/Marshal.4.8/%s", fname), fname)
+	})
+	r.GET("/gems/*gem", func(c *gin.Context) {
+		fname := c.Param("gem")
+		c.FileAttachment(fmt.Sprintf("/var/gemfast/%s", fname), fname)
+	})
 	r.POST("/api/v1/gems", func(c *gin.Context) {
 		var bodyBytes []byte
 		if c.Request.Body != nil {
@@ -44,7 +51,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		i.UpdateIndex()
+		go i.UpdateIndex()
 		c.String(http.StatusOK, "Uploaded successfully")
 	})
 	// geminabox compat
@@ -67,8 +74,9 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		i.UpdateIndex()
+		go i.UpdateIndex()
 		c.String(http.StatusOK, "Uploaded successfully")
 	})
+	// go i.UpdateIndex()
 	r.Run()
 }
