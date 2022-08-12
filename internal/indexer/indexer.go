@@ -17,6 +17,7 @@ import (
 	"time"
 	"sync"
 
+	cfg "github.com/gscho/gemfast/internal/config"
 	"github.com/gscho/gemfast/internal/marshal"
 	"github.com/gscho/gemfast/internal/spec"
 )
@@ -46,13 +47,24 @@ const (
 	RUBY_PLATFORM = "ruby"
 )
 
+var indexer *Indexer
+
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
-func New(destDir string) *Indexer {
+func init() {
+	gemfastDir := fmt.Sprintf("%s", cfg.Get("dir"))
+	indexer = new(gemfastDir)
+}
+
+func Get() (*Indexer) {
+	return indexer
+}
+
+func new(destDir string) *Indexer {
 	marshalName := "Marshal.4.8"
 	indexer := Indexer{destDir: destDir}
 	indexer.dir = mkTempDir("gem_generate_index")
