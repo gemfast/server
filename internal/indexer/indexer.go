@@ -3,6 +3,7 @@ package indexer
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"crypto/sha1"
 	"fmt"
 	"io"
@@ -14,10 +15,13 @@ import (
 	"regexp"
 	"sort"
 	"time"
+	"sync"
 
 	"github.com/gscho/gemfast/internal/marshal"
 	"github.com/gscho/gemfast/internal/spec"
 )
+
+var lock sync.Mutex
 
 type Indexer struct {
 	destDir                string
@@ -64,7 +68,6 @@ func New(destDir string) *Indexer {
 	indexer.destSpecsIdx = fmt.Sprintf("%s/specs.4.8", indexer.destDir)
 	indexer.destLatestSpecsIdx = fmt.Sprintf("%s/latest_specs.4.8", indexer.destDir)
 	indexer.destPrereleaseSpecsIdx = fmt.Sprintf("%s/prerelease_specs.4.8", indexer.destDir)
-	indexer.files = []string{indexer.quickMarshalDir}
 	indexer.files = append(indexer.files, indexer.specsIdx)
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.specsIdx))
 	indexer.files = append(indexer.files, indexer.latestSpecsIdx)
@@ -125,42 +128,30 @@ func mapGemsToSpecs(gems []string) []*spec.Spec {
 	return specs
 }
 
-// func (i Indexer) buildMarshalGemspecs(specs []*spec.Spec) {
-// 	// var files []string
-// 	for _, s := range specs {
-// 		specFName := fmt.Sprintf("%s.gemspec.rz", s.OriginalName)
-// 		marshalName := fmt.Sprintf("%s/%s", i.quickMarshalDir, specFName)
-// 		fmt.Println(marshalName)
-// 		dump := marshal.Dump(s)
-// 		var in bytes.Buffer
-// 		w := zlib.NewWriter(&in)
-// 		w.Write(dump)
-// 		w.Close()
-
-// 		var out bytes.Buffer
-// 		r, _ := zlib.NewReader(&in)
-// 		io.Copy(&out, r)
-// 		// os.Stdout.Write(out.Bytes())
-
-// 		// Open a new file for writing only
-// 		file, err := os.OpenFile(
-// 			marshalName,
-// 			os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-// 			0666,
-// 		)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		defer file.Close()
-
-// 		// Write bytes to file
-// 		bytesWritten, err := file.Write(out.Bytes())
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		log.Printf("Wrote %d bytes.\n", bytesWritten)
-// 	}
-// }
+func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
+	for _, s := range specs {
+		specFName := fmt.Sprintf("%s.gemspec.rz", s.OriginalName)
+		var marshalName string
+		if update {
+			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDirBase, specFName)
+			marshalName = fmt.Sprintf("%s/%s", indexer.destDir, marshalName)
+		} else {
+			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDir, specFName)
+		}
+		
+		dump := marshal.DumpGemspecGemfast(s.GemMetadata)
+		var b bytes.Buffer
+		rz := zlib.NewWriter(&b)
+		defer rz.Close() //NOT SUFFICIENT, DON'T DEFER WRITER OBJECTS
+		if _, err := rz.Write(dump); err != nil {
+			panic(err)
+		}
+		// NEED TO CLOSE EXPLICITLY
+		err := rz.Close()
+		check(err)
+		ioutil.WriteFile(marshalName, b.Bytes(), 0666)
+	}
+}
 
 func (indexer Indexer) buildModernIndices(specs []*spec.Spec) {
 	pre, rel, latest := spec.PartitionSpecs(specs)
@@ -215,22 +206,19 @@ func gzipFile(src string) {
 
 func (indexer Indexer) buildIndicies() {
 	specs := mapGemsToSpecs(indexer.gemList())
-	// indexer.buildMarshalGemspecs(specs)
+	indexer.buildMarshalGemspecs(specs, false)
 	indexer.buildModernIndices(specs)
 	indexer.compressIndicies()
 }
 
 func (indexer Indexer) installIndicies() {
 	destName := fmt.Sprintf("%s/%s", indexer.destDir, indexer.quickMarshalDirBase)
-	fmt.Println(destName)
-	fmt.Println(filepath.Dir(destName))
 	err := os.MkdirAll(filepath.Dir(destName), os.ModePerm)
 	check(err)
 	err = os.RemoveAll(destName)
 	check(err)
 	err = os.Rename(indexer.quickMarshalDir, destName)
 	check(err)
-	indexer.files = indexer.files[1:]
 	reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
 	for _, file := range indexer.files {
 		file = reg.ReplaceAllString(file, "${1}")
@@ -320,6 +308,8 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 }
 
 func (indexer Indexer) UpdateIndex() {
+	lock.Lock()
+	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
 	var updatedGems []string
 	indexer.mkTempDirs()
@@ -348,7 +338,7 @@ func (indexer Indexer) UpdateIndex() {
 	specs := mapGemsToSpecs(updatedGems)
 	pre, rel, latest := spec.PartitionSpecs(specs)
 
-	// indexer.buildMarshalGemspecs(specs)
+	indexer.buildMarshalGemspecs(specs, true)
 
 	ch := make(chan int, 3)
 	go indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx, ch)
