@@ -3,16 +3,12 @@ package marshal
 import (
 	"bufio"
 	"bytes"
-
-	// "encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"os"
+	// "os"
 
 	"github.com/gscho/gemfast/internal/spec"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -49,8 +45,6 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(SYMBOL_SIGN)
 	encInt(buff, 18)
 	buff.WriteString("Gem::Specification")
-	// encInt(buff, 17)
-	// buff.WriteString("MyModule::MyClass")
 	encInt(buff, meta.NumInstanceVars()) // Number of instance variables
 
 	// Name
@@ -490,7 +484,6 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 }
 
 func LoadSpecs(src io.Reader) []*spec.Spec {
-	log.SetOutput(os.Stdout)
 	var specs []*spec.Spec
 	var slinktbl [][]byte
 	var olinktbl [][]byte
@@ -507,28 +500,28 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 	for i < int(osize) {
 		b, err := reader.ReadByte() // Array sign
 		if b != ARRAY_SIGN {
-			log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("LoadSpecs: excepted ARRAY_SIGN")
-			log.WithFields(log.Fields{"index": i}).Error("Failed index")
+			// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("LoadSpecs: excepted ARRAY_SIGN")
+			// log.WithFields(log.Fields{"index": i}).Error("Failed index")
 			panic(err)
 		}
 		isize, err := readInt(reader) // Inner array len (3)
 		if err != nil || isize != 3 {
-			log.WithFields(log.Fields{"len": isize}).Error("readInt failed to parse")
+			// log.WithFields(log.Fields{"len": isize}).Error("readInt failed to parse")
 			panic(err)
 		}
 		name, err := readName(reader, &slinktbl, &olinktbl)
 		if err != nil {
-			log.WithFields(log.Fields{"index": i, "name": name}).Error("readName failed to parse a string")
+			// log.WithFields(log.Fields{"index": i, "name": name}).Error("readName failed to parse a string")
 			panic(err)
 		}
 		version, err := readVersion(reader, &slinktbl, &olinktbl)
 		if err != nil {
-			log.WithFields(log.Fields{"index": i, "version": version}).Error("readVersion failed to parse a string")
+			// log.WithFields(log.Fields{"index": i, "version": version}).Error("readVersion failed to parse a string")
 			panic(err)
 		}
 		platform, err := readPlatform(reader, &slinktbl, &olinktbl)
 		if err != nil {
-			log.WithFields(log.Fields{"index": i, "platform": platform}).Error("readPlatform failed to parse a string")
+			// log.WithFields(log.Fields{"index": i, "platform": platform}).Error("readPlatform failed to parse a string")
 			panic(err)
 		}
 		olinktbl = append(olinktbl, []byte{'['})
@@ -538,7 +531,6 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 			Version:          version,
 			OriginalPlatform: platform,
 		}
-		// log.WithFields(log.Fields{"name": spec.Name, "version": spec.Version, "platform": spec.OriginalPlatform}).Info("Loaded spec")
 		specs = append(specs, &spec)
 		i++
 	}
@@ -552,12 +544,12 @@ func readName(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (string, 
 		return readObjectLink(r, olinktbl)
 	}
 	if b != IVAR_SIGN {
-		log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted IVAR_SIGN")
+		// log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted IVAR_SIGN")
 		return string(b), errors.New("")
 	}
 	b, err = r.ReadByte() // RAWSTRING
 	if b != RAWSTRING_SIGN {
-		log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted RAWSTRING_SIGN")
+		// log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted RAWSTRING_SIGN")
 		return string(b), errors.New("")
 	}
 	strlen, err := readInt(r) // String length
@@ -575,7 +567,7 @@ func readName(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (string, 
 	b, err = r.ReadByte() // 6
 	b, err = r.ReadByte() // Symbol sign
 	if b != SYMBOL_SIGN && b != SYMBOL_LINK_SIGN {
-		log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted SYMBOL_SIGN or SYMBOL_LINK_SIGN")
+		// log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted SYMBOL_SIGN or SYMBOL_LINK_SIGN")
 		return string(b), errors.New("")
 	}
 	if b == SYMBOL_LINK_SIGN {
@@ -588,7 +580,7 @@ func readName(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (string, 
 	}
 	b, err = r.ReadByte() // TRUE sign
 	if b != TRUE_SIGN {
-		log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted 'T'")
+		// log.WithFields(log.Fields{"actual": string(b)}).Error("readName: excepted 'T'")
 		return string(b), errors.New("")
 	}
 	return string(nameBytes), nil
@@ -603,12 +595,12 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 	}
 	if b != 'U' {
 		b, err = r.ReadByte()
-		log.WithFields(log.Fields{"actual": string(b)}).Error("readVersion: expected U")
+		// log.WithFields(log.Fields{"actual": string(b)}).Error("readVersion: expected U")
 		return string(b), errors.New("")
 	}
 	b, err = r.ReadByte() // Symbol sign
 	if b != SYMBOL_SIGN && b != SYMBOL_LINK_SIGN {
-		log.WithFields(log.Fields{"actual": string(b)}).Error("readVersion: excepted SYMBOL_SIGN or SYMBOL_LINK_SIGN")
+		// log.WithFields(log.Fields{"actual": string(b)}).Error("readVersion: excepted SYMBOL_SIGN or SYMBOL_LINK_SIGN")
 		return string(b), errors.New("")
 	}
 	if b == SYMBOL_LINK_SIGN {
@@ -626,18 +618,18 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 
 	b, err = r.ReadByte() // Array sign
 	if b != ARRAY_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted ARRAY_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted ARRAY_SIGN")
 		return string(b), errors.New("")
 	}
 	b, err = r.ReadByte() // Array len (6 aka 1)
 	b, err = r.ReadByte() // IVAR
 	if b != IVAR_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted IVAR_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted IVAR_SIGN")
 		return string(b), errors.New("")
 	}
 	b, err = r.ReadByte() // RAWSTRING
 	if b != RAWSTRING_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted RAWSTRING_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted RAWSTRING_SIGN")
 		return string(b), errors.New("")
 	}
 	strlen, _ := readInt(r) // Length of version string
@@ -651,13 +643,13 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 	b, err = r.ReadByte() // 1
 	b, err = r.ReadByte() // Symbol Link sign
 	if b != SYMBOL_LINK_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted SYMBOL_LINK_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted SYMBOL_LINK_SIGN")
 		return string(b), errors.New("")
 	}
 	b, err = r.ReadByte() // 0
 	b, err = r.ReadByte() // TRUE sign
 	if b != TRUE_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted TRUE_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readVersion: excepted TRUE_SIGN")
 		return string(b), errors.New("")
 	}
 	*olinktbl = append(*olinktbl, []byte{'['})
@@ -671,12 +663,12 @@ func readPlatform(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (stri
 		return readObjectLink(r, olinktbl)
 	}
 	if b != IVAR_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted IVAR_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted IVAR_SIGN")
 		return string(b), errors.New("")
 	}
 	b, err = r.ReadByte() // RAWSTR
 	if b != RAWSTRING_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted RAWSTRING_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted RAWSTRING_SIGN")
 		return string(b), errors.New("")
 	}
 	strlen, _ := readInt(r) // length of platform string
@@ -691,14 +683,14 @@ func readPlatform(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (stri
 	b, err = r.ReadByte() // 6
 	b, err = r.ReadByte() // Symbol link sign
 	if b != SYMBOL_LINK_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted SYMBOL_LINK_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted SYMBOL_LINK_SIGN")
 		return string(b), errors.New("")
 	}
 	b, err = r.ReadByte() // 0
 	// b, err = r.ReadByte() // E
 	b, err = r.ReadByte() // TRUE sign
 	if b != TRUE_SIGN {
-		log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted TRUE_SIGN")
+		// log.WithFields(log.Fields{"actual": b, "ASCII": string(b)}).Error("readPlatform: excepted TRUE_SIGN")
 		return string(b), errors.New("")
 	}
 	return string(platformBytes), err

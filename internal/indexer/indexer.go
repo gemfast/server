@@ -9,17 +9,18 @@ import (
 	"io"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
-	"time"
 	"sync"
+	"time"
 
 	cfg "github.com/gscho/gemfast/internal/config"
 	"github.com/gscho/gemfast/internal/marshal"
 	"github.com/gscho/gemfast/internal/spec"
+
+	"github.com/rs/zerolog/log"
 )
 
 var lock sync.Mutex
@@ -95,13 +96,19 @@ func (indexer Indexer) GenerateIndex() {
 	indexer.installIndicies()
 }
 
-func mkTempDir(name string) (tmpdir string) {
-	dir, err := os.MkdirTemp("/tmp", name)
-	check(err)
-	fmt.Println("Temp dir name:", dir)
-	err = os.Chmod(dir, 0700)
-	check(err)
-	return dir
+func mkTempDir(name string) (string) {
+	if dir, err := os.MkdirTemp("/tmp", name); err != nil {
+		log.Error().Err(err).Msg("failed to create tmpdir")
+		panic(err)
+	} else {
+		log.Debug().Msg(fmt.Sprintf("created tmpdir %s", dir))
+		err = os.Chmod(dir, 0700)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create tmpdir")
+			panic(err)
+		}
+		return dir
+	}
 }
 
 func (indexer Indexer) mkTempDirs() {
@@ -179,16 +186,17 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 		0666,
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Str("index", idxFile).Msg("failed to create modern index file")
+		panic(err)
 	}
 	defer file.Close()
 
 	dump := marshal.DumpSpecs(specs)
-	bytesWritten, err := file.Write(dump)
+	_, err = file.Write(dump)
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Str("index", idxFile).Msg("failed to write modern index")
+		panic(err)
 	}
-	log.Printf("Wrote %d bytes.\n", bytesWritten)
 }
 
 func (indexer Indexer) compressIndicies() {
@@ -306,16 +314,17 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 		0666,
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Str("index", dest).Msg("failed to create destination spec index file")
+		panic(err)
 	}
 	defer file.Close()
 
 	dump := marshal.DumpSpecs(uniqSpecsIdx)
 	bytesWritten, err := file.Write(dump)
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Str("index", dest).Msg("failed to write destination spec index file")
+		panic(err)
 	}
-	log.Printf("Wrote %d bytes.\n", bytesWritten)
 	ch<-bytesWritten
 }
 

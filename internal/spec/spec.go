@@ -4,12 +4,15 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Spec struct {
@@ -26,14 +29,15 @@ type Spec struct {
 func untar(full_name string, gemfile string) string {
 	tmpdir, err := os.MkdirTemp("/tmp", full_name)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to create tmpdir")
 		panic(err)
 	}
-	fmt.Println("Temp dir name:", tmpdir)
+	log.Debug().Msg(fmt.Sprintf("created tmpdir %s", tmpdir))
 	file, err := os.Open(gemfile)
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Error().Err(err).Str("file", gemfile).Msg("failed to open gemfile")
+		panic(err)
 	}
 	defer file.Close()
 
@@ -68,12 +72,12 @@ func untar(full_name string, gemfile string) string {
 
 		case tar.TypeReg:
 			// handle normal file
-			fmt.Println("Untarring :", filename)
+			log.Debug().Msg(fmt.Sprintf("untarring %s", filename))
 			writer, err := os.Create(filename)
 
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				log.Error().Err(err).Str("file", filename).Msg("failed to untar file")
+				panic(err)
 			}
 
 			io.Copy(writer, tarBallReader)
@@ -87,7 +91,7 @@ func untar(full_name string, gemfile string) string {
 
 			writer.Close()
 		default:
-			fmt.Printf("Unable to untar type : %c in file %s", header.Typeflag, filename)
+			log.Error().Err(err).Str("file", filename).Bytes("type", []byte{header.Typeflag}).Msg("unrecognized file type")
 		}
 	}
 	return tmpdir
