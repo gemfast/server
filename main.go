@@ -18,14 +18,17 @@ func init() {
 }
 
 func main() {
-	err := db.InitDB(); if err != nil {
+	err := db.InitDB()
+	if err != nil {
 		panic(err)
 	}
-	defer db.DB.Close() 
-	err = indexer.InitIndexer(); if err != nil {
+	defer db.DB.Close()
+	err = indexer.InitIndexer()
+	if err != nil {
 		panic(err)
 	}
-	err = api.Run(); if err != nil {
+	err = api.Run()
+	if err != nil {
 		panic(err)
 	}
 }

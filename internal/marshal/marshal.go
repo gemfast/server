@@ -30,12 +30,12 @@ const (
 	//   BIGNUM_SIGN      = 'l'
 	//   REGEXP_SIGN      = '/'
 	CLASS_SIGN              = 'c'
-	USER_CLASS_SIGN					= 'C'
+	USER_CLASS_SIGN         = 'C'
 	USER_DEFINED_SIGN       = 'u'
 	USER_MARSHAL_SIGN       = 'U'
 	EXTENDED_BY_MODULE_SIGN = 'e'
 	MODULE_SIGN             = 'm'
-	EMPTY_STRING = 26
+	EMPTY_STRING            = 26
 )
 
 func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
@@ -63,7 +63,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte('E')
 	buff.WriteByte(TRUE_SIGN)
 
-  // Version
+	// Version
 	buff.WriteByte(SYMBOL_SIGN)
 	buff.WriteByte(13)
 	buff.WriteByte(OBJECT_LINK_SIGN)
@@ -172,7 +172,6 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(SYMBOL_LINK_SIGN)
 	buff.WriteByte(7)
 	buff.WriteByte(TRUE_SIGN)
-	
 
 	// Original Platform
 	buff.WriteByte(SYMBOL_SIGN)
@@ -287,7 +286,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(ARRAY_SIGN)
 	arrlen = len(meta.RequirePaths)
 	encInt(buff, arrlen) // Length of array
-	for _,rp := range meta.RequirePaths {
+	for _, rp := range meta.RequirePaths {
 		buff.WriteByte(IVAR_SIGN)
 		buff.WriteByte(RAWSTRING_SIGN)
 		strlen = len(rp)

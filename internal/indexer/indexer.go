@@ -57,15 +57,16 @@ func check(e error) {
 	}
 }
 
-func Get() (Indexer) {
+func Get() Indexer {
 	return indexer
 }
 
-func InitIndexer() (error) {
+func InitIndexer() error {
 	gemfastDir := fmt.Sprintf("%s", viper.Get("dir"))
 	marshalName := "Marshal.4.8"
 	indexer = Indexer{destDir: gemfastDir}
-	tmpdir, err := mkTempDir("gem_generate_index"); if err != nil {
+	tmpdir, err := mkTempDir("gem_generate_index")
+	if err != nil {
 		return err
 	}
 	indexer.dir = tmpdir
@@ -97,7 +98,8 @@ func (indexer Indexer) GenerateIndex() {
 }
 
 func mkTempDir(name string) (string, error) {
-	dir, err := os.MkdirTemp("/tmp", name); if err != nil {
+	dir, err := os.MkdirTemp("/tmp", name)
+	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
 		return dir, err
 	}
@@ -155,7 +157,7 @@ func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 		} else {
 			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDir, specFName)
 		}
-		
+
 		dump := marshal.DumpGemspecGemfast(s.GemMetadata)
 		var b bytes.Buffer
 		rz := zlib.NewWriter(&b)
@@ -251,7 +253,7 @@ func (indexer Indexer) installIndicies() {
 	check(err)
 }
 
-func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string, ch chan<-int) {
+func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string, ch chan<- int) {
 	var specsIdx []*spec.Spec
 	file, err := os.Open(src)
 	check(err)
@@ -299,7 +301,7 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 			}
 		}
 	}
-	
+
 	sort.Slice(uniqSpecsIdx, func(i, j int) bool {
 		l := uniqSpecsIdx[i].Name + uniqSpecsIdx[i].Version + uniqSpecsIdx[i].OriginalPlatform
 		r := uniqSpecsIdx[j].Name + uniqSpecsIdx[j].Version + uniqSpecsIdx[j].OriginalPlatform
@@ -323,7 +325,7 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 		log.Error().Err(err).Str("index", dest).Msg("failed to write destination spec index file")
 		panic(err)
 	}
-	ch<-bytesWritten
+	ch <- bytesWritten
 }
 
 func (indexer Indexer) UpdateIndex() {
@@ -359,7 +361,7 @@ func (indexer Indexer) UpdateIndex() {
 
 	saveDependencies(specs)
 	indexer.buildMarshalGemspecs(specs, true)
-	
+
 	ch := make(chan int, 3)
 	go indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx, ch)
 	go indexer.updateSpecsIndex(latest, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx, ch)
@@ -388,11 +390,11 @@ func (indexer Indexer) UpdateIndex() {
 func saveDependencies(specs []*spec.Spec) {
 	for _, s := range specs {
 		d := models.Dependency{
-			Name: s.Name,
-			Number: s.Version,
+			Name:     s.Name,
+			Number:   s.Version,
 			Platform: s.OriginalPlatform,
 		}
-		for _, dep := range s.GemMetadata.Dependencies{
+		for _, dep := range s.GemMetadata.Dependencies {
 			for _, vc := range dep.Requirement.VersionConstraints {
 				d.Dependencies = append(d.Dependencies, []string{dep.Name, fmt.Sprintf("%s %s", vc.Constraint, vc.Version)})
 			}

@@ -29,7 +29,7 @@ func getGem(c *gin.Context) {
 	c.FileAttachment(filePath, fileName)
 }
 
-func saveAndReindex(tmpfile *os.File) (error) {
+func saveAndReindex(tmpfile *os.File) error {
 	s := spec.FromFile(tmpfile.Name())
 	filePath := fmt.Sprintf("%s/%s-%s.gem", viper.Get("dir"), s.Name, s.Version)
 	err := os.Rename(tmpfile.Name(), filePath)
@@ -94,5 +94,5 @@ func getDependenciesJSON(c *gin.Context) {
 			deps = append(deps, d)
 		}
 	}
-	c.JSON(http.StatusOK, deps)	
+	c.JSON(http.StatusOK, deps)
 }

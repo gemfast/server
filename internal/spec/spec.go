@@ -23,7 +23,7 @@ type Spec struct {
 	Version          string
 	PreRelease       bool
 	LoadedFrom       string
-	GemMetadata GemMetadata
+	GemMetadata      GemMetadata
 }
 
 func untar(full_name string, gemfile string) string {
@@ -120,54 +120,57 @@ func GunzipMetadata(path string) string {
 	return yaml
 }
 
-func ParseGemMetadata(yamlBytes []byte) (GemMetadata) {
+func ParseGemMetadata(yamlBytes []byte) GemMetadata {
 	var metadata GemMetadata
 	err := yaml.Unmarshal(yamlBytes, &metadata)
 	if err != nil {
 		panic(err)
 	}
 	// var email string
-	switch t := metadata.Email.(type){
-		case []interface{}: {
+	switch t := metadata.Email.(type) {
+	case []interface{}:
+		{
 			for _, entry := range t {
 				metadata.Emails = append(metadata.Emails, entry.(string))
 			}
 		}
-		case interface{}: {
+	case interface{}:
+		{
 			metadata.Emails = append(metadata.Emails, t.(string))
 		}
-		default:
-			panic(fmt.Sprintf("Unknown type: %T for email", t))
+	default:
+		panic(fmt.Sprintf("Unknown type: %T for email", t))
 	}
 
 	var c string
 	var v string
 	for i, dep := range metadata.Dependencies {
 		for _, req := range dep.Requirement.Requirements {
-			switch t := req.(type){
-				case []interface{}: {
-	      	for _, entry := range t {
-	      		if fmt.Sprintf("%T", entry) == "string" {
-	      		  c = fmt.Sprintf("%s", entry)
-	      	  } else {
-	      	  	vmap := entry.(map[string]interface{})
-	      	  	v = fmt.Sprintf("%s", vmap["version"])
-	      	  	 
-	      	  }
-	      	  if c != "" && v != "" {
-		      	  vc := VersionContraint{
-	      	  		Constraint: c,
-	      	  		Version: v,
-	      	  	}
-		      	  dep.Requirement.VersionConstraints = append(dep.Requirement.VersionConstraints, vc)
-		      	  c = ""
-		      	  v = ""
-		      	}
-	      	}
-	      }
-	      default:
-					panic(fmt.Sprintf("Unknown type: %T for gem requirement requirements", t))
-	    }
+			switch t := req.(type) {
+			case []interface{}:
+				{
+					for _, entry := range t {
+						if fmt.Sprintf("%T", entry) == "string" {
+							c = fmt.Sprintf("%s", entry)
+						} else {
+							vmap := entry.(map[string]interface{})
+							v = fmt.Sprintf("%s", vmap["version"])
+
+						}
+						if c != "" && v != "" {
+							vc := VersionContraint{
+								Constraint: c,
+								Version:    v,
+							}
+							dep.Requirement.VersionConstraints = append(dep.Requirement.VersionConstraints, vc)
+							c = ""
+							v = ""
+						}
+					}
+				}
+			default:
+				panic(fmt.Sprintf("Unknown type: %T for gem requirement requirements", t))
+			}
 		}
 		metadata.Dependencies[i] = dep
 	}
@@ -190,7 +193,7 @@ func FromFile(gemfile string) *Spec {
 		Version:          metadata.Version.Version,
 		PreRelease:       false,
 		LoadedFrom:       full,
-		GemMetadata: metadata,
+		GemMetadata:      metadata,
 	}
 	return &s
 }
