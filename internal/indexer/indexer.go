@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gscho/gemfast/internal/marshal"
+	"github.com/gscho/gemfast/internal/models"
 	"github.com/gscho/gemfast/internal/spec"
 	"github.com/spf13/viper"
 
@@ -356,8 +357,9 @@ func (indexer Indexer) UpdateIndex() {
 	specs := mapGemsToSpecs(updatedGems)
 	pre, rel, latest := spec.PartitionSpecs(specs)
 
+	saveDependencies(specs)
 	indexer.buildMarshalGemspecs(specs, true)
-
+	
 	ch := make(chan int, 3)
 	go indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx, ch)
 	go indexer.updateSpecsIndex(latest, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx, ch)
@@ -380,5 +382,21 @@ func (indexer Indexer) UpdateIndex() {
 		check(err)
 		err = os.Chtimes(destName, newestMtime, newestMtime)
 		check(err)
+	}
+}
+
+func saveDependencies(specs []*spec.Spec) {
+	for _, s := range specs {
+		d := models.Dependency{
+			Name: s.Name,
+			Number: s.Version,
+			Platform: s.OriginalPlatform,
+		}
+		for _, dep := range s.GemMetadata.Dependencies{
+			for _, vc := range dep.Requirement.VersionConstraints {
+				d.Dependencies = append(d.Dependencies, []string{dep.Name, fmt.Sprintf("%s %s", vc.Constraint, vc.Version)})
+			}
+		}
+		models.SetDependencies(d.Name, d)
 	}
 }

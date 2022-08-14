@@ -5,10 +5,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gscho/gemfast/internal/indexer"
+	"github.com/gscho/gemfast/internal/models"
 	"github.com/gscho/gemfast/internal/spec"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -74,4 +77,22 @@ func geminaboxUploadGem(c *gin.Context) {
 		panic(err)
 	}
 	c.String(http.StatusOK, "Uploaded successfully")
+}
+
+func getDependenciesJSON(c *gin.Context) {
+	gemQuery := c.Query("gems")
+	log.Info().Str("gems", gemQuery).Msg("received gems")
+	if gemQuery == "" {
+		c.Status(http.StatusOK)
+		return
+	}
+	gems := strings.Split(gemQuery, ",")
+	var deps []models.Dependency
+	for _, gem := range gems {
+		existingDeps, _ := models.GetDependencies(gem)
+		for _, d := range *existingDeps {
+			deps = append(deps, d)
+		}
+	}
+	c.JSON(http.StatusOK, deps)	
 }
