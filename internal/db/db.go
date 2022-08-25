@@ -7,9 +7,9 @@ import (
 
 const ROOT_BUCKET = "root"
 
-var DB *bolt.DB
+var BoltDB *bolt.DB
 
-func InitDB() error {
+func Connect() error {
 	db, err := bolt.Open("dev/gemfast.db", 0600, nil)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg("could not open dev/gemfast.db")
@@ -23,6 +23,6 @@ func InitDB() error {
 		}
 		return nil
 	})
-	DB = db
+	BoltDB = db
 	return nil
 }

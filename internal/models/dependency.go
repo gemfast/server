@@ -26,7 +26,7 @@ func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
 
 func GetDependencies(name string) (*[]Dependency, error) {
 	var existing []byte
-	db.DB.View(func(tx *bolt.Tx) error {
+	db.BoltDB.View(func(tx *bolt.Tx) error {
 		deps := tx.Bucket([]byte(db.ROOT_BUCKET)).Get([]byte(name))
 		existing = deps
 		fmt.Println(string(deps))
@@ -37,7 +37,7 @@ func GetDependencies(name string) (*[]Dependency, error) {
 
 func SetDependencies(name string, newDep Dependency) error {
 	var existing []byte
-	db.DB.View(func(tx *bolt.Tx) error {
+	db.BoltDB.View(func(tx *bolt.Tx) error {
 		deps := tx.Bucket([]byte(db.ROOT_BUCKET)).Get([]byte(name))
 		existing = deps
 		return nil
@@ -47,7 +47,7 @@ func SetDependencies(name string, newDep Dependency) error {
 		if err != nil {
 			return fmt.Errorf("could not marshal config json: %v", err)
 		}
-		err = db.DB.Update(func(tx *bolt.Tx) error {
+		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
 			err = tx.Bucket([]byte(db.ROOT_BUCKET)).Put([]byte(name), depBytes)
 			if err != nil {
 				return fmt.Errorf("could not set: %v", err)
@@ -65,7 +65,7 @@ func SetDependencies(name string, newDep Dependency) error {
 		if !hashed[newHash] {
 			*deps = append(*deps, newDep)
 			depBytes, _ := json.Marshal(*deps)
-			_ = db.DB.Update(func(tx *bolt.Tx) error {
+			_ = db.BoltDB.Update(func(tx *bolt.Tx) error {
 				err := tx.Bucket([]byte(db.ROOT_BUCKET)).Put([]byte(name), depBytes)
 				if err != nil {
 					return fmt.Errorf("could not set: %v", err)

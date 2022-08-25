@@ -18,11 +18,11 @@ func init() {
 }
 
 func main() {
-	err := db.InitDB()
+	err := db.Connect()
 	if err != nil {
 		panic(err)
 	}
-	defer db.DB.Close()
+	defer db.BoltDB.Close()
 	err = indexer.InitIndexer()
 	if err != nil {
 		panic(err)

@@ -23,6 +23,6 @@ func addRoutes(r *gin.Engine) {
 	r.GET("/gems/*gem", getGem)
 	r.POST("/api/v1/gems", uploadGem)
 	r.POST("/upload", geminaboxUploadGem)
-	// r.GET("/api/v1/dependencies", getDependencies)
+	r.GET("/api/v1/dependencies", getDependencies)
 	r.GET("/api/v1/dependencies.json", getDependenciesJSON)
 }
