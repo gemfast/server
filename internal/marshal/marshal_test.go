@@ -37,6 +37,34 @@ func TestDumpSpecs(t *testing.T) {
 	}
 }
 
+func TestDumpSpecsWithCaching(t *testing.T) {
+	rubyResult := "04085b075b084922136d69786c69622d696e7374616c6c063a064554553a1147656d3a3a56657273696f6e5b0649220c332e31322e3139063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054400849220972756279063b0054"
+	rubyBytes, _ := hex.DecodeString(rubyResult)
+	spec1 := spec.Spec{
+		Name:             "mixlib-install",
+		Version:          "3.12.19",
+		OriginalPlatform: "ruby",
+	}
+	spec2 := spec.Spec{
+		Name:             "mixlib-install",
+		Version:          "3.12.19",
+		OriginalPlatform: "ruby",
+	}
+	specs := []*spec.Spec{&spec1, &spec2}
+	dump := DumpSpecs(specs)
+	for i, b := range rubyBytes {
+		if i >= len(dump) {
+			// t.Errorf("%x", b)
+			t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
+			// os.Exit(1)
+		}
+		if dump[i] != b {
+			t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, dump[i], string(dump[i]), dump[i], i)
+			// os.Exit(1)
+		}
+	}
+}
+
 func TestDumpSpecsWithSameName(t *testing.T) {
 	rubyResult := "04085b085b0849220b646576697365063a064554553a1147656d3a3a56657273696f6e5b0649220a342e372e32063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220c332e31322e3139063b005449220972756279063b00545b0849220b646576697365063b0054553b065b0649220a342e372e31063b005449220972756279063b0054"
 	spec1 := spec.Spec{

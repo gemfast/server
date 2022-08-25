@@ -78,17 +78,17 @@ func encHash(buff *bytes.Buffer, size int, olinktbl map[string]int, linkidx *int
 	}
 }
 
-func encArray(buff *bytes.Buffer, size int, olinktbl map[string]int, linkidx *int) {
+func encArray(buff *bytes.Buffer, size int, olinktbl map[string]int, olinkidx *int) {
 	buff.WriteByte(ARRAY_SIGN)
 	arrlen := size
 	encInt(buff, arrlen)
 	if olinktbl[string([]byte{ARRAY_SIGN})] == 0 {
-		*linkidx += 1
-		olinktbl[string([]byte{ARRAY_SIGN})] = *linkidx
+		*olinkidx += 1
+		olinktbl[string([]byte{ARRAY_SIGN})] = *olinkidx
 	}
 }
 
-func encSymbol(buff *bytes.Buffer, symbol []byte, slinktbl map[string]int, linkidx *int) {
+func encSymbol(buff *bytes.Buffer, symbol []byte, slinktbl map[string]int, slinkidx *int) {
 	if slinktbl[string(symbol)] != 0 {
 		buff.WriteByte(SYMBOL_LINK_SIGN)
 		encInt(buff, slinktbl[string(symbol)]-1)
@@ -96,8 +96,8 @@ func encSymbol(buff *bytes.Buffer, symbol []byte, slinktbl map[string]int, linki
 		buff.WriteByte(SYMBOL_SIGN)
 		encInt(buff, (len(symbol)))
 		buff.Write(symbol)
-		*linkidx += 1
-		slinktbl[string(symbol)] = *linkidx
+		*slinkidx += 1
+		slinktbl[string(symbol)] = *slinkidx
 	}
 }
 
@@ -127,6 +127,23 @@ func encString(buff *bytes.Buffer, str string, olinktbl map[string]int, olinkidx
 		*olinkidx += 1
 		olinktbl[str] = *olinkidx
 		encSymbol(buff, []byte{'E'}, slinktbl, slinkidx)
+	}
+	buff.WriteByte(TRUE_SIGN)
+}
+
+func encGemVersion(buff *bytes.Buffer, version string, olinktbl map[string]int, olinkidx *int, slinktbl map[string]int, slinkidx *int) {
+	class := "Gem::Version"
+	key := class + version
+	if olinktbl[key] != 0 {
+		buff.WriteByte(OBJECT_LINK_SIGN)
+		encInt(buff, olinktbl[key]-1)
+	} else {
+		buff.WriteByte(USER_MARSHAL_SIGN)
+		encSymbol(buff, []byte("Gem::Version"), slinktbl, slinkidx)
+		encArray(buff, 1, olinktbl, olinkidx)
+		encString(buff, version, olinktbl, olinkidx, slinktbl, slinkidx)
+		*olinkidx += 1
+		olinktbl[key] = *olinkidx
 	}
 }
 
@@ -508,67 +525,18 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 
 // TODO: implement object links
 func DumpSpecs(specs []*spec.Spec) []byte {
+	slinkidx := 0
+	slinktbl := make(map[string]int)
+	olinkidx := 0
+	olinktbl := make(map[string]int)
 	buff := bytes.NewBuffer(nil)
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
-	buff.WriteByte(ARRAY_SIGN)
-	encInt(buff, len(specs))
-	// buff.WriteByte(byte(len(specs) + 5)) // Outer Array Len
-	for idx, spec := range specs {
-		buff.WriteByte(ARRAY_SIGN)
-		buff.WriteByte(8) // Inner Array Len (Always 3 for modern indicies)
-		s := spec.Name
-		// l := len(s) + 5
-
-		// String "chef-ruby-lvm-attrib"
-		buff.Write([]byte{IVAR_SIGN, RAWSTRING_SIGN})
-		encInt(buff, len(s))
-		buff.WriteString(s)
-		buff.WriteByte(6)
-		if idx == 0 {
-			buff.WriteByte(SYMBOL_SIGN)
-			buff.WriteByte(6)
-			buff.WriteString("E")
-		} else {
-			buff.WriteByte(SYMBOL_LINK_SIGN)
-			buff.WriteByte(0)
-		}
-		buff.WriteByte(TRUE_SIGN)
-
-		// Gem::Version.new("0.3.10")
-		class := "Gem::Version"
-		v := spec.Version
-		// l3 := len(class) + 5
-		buff.WriteByte(USER_MARSHAL_SIGN)
-		if idx == 0 {
-			buff.WriteByte(SYMBOL_SIGN)
-			encInt(buff, len(class))
-			buff.WriteString(class)
-		} else {
-			buff.WriteByte(SYMBOL_LINK_SIGN)
-			buff.WriteByte(6)
-		}
-		buff.WriteByte(ARRAY_SIGN)
-		buff.WriteByte(6) // Array Len
-		buff.Write([]byte{IVAR_SIGN, RAWSTRING_SIGN})
-		// buff.WriteByte(byte(len(v) + 5))
-		encInt(buff, len(v))
-		buff.WriteString(v)
-		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_LINK_SIGN)
-		buff.WriteByte(0)
-		buff.WriteByte(TRUE_SIGN)
-
-		// String "ruby"
-		s2 := spec.OriginalPlatform
-		// l2 := len(s2) + 5
-		buff.Write([]byte{IVAR_SIGN, RAWSTRING_SIGN})
-		// buff.WriteByte(byte(l2))
-		encInt(buff, len(s2))
-		buff.WriteString(s2)
-		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_LINK_SIGN)
-		buff.WriteByte(0)
-		buff.WriteByte(TRUE_SIGN)
+	encArray(buff, len(specs), olinktbl, &olinkidx)
+	for _, spec := range specs {
+		encArray(buff, 3, olinktbl, &olinkidx) // Inner Array Len (Always 3 for modern indicies)
+		encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
+		encGemVersion(buff, spec.Version, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	return buff.Bytes()
