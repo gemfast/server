@@ -1,0 +1,25 @@
+GEM
+  remote: http://localhost:8080/
+  specs:
+    chef-utils (17.10.0)
+      concurrent-ruby
+    concurrent-ruby (1.1.10)
+    mixlib-install (3.12.19)
+      mixlib-shellout
+      mixlib-versioning
+      thor
+    mixlib-shellout (3.2.7)
+      chef-utils
+    mixlib-versioning (1.2.12)
+    pg (1.4.3)
+    thor (1.2.1)
+
+PLATFORMS
+  x86_64-darwin-21
+
+DEPENDENCIES
+  mixlib-install
+  pg
+
+BUNDLED WITH
+   2.3.3

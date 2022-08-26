@@ -1,5 +1,6 @@
 source "http://localhost:8080"
 # gem "litterbox"
-# gem "mixlib-install"
+gem "mixlib-install"
 # gem "devise"
 gem "pg"
+# gem "mixlib-install"
