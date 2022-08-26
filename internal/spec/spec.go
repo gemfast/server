@@ -32,7 +32,7 @@ func untar(full_name string, gemfile string) string {
 		log.Error().Err(err).Msg("failed to create tmpdir")
 		panic(err)
 	}
-	log.Debug().Msg(fmt.Sprintf("created tmpdir %s", tmpdir))
+	log.Trace().Msg(fmt.Sprintf("created tmpdir %s", tmpdir))
 	file, err := os.Open(gemfile)
 
 	if err != nil {
@@ -72,7 +72,7 @@ func untar(full_name string, gemfile string) string {
 
 		case tar.TypeReg:
 			// handle normal file
-			log.Debug().Msg(fmt.Sprintf("untarring %s", filename))
+			log.Trace().Msg(fmt.Sprintf("untarring %s", filename))
 			writer, err := os.Create(filename)
 
 			if err != nil {

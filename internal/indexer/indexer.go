@@ -92,7 +92,7 @@ func InitIndexer() error {
 }
 
 func (indexer Indexer) GenerateIndex() {
-	indexer.mkTempDirs()
+	mkTempDirs(indexer.quickMarshalDir)
 	indexer.buildIndicies()
 	indexer.installIndicies()
 }
@@ -103,7 +103,7 @@ func mkTempDir(name string) (string, error) {
 		log.Error().Err(err).Msg("failed to create tmpdir")
 		return dir, err
 	}
-	log.Debug().Msg(fmt.Sprintf("created tmpdir %s", dir))
+	log.Trace().Msg(fmt.Sprintf("created tmpdir %s", dir))
 	err = os.Chmod(dir, 0700)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
@@ -111,14 +111,15 @@ func mkTempDir(name string) (string, error) {
 	return dir, err
 }
 
-func (indexer Indexer) mkTempDirs() {
-	err := os.MkdirAll(indexer.quickMarshalDir, os.ModePerm)
+func mkTempDirs(dir string) {
+	err := os.MkdirAll(dir, os.ModePerm)
 	check(err)
 }
 
-func (indexer Indexer) gemList() []string {
+func gemList() []string {
 	var gems []string
-	filepath.WalkDir(indexer.destDir, func(s string, d fs.DirEntry, e error) error {
+	gemDir := fmt.Sprintf("%s", viper.Get("gem_dir"))
+	filepath.WalkDir(gemDir, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e
 		}
@@ -137,7 +138,7 @@ func mapGemsToSpecs(gems []string) []*spec.Spec {
 		fi, err := os.Stat(g)
 		check(err)
 		if fi.Size() == 0 {
-			fmt.Println("Skipping zero-length gem")
+			log.Trace().Str("gem", g).Msg("skipping zero-length gem")
 			continue
 		} else {
 			s = spec.FromFile(g)
@@ -225,7 +226,7 @@ func gzipFile(src string) {
 }
 
 func (indexer Indexer) buildIndicies() {
-	specs := mapGemsToSpecs(indexer.gemList())
+	specs := mapGemsToSpecs(gemList())
 	indexer.buildMarshalGemspecs(specs, false)
 	indexer.buildModernIndices(specs)
 	indexer.compressIndicies()
@@ -264,7 +265,7 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 	buff := bytes.NewBuffer(out)
 
 	specsIdx = marshal.LoadSpecs(buff)
-	fmt.Println(len(specsIdx))
+	log.Debug().Str("name", src).Int("len", len(specsIdx)).Msg("loaded index")
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
 		if platform == "" {
@@ -333,13 +334,13 @@ func (indexer Indexer) UpdateIndex() {
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
 	var updatedGems []string
-	indexer.mkTempDirs()
+	mkTempDirs(indexer.quickMarshalDir)
 	fi, err := os.Stat(indexer.destSpecsIdx)
 	check(err)
 	specsMtime := fi.ModTime()
 	newestMtime, err := time.Parse(time.RFC3339, EPOCH)
 	check(err)
-	for _, gem := range indexer.gemList() {
+	for _, gem := range gemList() {
 		fi, err := os.Stat(gem)
 		check(err)
 		gemMtime := fi.ModTime()
@@ -352,7 +353,7 @@ func (indexer Indexer) UpdateIndex() {
 	}
 
 	if len(updatedGems) == 0 {
-		fmt.Println("No new gems")
+		log.Trace().Msg("no new gems")
 		return
 	}
 

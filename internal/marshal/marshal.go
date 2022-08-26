@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	// "os"
-
 	"github.com/gscho/gemfast/internal/models"
 	"github.com/gscho/gemfast/internal/spec"
 )
@@ -17,20 +15,18 @@ const (
 	SUPPORTED_MAJOR_VERSION = 4
 	SUPPORTED_MINOR_VERSION = 8
 
-	NIL_SIGN         = '0'
-	TRUE_SIGN        = 'T'
-	FALSE_SIGN       = 'F'
-	FIXNUM_SIGN      = 'i'
-	RAWSTRING_SIGN   = '"'
-	SYMBOL_SIGN      = ':'
-	SYMBOL_LINK_SIGN = ';'
-	OBJECT_SIGN      = 'o'
-	OBJECT_LINK_SIGN = '@'
-	ARRAY_SIGN       = '['
-	IVAR_SIGN        = 'I'
-	HASH_SIGN        = '{'
-	//   BIGNUM_SIGN      = 'l'
-	//   REGEXP_SIGN      = '/'
+	NIL_SIGN                = '0'
+	TRUE_SIGN               = 'T'
+	FALSE_SIGN              = 'F'
+	FIXNUM_SIGN             = 'i'
+	RAWSTRING_SIGN          = '"'
+	SYMBOL_SIGN             = ':'
+	SYMBOL_LINK_SIGN        = ';'
+	OBJECT_SIGN             = 'o'
+	OBJECT_LINK_SIGN        = '@'
+	ARRAY_SIGN              = '['
+	IVAR_SIGN               = 'I'
+	HASH_SIGN               = '{'
 	CLASS_SIGN              = 'c'
 	USER_CLASS_SIGN         = 'C'
 	USER_DEFINED_SIGN       = 'u'
@@ -40,33 +36,49 @@ const (
 	EMPTY_STRING            = 26
 )
 
-func DumpBundlerDeps(deps []models.Dependency) []byte {
-	slinkidx := 0
-	slinktbl := make(map[string]int)
-	olinkidx := 0
-	olinktbl := make(map[string]int)
-	buff := bytes.NewBuffer(nil)
-	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
-	encArray(buff, len(deps), olinktbl, &olinkidx)
-	for _, dep := range deps {
-		encHash(buff, 4, olinktbl, &olinkidx)
-		encSymbol(buff, []byte("name"), slinktbl, &slinkidx)
-		encStringNoCache(buff, dep.Name, &olinkidx, slinktbl, &slinkidx)
-		encSymbol(buff, []byte("number"), slinktbl, &slinkidx)
-		encStringNoCache(buff, dep.Number, &olinkidx, slinktbl, &slinkidx)
-		encSymbol(buff, []byte("platform"), slinktbl, &slinkidx)
-		encStringNoCache(buff, dep.Platform, &olinkidx, slinktbl, &slinkidx)
-		encSymbol(buff, []byte("dependencies"), slinktbl, &slinkidx)
+func encInt(buff *bytes.Buffer, i int) error {
+	var len int
 
-		encArray(buff, len(dep.Dependencies), olinktbl, &olinkidx)
-		for _, depArr := range dep.Dependencies {
-			encArray(buff, len(depArr), olinktbl, &olinkidx)
-			for _, d := range depArr {
-				encStringNoCache(buff, d, &olinkidx, slinktbl, &slinkidx)
-			}
+	if i == 0 {
+		return buff.WriteByte(0)
+	} else if 0 < i && i < 123 {
+		return buff.WriteByte(byte(i + 5))
+	} else if -124 < i && i <= -1 {
+		return buff.WriteByte(byte(i - 5))
+	} else if 122 < i && i <= 0xff {
+		len = 1
+	} else if 0xff < i && i <= 0xffff {
+		len = 2
+	} else if 0xffff < i && i <= 0xffffff {
+		len = 3
+	} else if 0xffffff < i && i <= 0x3fffffff {
+		//for compatibility with 32bit Ruby, Fixnum should be less than 1073741824
+		len = 4
+	} else if -0x100 <= i && i < -123 {
+		len = -1
+	} else if -0x10000 <= i && i < -0x100 {
+		len = -2
+	} else if -0x1000000 <= i && i < -0x100000 {
+		len = -3
+	} else if -0x40000000 <= i && i < -0x1000000 {
+		//for compatibility with 32bit Ruby, Fixnum should be greater than -1073741825
+		len = -4
+	}
+
+	if err := buff.WriteByte(byte(len)); err != nil {
+		return err
+	}
+	if len < 0 {
+		len = -len
+	}
+
+	for c := 0; c < len; c++ {
+		if err := buff.WriteByte(byte(i >> uint(8*c) & 0xff)); err != nil {
+			return err
 		}
 	}
-	return buff.Bytes()
+
+	return nil
 }
 
 func encHash(buff *bytes.Buffer, size int, olinktbl map[string]int, linkidx *int) {
@@ -86,6 +98,14 @@ func encArray(buff *bytes.Buffer, size int, olinktbl map[string]int, olinkidx *i
 		*olinkidx += 1
 		olinktbl[string([]byte{ARRAY_SIGN})] = *olinkidx
 	}
+}
+
+func encArrayAndIncrementIndex(buff *bytes.Buffer, size int, olinktbl map[string]int, olinkidx *int) {
+	buff.WriteByte(ARRAY_SIGN)
+	arrlen := size
+	encInt(buff, arrlen)
+	*olinkidx += 1
+	olinktbl[string([]byte{ARRAY_SIGN})] = *olinkidx
 }
 
 func encSymbol(buff *bytes.Buffer, symbol []byte, slinktbl map[string]int, slinkidx *int) {
@@ -139,12 +159,58 @@ func encGemVersion(buff *bytes.Buffer, version string, olinktbl map[string]int, 
 		encInt(buff, olinktbl[key]-1)
 	} else {
 		buff.WriteByte(USER_MARSHAL_SIGN)
-		encSymbol(buff, []byte("Gem::Version"), slinktbl, slinkidx)
-		encArray(buff, 1, olinktbl, olinkidx)
-		encString(buff, version, olinktbl, olinkidx, slinktbl, slinkidx)
 		*olinkidx += 1
 		olinktbl[key] = *olinkidx
+		encSymbol(buff, []byte("Gem::Version"), slinktbl, slinkidx)
+		encArrayAndIncrementIndex(buff, 1, olinktbl, olinkidx)
+		encStringNoCache(buff, version, olinkidx, slinktbl, slinkidx)
 	}
+}
+
+func DumpBundlerDeps(deps []models.Dependency) ([]byte, error) {
+	slinkidx := 0
+	slinktbl := make(map[string]int)
+	olinkidx := 0
+	olinktbl := make(map[string]int)
+	buff := bytes.NewBuffer(nil)
+	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
+	encArray(buff, len(deps), olinktbl, &olinkidx)
+	for _, dep := range deps {
+		encHash(buff, 4, olinktbl, &olinkidx)
+		encSymbol(buff, []byte("name"), slinktbl, &slinkidx)
+		encStringNoCache(buff, dep.Name, &olinkidx, slinktbl, &slinkidx)
+		encSymbol(buff, []byte("number"), slinktbl, &slinkidx)
+		encStringNoCache(buff, dep.Number, &olinkidx, slinktbl, &slinkidx)
+		encSymbol(buff, []byte("platform"), slinktbl, &slinkidx)
+		encStringNoCache(buff, dep.Platform, &olinkidx, slinktbl, &slinkidx)
+		encSymbol(buff, []byte("dependencies"), slinktbl, &slinkidx)
+		encArrayAndIncrementIndex(buff, len(dep.Dependencies), olinktbl, &olinkidx)
+		for _, depArr := range dep.Dependencies {
+			encArrayAndIncrementIndex(buff, len(depArr), olinktbl, &olinkidx)
+			for _, d := range depArr {
+				encStringNoCache(buff, d, &olinkidx, slinktbl, &slinkidx)
+			}
+		}
+	}
+	return buff.Bytes(), nil
+}
+
+func DumpSpecs(specs []*spec.Spec) []byte {
+	slinkidx := 0
+	slinktbl := make(map[string]int)
+	olinkidx := 0
+	olinktbl := make(map[string]int)
+	buff := bytes.NewBuffer(nil)
+	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
+	encArray(buff, len(specs), olinktbl, &olinkidx)
+	for _, spec := range specs {
+		encArrayAndIncrementIndex(buff, 3, olinktbl, &olinkidx) // Inner Array Len (Always 3 for modern indicies)
+		encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
+		encGemVersion(buff, spec.Version, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
+	}
+
+	return buff.Bytes()
 }
 
 func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
@@ -519,26 +585,6 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(7)
 	buff.WriteByte(TRUE_SIGN)
 
-	// fmt.Println(hex.EncodeToString(buff.Bytes()))
-	return buff.Bytes()
-}
-
-// TODO: implement object links
-func DumpSpecs(specs []*spec.Spec) []byte {
-	slinkidx := 0
-	slinktbl := make(map[string]int)
-	olinkidx := 0
-	olinktbl := make(map[string]int)
-	buff := bytes.NewBuffer(nil)
-	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
-	encArray(buff, len(specs), olinktbl, &olinkidx)
-	for _, spec := range specs {
-		encArray(buff, 3, olinktbl, &olinkidx) // Inner Array Len (Always 3 for modern indicies)
-		encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
-		encGemVersion(buff, spec.Version, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
-	}
-
 	return buff.Bytes()
 }
 
@@ -559,28 +605,22 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 	for i < int(osize) {
 		b, err := reader.ReadByte() // Array sign
 		if b != ARRAY_SIGN {
-
-
 			panic(err)
 		}
 		isize, err := readInt(reader) // Inner array len (3)
 		if err != nil || isize != 3 {
-
 			panic(err)
 		}
 		name, err := readName(reader, &slinktbl, &olinktbl)
 		if err != nil {
-
 			panic(err)
 		}
 		version, err := readVersion(reader, &slinktbl, &olinktbl)
 		if err != nil {
-
 			panic(err)
 		}
 		platform, err := readPlatform(reader, &slinktbl, &olinktbl)
 		if err != nil {
-
 			panic(err)
 		}
 		olinktbl = append(olinktbl, []byte{'['})
@@ -775,49 +815,4 @@ func readInt(r *bufio.Reader) (int, error) {
 		}
 	}
 	return result, nil
-}
-
-func encInt(buff *bytes.Buffer, i int) error {
-	var len int
-
-	if i == 0 {
-		return buff.WriteByte(0)
-	} else if 0 < i && i < 123 {
-		return buff.WriteByte(byte(i + 5))
-	} else if -124 < i && i <= -1 {
-		return buff.WriteByte(byte(i - 5))
-	} else if 122 < i && i <= 0xff {
-		len = 1
-	} else if 0xff < i && i <= 0xffff {
-		len = 2
-	} else if 0xffff < i && i <= 0xffffff {
-		len = 3
-	} else if 0xffffff < i && i <= 0x3fffffff {
-		//for compatibility with 32bit Ruby, Fixnum should be less than 1073741824
-		len = 4
-	} else if -0x100 <= i && i < -123 {
-		len = -1
-	} else if -0x10000 <= i && i < -0x100 {
-		len = -2
-	} else if -0x1000000 <= i && i < -0x100000 {
-		len = -3
-	} else if -0x40000000 <= i && i < -0x1000000 {
-		//for compatibility with 32bit Ruby, Fixnum should be greater than -1073741825
-		len = -4
-	}
-
-	if err := buff.WriteByte(byte(len)); err != nil {
-		return err
-	}
-	if len < 0 {
-		len = -len
-	}
-
-	for c := 0; c < len; c++ {
-		if err := buff.WriteByte(byte(i >> uint(8*c) & 0xff)); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

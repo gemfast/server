@@ -15,7 +15,6 @@ func Run() error {
 
 func addRoutes(r *gin.Engine) {
 	r.HEAD("/", head)
-	fmt.Println(fmt.Sprintf("%s/specs.4.8.gz", viper.Get("dir")))
 	r.StaticFile("/specs.4.8.gz", fmt.Sprintf("%s/specs.4.8.gz", viper.Get("dir")))
 	r.StaticFile("/latest_specs.4.8.gz", fmt.Sprintf("%s/latest_specs.4.8.gz", viper.Get("dir")))
 	r.StaticFile("/prerelease_specs.4.8.gz", fmt.Sprintf("%s/prerelease_specs.4.8.gz", viper.Get("dir")))

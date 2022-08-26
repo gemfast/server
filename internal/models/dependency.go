@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/gscho/gemfast/internal/db"
@@ -26,12 +27,17 @@ func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
 
 func GetDependencies(name string) (*[]Dependency, error) {
 	var existing []byte
-	db.BoltDB.View(func(tx *bolt.Tx) error {
+	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		deps := tx.Bucket([]byte(db.ROOT_BUCKET)).Get([]byte(name))
+		if deps == nil {
+			return errors.New("dependencies not found")
+		}
 		existing = deps
-		fmt.Println(string(deps))
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return DependenciesFromBytes(existing)
 }
 
