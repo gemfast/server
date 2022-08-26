@@ -163,6 +163,7 @@ func encGemVersion(buff *bytes.Buffer, version string, olinktbl map[string]int, 
 		olinktbl[key] = *olinkidx
 		encSymbol(buff, []byte("Gem::Version"), slinktbl, slinkidx)
 		encArrayAndIncrementIndex(buff, 1, olinktbl, olinkidx)
+		// encString(buff, version, olinktbl, olinkidx, slinktbl, slinkidx)
 		encStringNoCache(buff, version, olinkidx, slinktbl, slinkidx)
 	}
 }
@@ -195,6 +196,7 @@ func DumpBundlerDeps(deps []models.Dependency) ([]byte, error) {
 	return buff.Bytes(), nil
 }
 
+//TODO: Encode strings and cache them. This reduces the spec index sizes by roughly 1/2
 func DumpSpecs(specs []*spec.Spec) []byte {
 	slinkidx := 0
 	slinktbl := make(map[string]int)
@@ -205,8 +207,10 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	encArray(buff, len(specs), olinktbl, &olinkidx)
 	for _, spec := range specs {
 		encArrayAndIncrementIndex(buff, 3, olinktbl, &olinkidx) // Inner Array Len (Always 3 for modern indicies)
+		// encString(buff, spec.Name, olinktbl, &olinkidx, slinktbl, &slinkidx)
 		encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
 		encGemVersion(buff, spec.Version, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		// encString(buff, spec.OriginalPlatform, olinktbl, &olinkidx, slinktbl, &slinkidx)
 		encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
 	}
 
@@ -588,6 +592,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	return buff.Bytes()
 }
 
+//TODO: Fix reads so "_" gem doesnt end up as "\fGem::Version"
 func LoadSpecs(src io.Reader) []*spec.Spec {
 	var specs []*spec.Spec
 	var slinktbl [][]byte
@@ -690,11 +695,11 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 	}
 	if b != 'U' {
 		b, err = r.ReadByte()
-		return string(b), errors.New("")
+		return string(b), errors.New("not u")
 	}
 	b, err = r.ReadByte() // Symbol sign
 	if b != SYMBOL_SIGN && b != SYMBOL_LINK_SIGN {
-		return string(b), errors.New("")
+		return string(b), errors.New("not symbol or link")
 	}
 	if b == SYMBOL_LINK_SIGN {
 		b, err = r.ReadByte() // 0
@@ -711,16 +716,16 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 
 	b, err = r.ReadByte() // Array sign
 	if b != ARRAY_SIGN {
-		return string(b), errors.New("")
+		return string(b), errors.New("not array")
 	}
 	b, err = r.ReadByte() // Array len (6 aka 1)
 	b, err = r.ReadByte() // IVAR
 	if b != IVAR_SIGN {
-		return string(b), errors.New("")
+		return string(b), errors.New("not ivar")
 	}
 	b, err = r.ReadByte() // RAWSTRING
 	if b != RAWSTRING_SIGN {
-		return string(b), errors.New("")
+		return string(b), errors.New("not string")
 	}
 	strlen, _ := readInt(r) // Length of version string
 	i = 0

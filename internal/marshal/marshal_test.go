@@ -17,11 +17,11 @@ func TestDumpSpecsWithMultiPlatforms(t *testing.T) {
 	rubyResult := "04085b0a5b0849220877646d063a064554553a1147656d3a3a56657273696f6e5b0649220a302e302e31063b005449220972756279063b00545b0849220877646d063b0054553b065b0649220a302e302e32063b005449220b6d696e673332063b00545b0849220877646d063b0054400e4922107838362d6d696e67773332063b00545b0849220877646d063b0054553b065b0649220a302e312e31063b005449220972756279063b00545b0849220877646d063b0054553b065b0649220a302e312e30063b005449220972756279063b0054"
 	rubyBytes, _ := hex.DecodeString(rubyResult)
 	testSpecs := [][]string{
-	  []string{"wdm", "0.0.1", "ruby"},
-	  []string{"wdm", "0.0.2", "ming32"},
-	  []string{"wdm", "0.0.2", "x86-mingw32"},
-	  []string{"wdm", "0.1.1", "ruby"},
-	  []string{"wdm", "0.1.0", "ruby"},
+		[]string{"wdm", "0.0.1", "ruby"},
+		[]string{"wdm", "0.0.2", "ming32"},
+		[]string{"wdm", "0.0.2", "x86-mingw32"},
+		[]string{"wdm", "0.1.1", "ruby"},
+		[]string{"wdm", "0.1.0", "ruby"},
 	}
 
 	var specs []*spec.Spec
@@ -78,7 +78,7 @@ func TestDumpSpecs(t *testing.T) {
 			OriginalPlatform: "ruby",
 		})
 	}
-	
+
 	b := DumpSpecs(specs)
 	if hex.EncodeToString(b) != rubyResult {
 		t.Error("Dump does not match ruby result")
@@ -98,7 +98,7 @@ func TestDumpSpecsWithCaching(t *testing.T) {
 		Version:          "3.12.19",
 		OriginalPlatform: "ruby",
 	}
-	
+
 	specs := []*spec.Spec{&spec1, &spec2}
 	dump := DumpSpecs(specs)
 	for i, b := range rubyBytes {
@@ -239,7 +239,7 @@ func TestDumpBundlerDeps(t *testing.T) {
 		Dependencies: [][]string{[]string{"mixlib-shellout", ">= 0"}, []string{"mixlib-versioning", ">= 0"}, []string{"thor", ">= 0"}},
 	}
 	deps = append(deps, d2)
-	bd := DumpBundlerDeps(deps)
+	bd, _ := DumpBundlerDeps(deps)
 	for i, b := range rubyBytes {
 		if i >= len(bd) {
 			// t.Errorf("%x", b)
