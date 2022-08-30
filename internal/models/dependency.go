@@ -28,7 +28,7 @@ func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
 func GetDependencies(name string) (*[]Dependency, error) {
 	var existing []byte
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		deps := tx.Bucket([]byte(db.ROOT_BUCKET)).Get([]byte(name))
+		deps := tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Get([]byte(name))
 		if deps == nil {
 			return errors.New("dependencies not found")
 		}
@@ -44,17 +44,17 @@ func GetDependencies(name string) (*[]Dependency, error) {
 func SetDependencies(name string, newDep Dependency) error {
 	var existing []byte
 	db.BoltDB.View(func(tx *bolt.Tx) error {
-		deps := tx.Bucket([]byte(db.ROOT_BUCKET)).Get([]byte(name))
+		deps := tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Get([]byte(name))
 		existing = deps
 		return nil
 	})
 	if existing == nil {
 		depBytes, err := json.Marshal([]Dependency{newDep})
 		if err != nil {
-			return fmt.Errorf("could not marshal config json: %v", err)
+			return fmt.Errorf("could not marshal dependencies to json: %v", err)
 		}
 		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-			err = tx.Bucket([]byte(db.ROOT_BUCKET)).Put([]byte(name), depBytes)
+			err = tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)
 			if err != nil {
 				return fmt.Errorf("could not set: %v", err)
 			}
@@ -72,7 +72,7 @@ func SetDependencies(name string, newDep Dependency) error {
 			*deps = append(*deps, newDep)
 			depBytes, _ := json.Marshal(*deps)
 			_ = db.BoltDB.Update(func(tx *bolt.Tx) error {
-				err := tx.Bucket([]byte(db.ROOT_BUCKET)).Put([]byte(name), depBytes)
+				err := tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)
 				if err != nil {
 					return fmt.Errorf("could not set: %v", err)
 				}

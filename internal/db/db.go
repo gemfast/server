@@ -1,28 +1,44 @@
 package db
 
 import (
+	"fmt"
+
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
-const ROOT_BUCKET = "root"
+const (
+	DEPENDENCY_BUCKET = "dependency"
+	USER_BUCKET       = "user"
+)
 
 var BoltDB *bolt.DB
 
 func Connect() error {
-	db, err := bolt.Open("dev/gemfast.db", 0600, nil)
+	dbFile := fmt.Sprintf("%s/gemfast.db", viper.Get("db_dir"))
+	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
-		log.Logger.Error().Err(err).Msg("could not open dev/gemfast.db")
+		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could not open %s", dbFile))
 		return err
 	}
-	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(ROOT_BUCKET))
+	BoltDB = db
+	createBucket(DEPENDENCY_BUCKET)
+	createBucket(USER_BUCKET)
+	return nil
+}
+
+func createBucket(bucket string) {
+	err := BoltDB.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(bucket))
 		if err != nil {
-			log.Error().Err(err).Msg("could not create root bucket")
+			log.Error().Err(err).Msg(fmt.Sprintf("could not create %s bucket", bucket))
 			return err
 		}
+		log.Logger.Trace().Msg(fmt.Sprintf("created %s bucket", bucket))
 		return nil
 	})
-	BoltDB = db
-	return nil
+	if err != nil {
+		panic(err)
+	}
 }
