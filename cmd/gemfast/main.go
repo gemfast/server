@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gscho/gemfast/internal/api"
 	"github.com/gscho/gemfast/internal/db"
@@ -16,7 +17,8 @@ func init() {
 	viper.SetEnvPrefix("GEMFAST")
 	viper.SetDefault("dir", "/var/gemfast")
 	viper.SetDefault("gem_dir", fmt.Sprintf("%s/gems", viper.Get("dir")))
-	viper.SetDefault("db_dir", fmt.Sprintf("db"))
+	viper.SetDefault("db_dir", "db")
+	viper.SetDefault("auth", "local")
 	viper.AutomaticEnv()
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -29,9 +31,15 @@ func main() {
 	}
 	defer db.BoltDB.Close()
 	log.Info().Msg("successfully connected to database")
-	err = models.CreateAdminIfNotExists()
+	err = models.CreateAdminUserIfNotExists()
 	if err != nil {
 		panic(err)
+	}
+	if strings.ToLower(viper.Get("auth").(string)) == "local" {
+		err = models.CreateLocalUsers()
+		if err != nil {
+			panic(err)
+		}
 	}
 	err = indexer.InitIndexer()
 	if err != nil {
