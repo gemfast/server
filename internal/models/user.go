@@ -202,7 +202,7 @@ func getAdminPassword() []byte {
 }
 
 func generatePassword() (string, error) {
-	res, err := password.Generate(32, 10, 10, false, false)
+	res, err := password.Generate(32, 10, 0, false, false)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to generate an admin password")
 		return "", err
