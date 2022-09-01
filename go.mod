@@ -6,8 +6,10 @@ require (
 	github.com/appleboy/gin-jwt/v2 v2.8.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/rs/zerolog v1.27.0
+	github.com/sethvargo/go-password v0.2.0
 	github.com/spf13/viper v1.12.0
 	go.etcd.io/bbolt v1.3.6
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -30,14 +32,12 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
-	github.com/sethvargo/go-password v0.2.0 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/text v0.3.7 // indirect
