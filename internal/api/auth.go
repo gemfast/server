@@ -22,7 +22,7 @@ func initAuthMiddleware() (*jwt.GinJWTMiddleware, error) {
 		Realm:       "gemfast",
 		Key:         []byte("secret key"),
 		Timeout:     time.Hour,
-		MaxRefresh:  time.Hour,
+		MaxRefresh:  time.Duration(time.Now().Year()),
 		IdentityKey: identityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(*models.User); ok {
