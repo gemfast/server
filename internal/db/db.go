@@ -25,6 +25,7 @@ func Connect() error {
 	BoltDB = db
 	createBucket(DEPENDENCY_BUCKET)
 	createBucket(USER_BUCKET)
+	log.Info().Str("db", dbFile).Msg("successfully connected to database")
 	return nil
 }
 
