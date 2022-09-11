@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -88,6 +89,7 @@ func InitIndexer() error {
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.latestSpecsIdx))
 	indexer.files = append(indexer.files, indexer.prereleaseSpecsIdx)
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.prereleaseSpecsIdx))
+	log.Info().Str("dir", indexer.dir).Msg("indexer initialized")
 	return nil
 }
 
@@ -201,9 +203,12 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 }
 
 func (indexer Indexer) compressIndicies() {
-	gzipFile(indexer.prereleaseSpecsIdx)
-	gzipFile(indexer.latestSpecsIdx)
-	gzipFile(indexer.specsIdx)
+	tmpIndicies := []string{indexer.prereleaseSpecsIdx, indexer.latestSpecsIdx, indexer.latestSpecsIdx}
+	for _, index := range tmpIndicies {
+		if _, err := os.Stat(index); err == nil {
+			gzipFile(index)
+		}
+	}
 }
 
 func gzipFile(src string) {
@@ -244,6 +249,9 @@ func (indexer Indexer) installIndicies() {
 	for _, file := range indexer.files {
 		file = reg.ReplaceAllString(file, "${1}")
 		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
+		if _, err := os.Stat(srcName); errors.Is(err, os.ErrNotExist) {
+		  continue
+		}
 		destName = fmt.Sprintf("%s/%s", indexer.destDir, file)
 		err = os.RemoveAll(destName)
 		check(err)
@@ -255,6 +263,11 @@ func (indexer Indexer) installIndicies() {
 }
 
 func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string, ch chan<- int) {
+	if len(updated) == 0 {
+		log.Info().Str("name", src).Msg("no new gems for index")
+		ch <- 0
+		return
+	}
 	var specsIdx []*spec.Spec
 	file, err := os.Open(src)
 	check(err)
@@ -266,38 +279,52 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 
 	specsIdx = marshal.LoadSpecs(buff)
 	log.Debug().Str("name", src).Int("len", len(specsIdx)).Msg("loaded index")
+	// hasNewSpec := false
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
 		if platform == "" {
 			spec.OriginalPlatform = RUBY_PLATFORM
 		}
 		specsIdx = append(specsIdx, spec)
+		// idx := sort.Search(len(specsIdx), func(i int) bool { return specsIdx[i].Name == spec.Name && specsIdx[i].Version == spec.Version && specsIdx[i].OriginalPlatform == spec.OriginalPlatform })
+		// if idx < len(specsIdx) && specsIdx[idx].Name == spec.Name && specsIdx[idx].Version == spec.Version && specsIdx[idx].OriginalPlatform == spec.OriginalPlatform {
+		// 	// x is present at data[i]
+		// } else {
+		// 	hasNewSpec = true
+		// 	specsIdx = append(specsIdx, spec)
+		// }
 	}
+
+	// if hasNewSpec == false {
+	// 	log.Info().Str("name", src).Msg("no new gems for index")
+	// 	ch <- 0
+	// 	return
+	// }
 
 	var uniqSpecsIdx []*spec.Spec
 	if src == indexer.destLatestSpecsIdx {
-		m := make(map[string]*spec.Spec)
+		specMap := make(map[string]*spec.Spec)
 		for _, spec := range specsIdx {
-			if m[spec.Name] != nil {
-				if m[spec.Name].Version < spec.Version {
-					m[spec.Name] = spec
+			if specMap[spec.Name] != nil {
+				if specMap[spec.Name].Version < spec.Version {
+					specMap[spec.Name] = spec
 				}
 			} else {
-				m[spec.Name] = spec
+				specMap[spec.Name] = spec
 			}
 		}
-		for _, v := range m {
+		for _, v := range specMap {
 			uniqSpecsIdx = append(uniqSpecsIdx, v)
 		}
 	} else {
-		m := make(map[string]int)
+		shaMap := make(map[string]int)
 		for _, spec := range specsIdx {
-			h := sha1.New()
+			sha1 := sha1.New()
 			specId := spec.Name + spec.Version + spec.OriginalPlatform
-			h.Write([]byte(specId))
-			bs := string(h.Sum(nil))
-			m[bs] += 1
-			if m[bs] == 1 {
+			sha1.Write([]byte(specId))
+			sha1Str := string(sha1.Sum(nil))
+			shaMap[sha1Str] += 1
+			if shaMap[sha1Str] == 1 {
 				uniqSpecsIdx = append(uniqSpecsIdx, spec)
 			}
 		}
@@ -326,6 +353,7 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 		log.Error().Err(err).Str("index", dest).Msg("failed to write destination spec index file")
 		panic(err)
 	}
+	log.Info().Str("name", src).Int("len", len(uniqSpecsIdx)).Msg("updated index")
 	ch <- bytesWritten
 }
 
@@ -360,7 +388,7 @@ func (indexer Indexer) UpdateIndex() {
 	specs := mapGemsToSpecs(updatedGems)
 	pre, rel, latest := spec.PartitionSpecs(specs)
 
-	saveDependencies(specs)
+	go saveDependencies(specs)
 	indexer.buildMarshalGemspecs(specs, true)
 
 	ch := make(chan int, 3)
@@ -379,12 +407,14 @@ func (indexer Indexer) UpdateIndex() {
 		file = reg.ReplaceAllString(file, "${1}")
 		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
 		destName := fmt.Sprintf("%s/%s", indexer.destDir, file)
-		err = os.RemoveAll(destName)
-		check(err)
-		err = os.Rename(srcName, destName)
-		check(err)
-		err = os.Chtimes(destName, newestMtime, newestMtime)
-		check(err)
+		if _, err := os.Stat(srcName); err == nil {
+			err = os.RemoveAll(destName)
+			check(err)
+			err = os.Rename(srcName, destName)
+			check(err)
+			err = os.Chtimes(destName, newestMtime, newestMtime)
+			check(err)
+		}
 	}
 }
 

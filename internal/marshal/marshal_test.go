@@ -138,6 +138,34 @@ func TestDumpSpecsWithSameName(t *testing.T) {
 	}
 }
 
+func TestLoadSpecsWithUnderscore(t *testing.T) {
+	rubyResult := "04085b075b084922065f063a064554553a1147656d3a3a56657273696f6e5b06492208312e30063b005449220972756279063b00545b084007553b065b06492208312e31063b0054400b"
+	rubyBytes, _ := hex.DecodeString(rubyResult)
+	buff := bytes.NewBuffer(rubyBytes)
+	specs := LoadSpecs(buff)
+	if len(specs) != 2 {
+		t.Error("Loaded specs length does not match ruby")
+	}
+	if specs[0].Name != "_" {
+		t.Errorf("Expected '_', got: %s", specs[0].Name)
+	}
+	if specs[0].Version != "1.0" {
+		t.Errorf("Expected '1.0', got: %s", specs[0].Version)
+	}
+	if specs[0].OriginalPlatform != "ruby" {
+		t.Errorf("Expected 'ruby', got: %s", specs[0].OriginalPlatform)
+	}
+	if specs[1].Name != "_" {
+		t.Errorf("Expected '_', got: %s", specs[1].Name)
+	}
+	if specs[1].Version != "1.1" {
+		t.Errorf("Expected '1.1', got: %s", specs[1].Version)
+	}
+	if specs[1].OriginalPlatform != "ruby" {
+		t.Errorf("Expected 'ruby', got: %s", specs[1].OriginalPlatform)
+	}
+}
+
 func TestLoadSpecs(t *testing.T) {
 	rubyResult := "04085b085b0849220b646576697365063a064554553a1147656d3a3a56657273696f6e5b0649220a342e372e32063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220c332e31322e3139063b005449220972756279063b00545b084922076132063b0054553b065b0649220a302e332e30063b005449220972756279063b0054"
 	rubyBytes, _ := hex.DecodeString(rubyResult)

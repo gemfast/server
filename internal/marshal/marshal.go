@@ -100,6 +100,12 @@ func encArray(buff *bytes.Buffer, size int, olinktbl map[string]int, olinkidx *i
 	}
 }
 
+func encArrayNoCache(buff *bytes.Buffer, size int) {
+	buff.WriteByte(ARRAY_SIGN)
+	arrlen := size
+	encInt(buff, arrlen)
+}
+
 func encArrayAndIncrementIndex(buff *bytes.Buffer, size int, olinktbl map[string]int, olinkidx *int) {
 	buff.WriteByte(ARRAY_SIGN)
 	arrlen := size
@@ -136,7 +142,7 @@ func encStringNoCache(buff *bytes.Buffer, str string, olinkidx *int, slinktbl ma
 func encString(buff *bytes.Buffer, str string, olinktbl map[string]int, olinkidx *int, slinktbl map[string]int, slinkidx *int) {
 	if olinktbl[str] != 0 {
 		buff.WriteByte(OBJECT_LINK_SIGN)
-		encInt(buff, olinktbl[str]-1)
+		encInt(buff, olinktbl[str])
 	} else {
 		buff.WriteByte(IVAR_SIGN)
 		buff.WriteByte(RAWSTRING_SIGN)
@@ -147,8 +153,8 @@ func encString(buff *bytes.Buffer, str string, olinktbl map[string]int, olinkidx
 		*olinkidx += 1
 		olinktbl[str] = *olinkidx
 		encSymbol(buff, []byte{'E'}, slinktbl, slinkidx)
+		buff.WriteByte(TRUE_SIGN)
 	}
-	buff.WriteByte(TRUE_SIGN)
 }
 
 func encGemVersion(buff *bytes.Buffer, version string, olinktbl map[string]int, olinkidx *int, slinktbl map[string]int, slinkidx *int) {
@@ -156,15 +162,17 @@ func encGemVersion(buff *bytes.Buffer, version string, olinktbl map[string]int, 
 	key := class + version
 	if olinktbl[key] != 0 {
 		buff.WriteByte(OBJECT_LINK_SIGN)
-		encInt(buff, olinktbl[key]-1)
+		encInt(buff, olinktbl[key])
 	} else {
 		buff.WriteByte(USER_MARSHAL_SIGN)
-		*olinkidx += 1
-		olinktbl[key] = *olinkidx
 		encSymbol(buff, []byte("Gem::Version"), slinktbl, slinkidx)
-		encArrayAndIncrementIndex(buff, 1, olinktbl, olinkidx)
+		encArrayNoCache(buff, 1)
 		// encString(buff, version, olinktbl, olinkidx, slinktbl, slinkidx)
 		encStringNoCache(buff, version, olinkidx, slinktbl, slinkidx)
+		*olinkidx += 1
+		olinktbl[string([]byte{ARRAY_SIGN})] = *olinkidx
+		*olinkidx += 1
+		olinktbl[string([]byte{USER_MARSHAL_SIGN})] = *olinkidx
 	}
 }
 
@@ -204,14 +212,14 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	olinktbl := make(map[string]int)
 	buff := bytes.NewBuffer(nil)
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
-	encArray(buff, len(specs), olinktbl, &olinkidx)
+	encArrayNoCache(buff, len(specs))
 	for _, spec := range specs {
 		encArrayAndIncrementIndex(buff, 3, olinktbl, &olinkidx) // Inner Array Len (Always 3 for modern indicies)
-		// encString(buff, spec.Name, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
+		encString(buff, spec.Name, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		// encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
 		encGemVersion(buff, spec.Version, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		// encString(buff, spec.OriginalPlatform, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
+		encString(buff, spec.OriginalPlatform, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		// encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	return buff.Bytes()
@@ -612,6 +620,7 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 		if b != ARRAY_SIGN {
 			panic(err)
 		}
+		olinktbl = append(olinktbl, []byte{'['})
 		isize, err := readInt(reader) // Inner array len (3)
 		if err != nil || isize != 3 {
 			panic(err)
@@ -628,7 +637,6 @@ func LoadSpecs(src io.Reader) []*spec.Spec {
 		if err != nil {
 			panic(err)
 		}
-		olinktbl = append(olinktbl, []byte{'['})
 
 		spec := spec.Spec{
 			Name:             name,
@@ -711,7 +719,7 @@ func readVersion(r *bufio.Reader, slinktbl *[][]byte, olinktbl *[][]byte) (strin
 			tmp = append(tmp, b)
 			i++
 		}
-		*olinktbl = append(*olinktbl, tmp)
+		*slinktbl = append(*slinktbl, tmp)
 	}
 
 	b, err = r.ReadByte() // Array sign
