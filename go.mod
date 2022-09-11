@@ -1,6 +1,6 @@
 module github.com/gscho/gemfast
 
-go 1.17
+go 1.19
 
 require (
 	github.com/appleboy/gin-jwt/v2 v2.8.0
@@ -10,6 +10,7 @@ require (
 	github.com/spf13/viper v1.12.0
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
+	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
 	gopkg.in/yaml.v3 v3.0.1
 )
 
