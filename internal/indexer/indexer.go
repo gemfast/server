@@ -125,7 +125,7 @@ func gemList() []string {
 		if e != nil {
 			return e
 		}
-		if filepath.Ext(d.Name()) == ".gem" {
+		if filepath.Ext(d.Name()) == ".gem" && filepath.Base(s) != ".gem" {
 			gems = append(gems, s)
 		}
 		return nil
