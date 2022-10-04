@@ -4,3 +4,4 @@ prerelease_specs*
 *.gem
 *.rb
 gemfast.db
+bin/*
