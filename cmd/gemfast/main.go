@@ -15,7 +15,7 @@ func init() {
 	viper.SetEnvPrefix("GEMFAST")
 	viper.SetDefault("dir", "/var/gemfast")
 	viper.SetDefault("gem_dir", fmt.Sprintf("%s/gems", viper.Get("dir")))
-	viper.SetDefault("db_dir", "db")
+	viper.SetDefault("db_dir", ".")
 	viper.SetDefault("auth", "local")
 	viper.AutomaticEnv()
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
