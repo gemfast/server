@@ -204,7 +204,7 @@ func DumpBundlerDeps(deps []models.Dependency) ([]byte, error) {
 	return buff.Bytes(), nil
 }
 
-//TODO: Encode strings and cache them. This reduces the spec index sizes by roughly 1/2
+// TODO: Encode strings and cache them. This reduces the spec index sizes by roughly 1/2
 func DumpSpecs(specs []*spec.Spec) []byte {
 	slinkidx := 0
 	slinktbl := make(map[string]int)
@@ -600,7 +600,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	return buff.Bytes()
 }
 
-//TODO: Fix reads so "_" gem doesnt end up as "\fGem::Version"
+// TODO: Fix reads so "_" gem doesnt end up as "\fGem::Version"
 func LoadSpecs(src io.Reader) []*spec.Spec {
 	var specs []*spec.Spec
 	var slinktbl [][]byte

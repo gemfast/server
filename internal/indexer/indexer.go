@@ -250,7 +250,7 @@ func (indexer Indexer) installIndicies() {
 		file = reg.ReplaceAllString(file, "${1}")
 		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
 		if _, err := os.Stat(srcName); errors.Is(err, os.ErrNotExist) {
-		  continue
+			continue
 		}
 		destName = fmt.Sprintf("%s/%s", indexer.destDir, file)
 		err = os.RemoveAll(destName)
