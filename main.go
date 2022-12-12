@@ -3,11 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/gscho/gemfast/internal/api"
-	"github.com/gscho/gemfast/internal/db"
-	"github.com/gscho/gemfast/internal/indexer"
+	gemfast "github.com/gscho/gemfast/cmd/gemfast"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -23,19 +20,5 @@ func init() {
 }
 
 func main() {
-	log.Info().Msg("starting services")
-	err := db.Connect()
-	if err != nil {
-		panic(err)
-	}
-	defer db.BoltDB.Close()
-	err = indexer.InitIndexer()
-	if err != nil {
-		panic(err)
-	}
-	// indexer.Get().GenerateIndex()
-	err = api.Run()
-	if err != nil {
-		panic(err)
-	}
+	gemfast.Execute()
 }
