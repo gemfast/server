@@ -12,7 +12,7 @@ import (
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
-	Short: "Start the gemfast server.",
+	Short: "Start the gemfast server",
 	Run: func(cmd *cobra.Command, args []string) {
 		serve()
 	},
