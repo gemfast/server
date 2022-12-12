@@ -2,28 +2,28 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"net/http"
-	"encoding/json"
 	"os"
-  "os/user"
-  "github.com/spf13/cobra"
-  "syscall"
-  "golang.org/x/crypto/ssh/terminal"
+	"os/user"
+	"syscall"
 )
 
 var loginCmd = &cobra.Command{
-  Use:   "login [username]",
-  Short: "Authenticate with the gemfast server",
-  Args:       cobra.MinimumNArgs(1),
-  Run: func(cmd *cobra.Command, args []string) {
-    login(args[0])
-  },
+	Use:   "login [username]",
+	Short: "Authenticate with the gemfast server",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		login(args[0])
+	},
 }
 
 func init() {
-  rootCmd.AddCommand(loginCmd)
+	rootCmd.AddCommand(loginCmd)
 }
 
 type Login struct {
@@ -33,10 +33,10 @@ type Login struct {
 
 func login(username string) {
 	fmt.Print("password: ")
-  pass, err := terminal.ReadPassword(int(syscall.Stdin))
-  if err != nil {
-  	panic(err)
-  }
+	pass, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		panic(err)
+	}
 	httpposturl := "http://localhost:8080/login"
 	login := Login{Username: username, Password: string(pass)}
 	jsonData, _ := json.Marshal(login)

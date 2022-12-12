@@ -140,10 +140,10 @@ func ParseGemMetadata(yamlBytes []byte) GemMetadata {
 		{
 			metadata.Emails = append(metadata.Emails, t.(string))
 		}
-	case nil: 
+	case nil:
 		{
 			// nothing
-	  }
+		}
 	default:
 		panic(fmt.Sprintf("Unknown type: %T for email", t))
 	}
