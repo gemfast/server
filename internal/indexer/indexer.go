@@ -90,6 +90,22 @@ func InitIndexer() error {
 	indexer.files = append(indexer.files, indexer.prereleaseSpecsIdx)
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.prereleaseSpecsIdx))
 	log.Info().Str("dir", indexer.dir).Msg("indexer initialized")
+	shouldIndex := false
+	if _, err := os.Stat(indexer.destSpecsIdx); errors.Is(err, os.ErrNotExist) {
+		log.Info().Str("index", indexer.destSpecsIdx).Msg("index file not found - generating the index")
+		shouldIndex = true
+	}
+	if _, err := os.Stat(indexer.destLatestSpecsIdx); errors.Is(err, os.ErrNotExist) {
+		log.Info().Str("index", indexer.destLatestSpecsIdx).Msg("index file not found - generating the index")
+		shouldIndex = true
+	}
+	if _, err := os.Stat(indexer.destPrereleaseSpecsIdx); errors.Is(err, os.ErrNotExist) {
+		log.Info().Str("index", indexer.destPrereleaseSpecsIdx).Msg("index file not found - generating the index")
+		shouldIndex = true
+	}
+	if shouldIndex {
+		indexer.GenerateIndex()
+	}
 	return nil
 }
 
@@ -279,27 +295,13 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 
 	specsIdx = marshal.LoadSpecs(buff)
 	log.Debug().Str("name", src).Int("len", len(specsIdx)).Msg("loaded index")
-	// hasNewSpec := false
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
 		if platform == "" {
 			spec.OriginalPlatform = RUBY_PLATFORM
 		}
 		specsIdx = append(specsIdx, spec)
-		// idx := sort.Search(len(specsIdx), func(i int) bool { return specsIdx[i].Name == spec.Name && specsIdx[i].Version == spec.Version && specsIdx[i].OriginalPlatform == spec.OriginalPlatform })
-		// if idx < len(specsIdx) && specsIdx[idx].Name == spec.Name && specsIdx[idx].Version == spec.Version && specsIdx[idx].OriginalPlatform == spec.OriginalPlatform {
-		// 	// x is present at data[i]
-		// } else {
-		// 	hasNewSpec = true
-		// 	specsIdx = append(specsIdx, spec)
-		// }
 	}
-
-	// if hasNewSpec == false {
-	// 	log.Info().Str("name", src).Msg("no new gems for index")
-	// 	ch <- 0
-	// 	return
-	// }
 
 	var uniqSpecsIdx []*spec.Spec
 	if src == indexer.destLatestSpecsIdx {
