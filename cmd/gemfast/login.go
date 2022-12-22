@@ -3,6 +3,8 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"gopkg.in/yaml.v3"
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
@@ -31,6 +33,51 @@ type Login struct {
 	Password string `json:"password"`
 }
 
+func writeGemCredentials(dir string, body []byte) {
+	fname := fmt.Sprintf("%s/credentials", dir)
+	if _, err := os.Stat(fname); errors.Is(err, os.ErrNotExist) {
+	  err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
+		f, err := os.Create(fname)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+		j := map[string]string{}
+		json.Unmarshal(body, &j)
+		delete(j, "code")
+		delete(j, "expire")
+		j[":gemfast"] = fmt.Sprintf("Bearer %s", j["token"])
+		delete(j, "token")
+		data, err := yaml.Marshal(&j)
+		_, err = f.WriteString(string(data))
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		data := make(map[interface{}]interface{})
+
+		yfile, err := ioutil.ReadFile(fname)
+	  if err != nil {
+	  	panic(err)
+	  }
+	  err = yaml.Unmarshal(yfile, &data)
+	  if err != nil {
+	  	panic(err)
+	  }
+	  j := map[string]string{}
+		json.Unmarshal(body, &j)
+	  data[":gemfast"] = fmt.Sprintf("Bearer %s", j["token"])
+	  out, err := yaml.Marshal(&data)
+	  err = ioutil.WriteFile(fname, out, 0)
+	  if err != nil {
+	  	panic(err)
+	  }
+	}
+}
+
 func login(username string) {
 	fmt.Print("password: ")
 	pass, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -40,20 +87,37 @@ func login(username string) {
 	httpposturl := "http://localhost:8080/login"
 	login := Login{Username: username, Password: string(pass)}
 	jsonData, _ := json.Marshal(login)
-	request, error := http.NewRequest("POST", httpposturl, bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(jsonData))
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
 	client := &http.Client{}
-	response, error := client.Do(request)
-	if error != nil {
-		panic(error)
+	response, err := client.Do(request)
+	if err != nil {
+		panic(err)
 	}
 	defer response.Body.Close()
 
+	if response.StatusCode != 200 {
+		fmt.Println("\nlogin failed")
+	}
+	fmt.Println("\nlogin succeeded")
+
 	body, _ := ioutil.ReadAll(response.Body)
 	usr, _ := user.Current()
-	path := fmt.Sprintf("%s/.gemfast/gemfastconfig.json", usr.HomeDir)
+	gemfdir := fmt.Sprintf("%s/.gemfast", usr.HomeDir)
+	err = os.MkdirAll(gemfdir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	path := fmt.Sprintf("%s/config.json", gemfdir)
 	f, err := os.Create(path)
+	if err != nil {
+		panic(err)
+	}
 	defer f.Close()
-	f.WriteString(string(body))
+	_, err = f.WriteString(string(body))
+	if err != nil {
+		panic(err)
+	}
+	writeGemCredentials(fmt.Sprintf("%s/.gem", usr.HomeDir), body)
 }
