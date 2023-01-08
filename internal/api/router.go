@@ -12,17 +12,19 @@ import (
 
 func Run() error {
 	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
 	configureAuth(r)
 	addRoutes(r)
-	log.Info().Msg("gemfast server ready")
-	return r.Run()
+	port := ":" + viper.GetString("port")
+	log.Info().Str("port", port).Msg("gemfast server ready")
+	return r.Run(port)
 }
 
 func configureAuth(r *gin.Engine) {
 	authMode := viper.Get("auth").(string)
-	log.Info().Str("auth", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
 	case "local":
+		log.Info().Str("auth", authMode).Msg("configuring auth strategy")
 		configureLocalAuth(r)
 	case "none":
 		configureNoneAuth(r)

@@ -30,6 +30,7 @@ func userFromBytes(data []byte) (*User, error) {
 
 func AuthenticateLocalUser(incoming User) (bool, error) {
 	current, err := GetUser(incoming.Username)
+	fmt.Println(bcrypt.CompareHashAndPassword(current.Password, incoming.Password))
 	if err != nil {
 		return false, err
 	}
@@ -86,25 +87,12 @@ func CreateAdminUserIfNotExists() error {
 		if viper.Get("admin_password") == nil {
 			return nil
 		}
-		pw := viper.Get("admin_password").(string)
+		pw := viper.GetString("admin_password")
 		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(pw)); err != nil {
 			log.Info().Msg("updating admin user password to $GEMFAST_ADMIN_PASSWORD")
-			userBytes, err := json.Marshal(User{
-				Username: "admin",
-				Password: []byte(pw),
-			})
-			if err != nil {
-				return fmt.Errorf("could not marshal user to json: %v", err)
-			}
-			err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-				err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte("admin"), userBytes)
-				if err != nil {
-					return fmt.Errorf("could not set: %v", err)
-				}
-				return nil
-			})
+		} else {
+			return nil
 		}
-		return nil
 	}
 	user = User{
 		Username: "admin",
@@ -192,7 +180,7 @@ func getAdminPassword() []byte {
 			panic(err)
 		}
 	} else {
-		pw = viper.Get("admin_password").(string)
+		pw = viper.GetString("admin_password")
 	}
 	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), 14)
 	if err != nil {
@@ -208,6 +196,6 @@ func generatePassword() (string, error) {
 		return "", err
 	}
 	log.Warn().Msg("generating admin password because environment variable GEMFAST_ADMIN_PASSWORD not set")
-	log.Info().Str("password", string(res)).Msg("generated admin password")
+	log.Info().Str("password", res).Msg("generated admin password")
 	return res, nil
 }

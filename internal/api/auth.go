@@ -25,10 +25,12 @@ func initAuthMiddleware() (*jwt.GinJWTMiddleware, error) {
 		MaxRefresh:  time.Duration(time.Now().Year()),
 		IdentityKey: identityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
-			if v, ok := data.(*models.User); ok {
+			if v, ok := data.(models.User); ok {
 				return jwt.MapClaims{
 					identityKey: v.Username,
 				}
+			} else {
+				log.Error().Msg("failed to map jwt claims")
 			}
 			return jwt.MapClaims{}
 		},

@@ -124,6 +124,7 @@ func ParseGemMetadata(yamlBytes []byte) GemMetadata {
 	var metadata GemMetadata
 	err := yaml.Unmarshal(yamlBytes, &metadata)
 	if err != nil {
+		fmt.Println(string(yamlBytes))
 		panic(err)
 	}
 	// var email string
@@ -132,7 +133,10 @@ func ParseGemMetadata(yamlBytes []byte) GemMetadata {
 		{
 			for _, entry := range t {
 				if t != nil {
-					metadata.Emails = append(metadata.Emails, entry.(string))
+					email, ok := entry.(string)
+					if ok {
+						metadata.Emails = append(metadata.Emails, email)
+					}
 				}
 			}
 		}

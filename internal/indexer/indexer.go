@@ -110,7 +110,8 @@ func InitIndexer() error {
 }
 
 func (indexer Indexer) GenerateIndex() {
-	mkTempDirs(indexer.quickMarshalDir)
+	mkDirs(indexer.quickMarshalDir)
+	mkDirs(viper.GetString("gem_dir"))
 	indexer.buildIndicies()
 	indexer.installIndicies()
 }
@@ -129,7 +130,7 @@ func mkTempDir(name string) (string, error) {
 	return dir, err
 }
 
-func mkTempDirs(dir string) {
+func mkDirs(dir string) {
 	err := os.MkdirAll(dir, os.ModePerm)
 	check(err)
 }
@@ -364,7 +365,7 @@ func (indexer Indexer) UpdateIndex() {
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
 	var updatedGems []string
-	mkTempDirs(indexer.quickMarshalDir)
+	mkDirs(indexer.quickMarshalDir)
 	fi, err := os.Stat(indexer.destSpecsIdx)
 	check(err)
 	specsMtime := fi.ModTime()
