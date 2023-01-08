@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
+	"github.com/gscho/gemfast/internal/config"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -16,7 +16,7 @@ const (
 var BoltDB *bolt.DB
 
 func Connect() error {
-	dbFile := fmt.Sprintf("%s/gemfast.db", viper.Get("db_dir"))
+	dbFile := fmt.Sprintf("%s/gemfast.db", config.Env.DBDir)
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could not open %s", dbFile))

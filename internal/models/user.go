@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gscho/gemfast/internal/config"
 	"github.com/gscho/gemfast/internal/db"
 
 	"github.com/rs/zerolog/log"
 	"github.com/sethvargo/go-password/password"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -84,10 +84,10 @@ func CreateAdminUserIfNotExists() error {
 		panic(err)
 	}
 	if user.Username != "" && len(user.Password) > 0 {
-		if viper.Get("admin_password") == nil {
+		if config.Env.AdminPassword == "" {
 			return nil
 		}
-		pw := viper.GetString("admin_password")
+		pw := config.Env.AdminPassword
 		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(pw)); err != nil {
 			log.Info().Msg("updating admin user password to $GEMFAST_ADMIN_PASSWORD")
 		} else {
@@ -113,7 +113,7 @@ func CreateAdminUserIfNotExists() error {
 }
 
 func CreateLocalUsers() error {
-	if viper.Get("add_local_users") == nil {
+	if config.Env.AddLocalUsers == "" {
 		log.Trace().Msg("no local users to add")
 		return nil
 	}
@@ -135,7 +135,7 @@ func CreateLocalUsers() error {
 	})
 
 	m := make(map[string]bool)
-	usersFromEnv := viper.Get("add_local_users").(string)
+	usersFromEnv := config.Env.AddLocalUsers
 	pairs := strings.Split(usersFromEnv, ",")
 	db.BoltDB.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(db.USER_BUCKET))
@@ -174,13 +174,13 @@ func CreateLocalUsers() error {
 func getAdminPassword() []byte {
 	var pw string
 	var err error
-	if viper.Get("admin_password") == nil {
+	if config.Env.AdminPassword == "" {
 		pw, err = generatePassword()
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		pw = viper.GetString("admin_password")
+		pw = config.Env.AdminPassword
 	}
 	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), 14)
 	if err != nil {

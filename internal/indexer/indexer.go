@@ -17,10 +17,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gscho/gemfast/internal/config"
 	"github.com/gscho/gemfast/internal/marshal"
 	"github.com/gscho/gemfast/internal/models"
 	"github.com/gscho/gemfast/internal/spec"
-	"github.com/spf13/viper"
 
 	"github.com/rs/zerolog/log"
 )
@@ -63,7 +63,7 @@ func Get() Indexer {
 }
 
 func InitIndexer() error {
-	gemfastDir := fmt.Sprintf("%s", viper.Get("dir"))
+	gemfastDir := fmt.Sprintf("%s", config.Env.Dir)
 	marshalName := "Marshal.4.8"
 	indexer = Indexer{destDir: gemfastDir}
 	tmpdir, err := mkTempDir("gem_generate_index")
@@ -111,7 +111,7 @@ func InitIndexer() error {
 
 func (indexer Indexer) GenerateIndex() {
 	mkDirs(indexer.quickMarshalDir)
-	mkDirs(viper.GetString("gem_dir"))
+	mkDirs(config.Env.GemDir)
 	indexer.buildIndicies()
 	indexer.installIndicies()
 }
@@ -137,7 +137,7 @@ func mkDirs(dir string) {
 
 func gemList() []string {
 	var gems []string
-	gemDir := fmt.Sprintf("%s", viper.Get("gem_dir"))
+	gemDir := fmt.Sprintf("%s", config.Env.GemDir)
 	filepath.WalkDir(gemDir, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e

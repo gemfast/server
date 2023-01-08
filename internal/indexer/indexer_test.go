@@ -3,11 +3,11 @@ package indexer
 import (
 	"testing"
 
-	"github.com/spf13/viper"
+	"github.com/gscho/gemfast/internal/config"
 )
 
 func TestGemList(t *testing.T) {
-	viper.Set("gem_dir", "../../test/fixtures/gem_list")
+	config.Env.GemDir = "../../test/fixtures/gem_list"
 	expected := []string{"../../test/fixtures/gem_list/a.gem", "../../test/fixtures/gem_list/another_@gem]2345.gem", "../../test/fixtures/gem_list/b.gem"}
 	actual := gemList()
 	if len(actual) != len(expected) {
