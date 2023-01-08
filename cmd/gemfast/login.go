@@ -3,11 +3,11 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
-	"gopkg.in/yaml.v3"
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -36,7 +36,7 @@ type Login struct {
 func writeGemCredentials(dir string, body []byte) {
 	fname := fmt.Sprintf("%s/credentials", dir)
 	if _, err := os.Stat(fname); errors.Is(err, os.ErrNotExist) {
-	  err = os.MkdirAll(dir, os.ModePerm)
+		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
@@ -60,27 +60,28 @@ func writeGemCredentials(dir string, body []byte) {
 		data := make(map[interface{}]interface{})
 
 		yfile, err := ioutil.ReadFile(fname)
-	  if err != nil {
-	  	panic(err)
-	  }
-	  err = yaml.Unmarshal(yfile, &data)
-	  if err != nil {
-	  	panic(err)
-	  }
-	  j := map[string]string{}
+		if err != nil {
+			panic(err)
+		}
+		err = yaml.Unmarshal(yfile, &data)
+		if err != nil {
+			panic(err)
+		}
+		j := map[string]string{}
 		json.Unmarshal(body, &j)
-	  data[":gemfast"] = fmt.Sprintf("Bearer %s", j["token"])
-	  out, err := yaml.Marshal(&data)
-	  err = ioutil.WriteFile(fname, out, 0)
-	  if err != nil {
-	  	panic(err)
-	  }
+		data[":gemfast"] = fmt.Sprintf("Bearer %s", j["token"])
+		out, err := yaml.Marshal(&data)
+		err = ioutil.WriteFile(fname, out, 0)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
 func login(username string) {
 	fmt.Print("password: ")
 	pass, err := terminal.ReadPassword(int(syscall.Stdin))
+	fmt.Println("'" + string(pass) + "'")
 	if err != nil {
 		panic(err)
 	}
@@ -99,6 +100,7 @@ func login(username string) {
 
 	if response.StatusCode != 200 {
 		fmt.Println("\nlogin failed")
+		os.Exit(1)
 	}
 	fmt.Println("\nlogin succeeded")
 
