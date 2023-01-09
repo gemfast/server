@@ -18,13 +18,15 @@ func InitConfig() {
 type envConfig struct {
 	LocalServerPort string `mapstructure:"LOCAL_SERVER_PORT"`
 	SecretKey       string `mapstructure:"SECRET_KEY"`
-	Dir string `mapstructure:"GEMFAST_DIR"`
-	GemDir string `mapstructure:"GEMFAST_GEM_DIR"`
-	DBDir string `mapstructure:"GEMFAST_DB_DIR"`
-	Port string `mapstructure:"GEMFAST_PORT"`
+	Dir             string `mapstructure:"GEMFAST_DIR"`
+	GemDir          string `mapstructure:"GEMFAST_GEM_DIR"`
+	DBDir           string `mapstructure:"GEMFAST_DB_DIR"`
+	BinPath         string `mapstructure:"GEMFAST_BIN_PATH"`
+	URL             string `mapstructure:"GEMFAST_URL"`
+	Port            string `mapstructure:"GEMFAST_PORT"`
 
-	// Auth stuff
-	AuthMode string `mapstructure:"GEMFAST_AUTH"`
+	// Auth
+	AuthMode      string `mapstructure:"GEMFAST_AUTH"`
 	AdminPassword string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
 	AddLocalUsers string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
 }
@@ -36,14 +38,16 @@ func configureZeroLog() {
 
 func loadEnvVariables() (config *envConfig) {
 	viper.SetDefault("GEMFAST_DIR", "/var/gemfast")
-	viper.SetDefault("GEMFAST_GEM_DIR", fmt.Sprintf("%s/gems", viper.Get("dir")))
+	viper.SetDefault("GEMFAST_GEM_DIR", fmt.Sprintf("%s/gems", viper.Get("GEMFAST_DIR")))
 	viper.SetDefault("GEMFAST_DB_DIR", ".")
 	viper.SetDefault("GEMFAST_AUTH", "local")
+	viper.SetDefault("GEMFAST_BIN_PATH", "/usr/bin/gemfast")
+	viper.SetDefault("GEMFAST_URL", "http://localhost")
 	viper.SetDefault("GEMFAST_PORT", 8080)
 	viper.AutomaticEnv()
 	viper.AddConfigPath("$HOME/.gemfast")
 	viper.AddConfigPath("/etc/gemfast")
-	viper.SetConfigName("config")
+	viper.SetConfigName("gemfast")
 	viper.SetConfigType("env")
 	viper.ReadInConfig()
 	if err := viper.ReadInConfig(); err != nil {

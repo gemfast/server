@@ -5,14 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/user"
 	"syscall"
+
+	"github.com/gscho/gemfast/internal/config"
+	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh/terminal"
+	"gopkg.in/yaml.v3"
 )
 
 var loginCmd = &cobra.Command{
@@ -85,7 +87,7 @@ func login(username string) {
 	if err != nil {
 		panic(err)
 	}
-	httpposturl := "http://localhost:8080/login"
+	httpposturl := fmt.Sprintf("%s:%s/login", config.Env.URL, config.Env.Port)
 	login := Login{Username: username, Password: string(pass)}
 	jsonData, _ := json.Marshal(login)
 	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(jsonData))

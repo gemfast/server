@@ -123,14 +123,12 @@ func CreateLocalUsers() error {
 		if b == nil {
 			return fmt.Errorf("get bucket: FAILED")
 		}
-		// we need cursor for iteration
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			if string(k) != "admin" {
 				usernames = append(usernames, string(k))
 			}
 		}
-		// should return nil to complete the transaction
 		return nil
 	})
 

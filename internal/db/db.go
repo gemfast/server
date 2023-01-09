@@ -3,8 +3,8 @@ package db
 import (
 	"fmt"
 
-	"github.com/rs/zerolog/log"
 	"github.com/gscho/gemfast/internal/config"
+	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
 )
 

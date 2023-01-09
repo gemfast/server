@@ -14,7 +14,6 @@ import (
 	"github.com/gscho/gemfast/internal/models"
 	"github.com/gscho/gemfast/internal/spec"
 	"github.com/rs/zerolog/log"
-
 )
 
 func head(c *gin.Context) {}
@@ -55,43 +54,43 @@ func uploadGem(c *gin.Context) {
 	err = os.WriteFile(tmpfile.Name(), bodyBytes, 0644)
 	if err != nil {
 		log.Error().Err(err).Str("tmpfile", tmpfile.Name()).Msg("failed to save uploaded file")
-		c.String(http.StatusInternalServerError, "Failed to index gem")
+		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
 	if err = saveAndReindex(tmpfile); err != nil {
 		log.Error().Err(err).Msg("failed to reindex gem")
-		c.String(http.StatusInternalServerError, "Failed to index gem")
+		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
-	c.String(http.StatusOK, "Uploaded successfully")
+	c.String(http.StatusOK, "uploaded successfully")
 }
 
 func geminaboxUploadGem(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to read form file")
-		c.String(http.StatusBadRequest, "Failed to read form file parameter")
+		c.String(http.StatusBadRequest, "failed to read form file parameter")
 		return
 	}
 	tmpfile, err := ioutil.TempFile("/tmp", "*.gem")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmp file")
-		c.String(http.StatusInternalServerError, "Failed to index gem")
+		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
 	defer os.Remove(tmpfile.Name())
 
 	if err = c.SaveUploadedFile(file, tmpfile.Name()); err != nil {
 		log.Error().Err(err).Str("tmpfile", tmpfile.Name()).Msg("failed to save uploaded file")
-		c.String(http.StatusInternalServerError, "Failed to index gem")
+		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
 	if err = saveAndReindex(tmpfile); err != nil {
 		log.Error().Err(err).Msg("failed to reindex gem")
-		c.String(http.StatusInternalServerError, "Failed to index gem")
+		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
-	c.String(http.StatusOK, "Uploaded successfully")
+	c.String(http.StatusOK, "uploaded successfully")
 }
 
 func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency, error) {
@@ -101,7 +100,7 @@ func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency,
 		existingDeps, err := models.GetDependencies(gem)
 		if err != nil {
 			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
-			c.String(http.StatusNotFound, fmt.Sprintf("Failed to fetch dependencies for gem: %s", gem))
+			c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gem))
 			return nil, err
 		}
 		for _, d := range *existingDeps {
@@ -125,7 +124,7 @@ func getDependencies(c *gin.Context) {
 	bundlerDeps, err := marshal.DumpBundlerDeps(deps)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal gem dependencies")
-		c.String(http.StatusInternalServerError, "Failed to marshal gem dependencies")
+		c.String(http.StatusInternalServerError, "failed to marshal gem dependencies")
 		return
 	}
 	c.Header("Content-Type", "application/octet-stream; charset=utf-8")
