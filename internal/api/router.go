@@ -14,15 +14,15 @@ import (
 func Run() error {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	r.Use(gin.Recovery())
-	configureAuth(r)
-	addRoutes(r)
+	initRouter(r)
 	port := ":" + config.Env.Port
 	log.Info().Str("port", port).Msg("gemfast server ready")
 	return r.Run(port)
 }
 
-func configureAuth(r *gin.Engine) {
+func initRouter(r *gin.Engine) {
+	r.Use(gin.Recovery())
+	r.HEAD("/", head)
 	authMode := config.Env.AuthMode
 	switch strings.ToLower(authMode) {
 	case "local":
@@ -49,20 +49,10 @@ func configureLocalAuth(r *gin.Engine) {
 	r.POST("/login", authMiddleware.LoginHandler)
 	localAuth := r.Group("/")
 	localAuth.GET("/refresh_token", authMiddleware.RefreshHandler)
-	// authorized.Use(authMiddleware.MiddlewareFunc())
-	// {
-	// 	authorized.POST("/api/v1/gems", uploadGem)
-	// 	authorized.POST("/upload", geminaboxUploadGem)
-	// }
-}
-
-func configureNoneAuth(r *gin.Engine) {
-	r.POST("/api/v1/gems", uploadGem)
-	r.POST("/upload", geminaboxUploadGem)
-}
-
-func addRoutes(r *gin.Engine) {
-	r.HEAD("/", head)
+	localAuth.Use(authMiddleware.MiddlewareFunc())
+	{
+		localAuth.POST("create_token", createToken)
+	}
 	tokenAuth := r.Group("/")
 	tokenAuth.Use(middleware.GinTokenMiddleware())
 	{
@@ -73,6 +63,20 @@ func addRoutes(r *gin.Engine) {
 		tokenAuth.GET("/gems/*gem", getGem)
 		tokenAuth.GET("/api/v1/dependencies", getDependencies)
 		tokenAuth.GET("/api/v1/dependencies.json", getDependenciesJSON)
-		tokenAuth.POST("create_token", createToken)
+		tokenAuth.POST("/api/v1/gems", uploadGem)
+		tokenAuth.POST("/upload", geminaboxUploadGem)
 	}
+}
+
+func configureNoneAuth(r *gin.Engine) {
+	r.POST("create_token", createToken)
+	r.StaticFile("/specs.4.8.gz", fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
+	r.StaticFile("/latest_specs.4.8.gz", fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
+	r.StaticFile("/prerelease_specs.4.8.gz", fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
+	r.GET("/quick/Marshal.4.8/*gemspec.rz", getGemspecRz)
+	r.GET("/gems/*gem", getGem)
+	r.GET("/api/v1/dependencies", getDependencies)
+	r.GET("/api/v1/dependencies.json", getDependenciesJSON)
+	r.POST("/api/v1/gems", uploadGem)
+	r.POST("/upload", geminaboxUploadGem)
 }
