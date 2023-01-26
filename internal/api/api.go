@@ -18,6 +18,10 @@ import (
 
 func head(c *gin.Context) {}
 
+func createToken(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"token": "lol"})
+}
+
 func getGemspecRz(c *gin.Context) {
 	fileName := c.Param("gemspec.rz")
 	filePath := fmt.Sprintf("%s/quick/Marshal.4.8/%s", config.Env.Dir, fileName)

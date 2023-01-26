@@ -17,7 +17,7 @@ type login struct {
 
 var identityKey = "id"
 
-func initAuthMiddleware() (*jwt.GinJWTMiddleware, error) {
+func initJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "gemfast",
 		Key:         []byte("secret key"),

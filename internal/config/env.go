@@ -51,7 +51,7 @@ func loadEnvVariables() (config *envConfig) {
 	viper.SetConfigType("env")
 	viper.ReadInConfig()
 	if err := viper.ReadInConfig(); err != nil {
-		log.Error().Err(err).Msg("unable to read in config.env")
+		log.Warn().Err(err).Msg("unable to read in config.env")
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
