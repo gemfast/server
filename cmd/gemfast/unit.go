@@ -11,8 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const GemfastSystemdTemplate = `
-[Unit]
+const GemfastSystemdTemplate = `[Unit]
 Description=Gemfast Private Rubygems Server
 Documentation=https://gemfast.io
 After=network.target network-online.target
@@ -24,8 +23,7 @@ Restart=always
 RestartSec=10
 
 [Install]
-WantedBy=multi-user.target
-`
+WantedBy=multi-user.target`
 
 var unitCmd = &cobra.Command{
 	Use:   "unit",

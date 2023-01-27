@@ -1,6 +1,7 @@
 package models
 
 import (
+	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -17,6 +18,7 @@ import (
 type User struct {
 	Username string
 	Password []byte
+	Token string
 }
 
 func userFromBytes(data []byte) (*User, error) {
@@ -30,7 +32,6 @@ func userFromBytes(data []byte) (*User, error) {
 
 func AuthenticateLocalUser(incoming User) (bool, error) {
 	current, err := GetUser(incoming.Username)
-	fmt.Println(bcrypt.CompareHashAndPassword(current.Password, incoming.Password))
 	if err != nil {
 		return false, err
 	}
@@ -188,12 +189,33 @@ func getAdminPassword() []byte {
 }
 
 func generatePassword() (string, error) {
-	res, err := password.Generate(32, 10, 0, false, false)
+	pw, err := password.Generate(32, 10, 0, false, false)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to generate an admin password")
 		return "", err
 	}
 	log.Warn().Msg("generating admin password because environment variable GEMFAST_ADMIN_PASSWORD not set")
-	log.Info().Str("password", res).Msg("generated admin password")
-	return res, nil
+	log.Info().Str("password", pw).Msg("generated admin password")
+	return pw, nil
+}
+
+func CreateUserToken(user *User) (string, error) {
+	token, err := password.Generate(32, 10, 10, false, false)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to generate a token")
+		return "", err
+	}
+	user.Token = token
+	userBytes, err := json.Marshal(user)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal user to json: %v", err)
+	}
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+		if err != nil {
+			return fmt.Errorf("could not set: %v", err)
+		}
+		return nil
+	})
+	return b64.StdEncoding.EncodeToString([]byte(token)), err
 }

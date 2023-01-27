@@ -16,8 +16,7 @@ func InitConfig() {
 }
 
 type envConfig struct {
-	LocalServerPort string `mapstructure:"LOCAL_SERVER_PORT"`
-	SecretKey       string `mapstructure:"SECRET_KEY"`
+	LogLevel				string `mapstructure:"GEMFAST_LOG_LEVEL"`
 	Dir             string `mapstructure:"GEMFAST_DIR"`
 	GemDir          string `mapstructure:"GEMFAST_GEM_DIR"`
 	DBDir           string `mapstructure:"GEMFAST_DB_DIR"`
@@ -33,17 +32,22 @@ type envConfig struct {
 
 func configureZeroLog() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 }
 
 func loadEnvVariables() (config *envConfig) {
+	viper.BindEnv("GEMFAST_LOG_LEVEL")
 	viper.SetDefault("GEMFAST_DIR", "/var/gemfast")
 	viper.SetDefault("GEMFAST_GEM_DIR", fmt.Sprintf("%s/gems", viper.Get("GEMFAST_DIR")))
 	viper.SetDefault("GEMFAST_DB_DIR", ".")
-	viper.SetDefault("GEMFAST_AUTH", "local")
 	viper.SetDefault("GEMFAST_BIN_PATH", "/usr/bin/gemfast")
 	viper.SetDefault("GEMFAST_URL", "http://localhost")
 	viper.SetDefault("GEMFAST_PORT", 8080)
+
+	viper.SetDefault("GEMFAST_AUTH", "local")
+	viper.BindEnv("GEMFAST_ADMIN_PASSWORD")
+	viper.BindEnv("GEMFAST_ADD_LOCAL_USERS")
+
 	viper.AutomaticEnv()
 	viper.AddConfigPath("$HOME/.gemfast")
 	viper.AddConfigPath("/etc/gemfast")
@@ -51,7 +55,7 @@ func loadEnvVariables() (config *envConfig) {
 	viper.SetConfigType("env")
 	viper.ReadInConfig()
 	if err := viper.ReadInConfig(); err != nil {
-		log.Warn().Err(err).Msg("unable to read in config.env")
+		log.Debug().Err(err).Msg("unable to read in config.env")
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {

@@ -24,9 +24,9 @@ func initRouter(r *gin.Engine) {
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
 	authMode := config.Env.AuthMode
+	log.Info().Str("auth", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
 	case "local":
-		log.Info().Str("auth", authMode).Msg("configuring auth strategy")
 		configureLocalAuth(r)
 	case "none":
 		configureNoneAuth(r)
@@ -48,10 +48,10 @@ func configureLocalAuth(r *gin.Engine) {
 	}
 	r.POST("/login", authMiddleware.LoginHandler)
 	localAuth := r.Group("/")
-	localAuth.GET("/refresh_token", authMiddleware.RefreshHandler)
+	localAuth.GET("/refresh-token", authMiddleware.RefreshHandler)
 	localAuth.Use(authMiddleware.MiddlewareFunc())
 	{
-		localAuth.POST("create_token", createToken)
+		localAuth.POST("token", createToken)
 	}
 	tokenAuth := r.Group("/")
 	tokenAuth.Use(middleware.GinTokenMiddleware())

@@ -15,7 +15,7 @@ type login struct {
 	Password string `form:"password" json:"password" binding:"required"`
 }
 
-var identityKey = "id"
+const IdentityKey = "id"
 
 func initJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
@@ -23,11 +23,11 @@ func initJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 		Key:         []byte("secret key"),
 		Timeout:     time.Hour,
 		MaxRefresh:  time.Duration(time.Now().Year()),
-		IdentityKey: identityKey,
+		IdentityKey: IdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(models.User); ok {
 				return jwt.MapClaims{
-					identityKey: v.Username,
+					IdentityKey: v.Username,
 				}
 			} else {
 				log.Error().Msg("failed to map jwt claims")
@@ -37,7 +37,7 @@ func initJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
 			return &models.User{
-				Username: claims[identityKey].(string),
+				Username: claims[IdentityKey].(string),
 			}
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
