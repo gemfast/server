@@ -5,3 +5,4 @@ prerelease_specs*
 *.rb
 gemfast.db
 bin/*
+omnibus/pkg
