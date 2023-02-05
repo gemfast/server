@@ -1,0 +1,54 @@
+{
+  "basename": "gemfast_0.1.0+20230205182245-1_arm64.deb",
+  "md5": "0202892acceaa26315209269f3e391a1",
+  "sha1": "39c67691a3660bbebab1e2bf52b7fea300e61cd9",
+  "sha256": "356b597e6d9d5e4fa588762755adfbf348e08af1ad4ec50a4e57371ce599b4db",
+  "sha512": "72faacb587b983397fda46d07656f3e1b0fa27355cb258df8465c053b1fc94888abb1ceb23987fcbee717bb791402285cbc04d5ac7df74e1b017cfd14194983f",
+  "platform": "ubuntu",
+  "platform_version": "22.04",
+  "arch": "aarch64",
+  "name": "gemfast",
+  "friendly_name": "Gemfast Server",
+  "homepage": "https://www.gemfast.io",
+  "version": "0.1.0+20230205182245",
+  "iteration": 1,
+  "license": "GEMFAST EULA",
+  "version_manifest": {
+    "manifest_format": 2,
+    "software": {
+      "gemfast": {
+        "locked_version": "local_source",
+        "locked_source": {
+          "path": "/home"
+        },
+        "source_type": "path",
+        "described_version": "local_source",
+        "license": "BSD-3-Clause"
+      },
+      "caddy": {
+        "locked_version": "2.6.2",
+        "locked_source": {
+          "sha256": "5af0ee65a0220108b7b96322b0418abcda526d5f7fec5afaea029f1aebcca62a",
+          "url": "https://github.com/caddyserver/caddy/releases/download/v2.6.2/caddy_2.6.2_linux_amd64.tar.gz"
+        },
+        "source_type": "url",
+        "described_version": "2.6.2",
+        "license": "BSD-3-Clause"
+      },
+      "runit": {
+        "locked_version": "2.1.2",
+        "locked_source": {
+          "sha256": "6fd0160cb0cf1207de4e66754b6d39750cff14bb0aa66ab49490992c0c47ba18",
+          "url": "http://smarden.org/runit/runit-2.1.2.tar.gz"
+        },
+        "source_type": "url",
+        "described_version": "2.1.2",
+        "license": "BSD-3-Clause"
+      }
+    },
+    "build_version": "0.1.0+20230205182245",
+    "build_git_revision": "c83ff3c0c019130ac6db37b851a1f826dc7232ea",
+    "license": "GEMFAST EULA"
+  },
+  "license_content": "gemfast 0.1.0+20230205182245 license: \"GEMFAST EULA\"\n\n\n\n\n\nThis product bundles caddy 2.6.2,\nwhich is available under a \"BSD-3-Clause\" License.\n\nThis product bundles gemfast local_source,\nwhich is available under a \"BSD-3-Clause\" License.\n\nThis product bundles runit 2.1.2,\nwhich is available under a \"BSD-3-Clause\" License.\n\n\n\n\n"
+}

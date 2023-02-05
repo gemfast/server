@@ -1,0 +1,41 @@
+#!/bin/sh
+
+mkdir -p /opt/gemfast/sv/gemfast/log
+
+cat << EOF > /opt/gemfast/sv/gemfast/log/run
+#!/bin/sh
+exec /opt/gemfast/embedded/bin/svlogd -tt /var/log/gemfast
+EOF
+chmod +x /opt/gemfast/sv/gemfast/log/run
+
+cat << EOF > /opt/gemfast/sv/gemfast/run
+#!/bin/sh
+exec /opt/gemfast/embedded/bin/chpst /opt/gemfast/bin/gemfast server 2>&1
+EOF
+chmod +x /opt/gemfast/sv/gemfast/run
+
+ln -s /opt/gemfast/sv/gemfast /opt/gemfast/service/gemfast
+
+mkdir -p /var/log/gemfast
+
+mkdir -p /opt/gemfast/sv/caddy/log
+
+cat << EOF > /opt/gemfast/sv/caddy/log/run
+#!/bin/sh
+exec /opt/gemfast/embedded/bin/svlogd -tt /var/log/caddy
+EOF
+chmod +x /opt/gemfast/sv/caddy/log/run
+
+cat << EOF > /opt/gemfast/sv/caddy/run
+#!/bin/sh
+exec /opt/gemfast/embedded/bin/chpst /opt/gemfast/embedded/bin/caddy run 2>&1
+EOF
+chmod +x /opt/gemfast/sv/caddy/run
+
+ln -s /opt/gemfast/sv/caddy /opt/gemfast/service/caddy
+
+mkdir -p /var/log/caddy
+
+echo "Thank you for installing Gemfast Server! For help getting started visit https://gemfast.io/docs"
+
+exit 0

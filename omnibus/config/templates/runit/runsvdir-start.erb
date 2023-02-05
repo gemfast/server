@@ -1,0 +1,5 @@
+#!/bin/bash
+
+PATH=<%= install_dir %>/bin:<%= install_dir %>/embedded/bin:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
+
+exec env - PATH=$PATH runsvdir -P <%= install_dir %>/service 'log: <%= '.'*395 %>'
