@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+#
+# Description:
+#   This script can be used to copy one or more files from an s3 bucket to a destination path. Run `--help` for more information.
+#
+# Assumptions:
+#   - Gemfast is installed
+#
+# Flow:
+#   - Parse CLI arguments
+#   - Export AWS credentials
+#   - Check if __BUCKET_NAME exists
+#   - Copy all files from the __BUCKET_NAME/__BUCKET_PREFIX to the __DESTINATION_PATH
+set -eo pipefail
+
+SV=/opt/gemfast/embedded/bin/sv
+
+function main() {
+  if [[ $# -ne 1 ]]; then
+    log "ERROR" "must provide an action"
+    help
+    exit 1
+  fi
+  local action=$1
+  case "${action}" in
+    status|start|stop|restart|force-restart|kill)
+      sv "${action}" "caddy"
+      sv "${action}" "gemfast"
+      ;;
+    --help|help)
+      help
+      ;;
+    *)
+      log "ERROR" "unknown action: '${action}'"
+      help
+      ;;
+  esac
+}
+
+#
+#
+#
+function ensure-runsvdir() {  
+  if [ ! -f /etc/cron.d/makerun-runsvdir ]; then
+    echo "*/2 * * * * $(whoami) /opt/gemfast/embedded/bin/makerun" > /etc/cron.d/makerun-runsvdir
+  fi
+  if ps ax | grep -v grep | grep "runsvdir" > /dev/null; then
+    return
+  else
+    . /opt/gemfast/embedded/bin/makerun
+  fi
+  
+}
+
+#
+# Wrapper to sv command
+#
+function sv() {
+  local action=$1
+  local service=$2
+  if [ $action == "start" ]; then
+    ensure-runsvdir
+  fi
+  "${SV}" ${action} "${service}"
+}
+
+#
+# Emit help text
+#
+function help() {
+    echo "Usage: gemfast-ctl [action]"
+    echo
+    echo "Summary:"
+    echo "Issue service commands to a gemfast server."
+    echo "This script assumes that gemfast is already installed on the system and that the destination path is \"/opt/gemfast\"."
+    echo
+    echo
+    echo "Actions:"
+    echo "status:"
+    echo "  Report the current status of gemfast services."
+    echo "up:"
+    echo "  If gemfast services are not running, start it."
+    echo "down:"
+    echo "  The prefix path of s3 bucket to download."
+    echo "restart:"
+    echo "  The destination path that the buckets contents will be downloaded to."
+    echo "force-restart:"
+    echo "  The aws access key id of the target aws account."
+    echo "kill:"
+    echo "  If gemfast services are running, send it the KILL signal."
+    echo
+}
+
+#
+# Emit a message to the console
+#
+function log() {
+    local __MESSAGE="${2}"
+    local __LEVEL="${1:-INFO}"
+    # shellcheck disable=SC2155
+    local __TIMESTAMP="$( date '+%Y-%m-%d %H:%M:%S.%s%z' )"
+    __BLUE="$(printf '\033[0;37m\033[44m')"
+    __RED="$(printf '\033[0;37m\033[41m')"
+    __YELLOW="$(printf '\033[0;93m')"
+    __NO_COLOUR="$(printf '\033[0m')"
+
+    if [[ "${__LEVEL}" == "ERROR" ]]; then
+        printf "%s - %s - %s\n" "${__TIMESTAMP}" "${__LEVEL}" "${__RED}${__MESSAGE}${__NO_COLOUR}"
+    elif [[ "${__LEVEL}" == "WARN" ]]; then
+        printf "%s - %s - %s\n" "${__TIMESTAMP}" "${__LEVEL}" "${__YELLOW}${__MESSAGE}${__NO_COLOUR}"
+    else
+        printf "%s - %s - %s\n" "${__TIMESTAMP}" "${__LEVEL}" "${__BLUE}${__MESSAGE}${__NO_COLOUR}"
+    fi
+}
+
+main "$@"
