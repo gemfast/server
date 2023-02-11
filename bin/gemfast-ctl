@@ -6,19 +6,12 @@
 # Assumptions:
 #   - Gemfast is installed
 #
-# Flow:
-#   - Parse CLI arguments
-#   - Export AWS credentials
-#   - Check if __BUCKET_NAME exists
-#   - Copy all files from the __BUCKET_NAME/__BUCKET_PREFIX to the __DESTINATION_PATH
 set -eo pipefail
-
-SV=/opt/gemfast/embedded/bin/sv
 
 function main() {
   if [[ $# -ne 1 ]]; then
-    log "ERROR" "must provide an action"
     help
+    log "ERROR" "must provide an action"
     exit 1
   fi
   local action=$1
@@ -31,23 +24,23 @@ function main() {
       help
       ;;
     *)
-      log "ERROR" "unknown action: '${action}'"
       help
+      log "ERROR" "unknown action: '${action}'"
       ;;
   esac
 }
 
 #
+# Create the makerun-runsvdir and make sure runsvdir is started 
 #
-#
-function ensure-runsvdir() {  
+function ensure-runsvdir() {
   if [ ! -f /etc/cron.d/makerun-runsvdir ]; then
     echo "*/2 * * * * $(whoami) /opt/gemfast/embedded/bin/makerun" > /etc/cron.d/makerun-runsvdir
   fi
   if ps ax | grep -v grep | grep "runsvdir" > /dev/null; then
     return
   else
-    . /opt/gemfast/embedded/bin/makerun
+    /opt/gemfast/embedded/bin/runsvdir-start &
   fi
   
 }
@@ -61,11 +54,11 @@ function sv() {
   if [ $action == "start" ]; then
     ensure-runsvdir
   fi
-  "${SV}" ${action} "${service}"
+  /opt/gemfast/embedded/bin/sv ${action} "${service}"
 }
 
 #
-# Emit help text
+# Print help text
 #
 function help() {
     echo "Usage: gemfast-ctl [action]"
@@ -79,15 +72,15 @@ function help() {
     echo "status:"
     echo "  Report the current status of gemfast services."
     echo "up:"
-    echo "  If gemfast services are not running, start it."
+    echo "  If gemfast services are not running, start them."
     echo "down:"
-    echo "  The prefix path of s3 bucket to download."
+    echo "  If gemfast services are running, stop them."
     echo "restart:"
-    echo "  The destination path that the buckets contents will be downloaded to."
+    echo "  If gemfast services are running, stop them and start them. If gemfast services are not running, start them."
     echo "force-restart:"
-    echo "  The aws access key id of the target aws account."
+    echo "  If gemfast services are running, stop them and start them. If gemfast services are not running, start them. Send the KILL signal if the timeout is reached."
     echo "kill:"
-    echo "  If gemfast services are running, send it the KILL signal."
+    echo "  If gemfast services are running, send them the KILL signal."
     echo
 }
 
@@ -95,22 +88,9 @@ function help() {
 # Emit a message to the console
 #
 function log() {
-    local __MESSAGE="${2}"
-    local __LEVEL="${1:-INFO}"
-    # shellcheck disable=SC2155
-    local __TIMESTAMP="$( date '+%Y-%m-%d %H:%M:%S.%s%z' )"
-    __BLUE="$(printf '\033[0;37m\033[44m')"
-    __RED="$(printf '\033[0;37m\033[41m')"
-    __YELLOW="$(printf '\033[0;93m')"
-    __NO_COLOUR="$(printf '\033[0m')"
-
-    if [[ "${__LEVEL}" == "ERROR" ]]; then
-        printf "%s - %s - %s\n" "${__TIMESTAMP}" "${__LEVEL}" "${__RED}${__MESSAGE}${__NO_COLOUR}"
-    elif [[ "${__LEVEL}" == "WARN" ]]; then
-        printf "%s - %s - %s\n" "${__TIMESTAMP}" "${__LEVEL}" "${__YELLOW}${__MESSAGE}${__NO_COLOUR}"
-    else
-        printf "%s - %s - %s\n" "${__TIMESTAMP}" "${__LEVEL}" "${__BLUE}${__MESSAGE}${__NO_COLOUR}"
-    fi
+    local message="${2}"
+    local level="${1:-INFO}"
+    printf "%s - %s\n" "${level}" "${message}"
 }
 
 main "$@"
