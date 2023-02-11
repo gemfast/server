@@ -55,7 +55,7 @@ func loadEnvVariables() (config *envConfig) {
 	viper.SetConfigType("env")
 	viper.ReadInConfig()
 	if err := viper.ReadInConfig(); err != nil {
-		log.Trace().Err(err).Msg("unable to read in gemfast.env")
+		log.Error().Err(err).Msg("unable to read in gemfast.env")
 		return
 	}
 
