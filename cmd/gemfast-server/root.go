@@ -30,7 +30,10 @@ func Execute() {
 	if err != nil {
 		panic(err)
 	}
-	// indexer.Get().GenerateIndex()
+	err = indexer.Get().GenerateIndex()
+	if err != nil {
+		panic(err)
+	}
 	err = api.Run()
 	if err != nil {
 		panic(err)
