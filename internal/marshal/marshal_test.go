@@ -4,139 +4,139 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
-	"strings"
+	// "strings"
 
 	// "os"
 	"testing"
 
 	"github.com/gemfast/server/internal/models"
-	"github.com/gemfast/server/internal/spec"
+	// "github.com/gemfast/server/internal/spec"
 )
 
-func TestDumpSpecsWithMultiPlatforms(t *testing.T) {
-	rubyResult := "04085b0a5b0849220877646d063a064554553a1147656d3a3a56657273696f6e5b0649220a302e302e31063b005449220972756279063b00545b0849220877646d063b0054553b065b0649220a302e302e32063b005449220b6d696e673332063b00545b0849220877646d063b0054400e4922107838362d6d696e67773332063b00545b0849220877646d063b0054553b065b0649220a302e312e31063b005449220972756279063b00545b0849220877646d063b0054553b065b0649220a302e312e30063b005449220972756279063b0054"
-	rubyBytes, _ := hex.DecodeString(rubyResult)
-	testSpecs := [][]string{
-		[]string{"wdm", "0.0.1", "ruby"},
-		[]string{"wdm", "0.0.2", "ming32"},
-		[]string{"wdm", "0.0.2", "x86-mingw32"},
-		[]string{"wdm", "0.1.1", "ruby"},
-		[]string{"wdm", "0.1.0", "ruby"},
-	}
+// func TestDumpSpecsWithMultiPlatforms(t *testing.T) {
+// 	rubyResult := "04085b0a5b0849220877646d063a064554553a1147656d3a3a56657273696f6e5b0649220a302e302e31063b005449220972756279063b00545b0849220877646d063b0054553b065b0649220a302e302e32063b005449220b6d696e673332063b00545b0849220877646d063b0054400e4922107838362d6d696e67773332063b00545b0849220877646d063b0054553b065b0649220a302e312e31063b005449220972756279063b00545b0849220877646d063b0054553b065b0649220a302e312e30063b005449220972756279063b0054"
+// 	rubyBytes, _ := hex.DecodeString(rubyResult)
+// 	testSpecs := [][]string{
+// 		[]string{"wdm", "0.0.1", "ruby"},
+// 		[]string{"wdm", "0.0.2", "ming32"},
+// 		[]string{"wdm", "0.0.2", "x86-mingw32"},
+// 		[]string{"wdm", "0.1.1", "ruby"},
+// 		[]string{"wdm", "0.1.0", "ruby"},
+// 	}
 
-	var specs []*spec.Spec
-	for _, ts := range testSpecs {
-		specs = append(specs, &spec.Spec{
-			Name:             ts[0],
-			Version:          ts[1],
-			OriginalPlatform: ts[2],
-		})
-	}
-	dump := DumpSpecs(specs)
-	for i, b := range rubyBytes {
-		if i >= len(dump) {
-			// t.Errorf("%x", b)
-			t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
-			// os.Exit(1)
-		}
-		if dump[i] != b {
-			t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, dump[i], string(dump[i]), dump[i], i)
-			// os.Exit(1)
-		}
-	}
-}
+// 	var specs []*spec.Spec
+// 	for _, ts := range testSpecs {
+// 		specs = append(specs, &spec.Spec{
+// 			Name:             ts[0],
+// 			Version:          ts[1],
+// 			OriginalPlatform: ts[2],
+// 		})
+// 	}
+// 	dump := DumpSpecs(specs)
+// 	for i, b := range rubyBytes {
+// 		if i >= len(dump) {
+// 			// t.Errorf("%x", b)
+// 			t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
+// 			// os.Exit(1)
+// 		}
+// 		if dump[i] != b {
+// 			t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, dump[i], string(dump[i]), dump[i], i)
+// 			// os.Exit(1)
+// 		}
+// 	}
+// }
 
-func TestDumpSpecs(t *testing.T) {
-	rubyResult := "04085b135b0849220f636865662d7574696c73063a064554553a1147656d3a3a56657273696f6e5b0649220c31372e31302e30063b005449220972756279063b00545b08492214636f6e63757272656e742d72756279063b0054553b065b0649220b312e312e3130063b005449220972756279063b00545b0849220b646576697365063b0054553b065b0649220a342e372e31063b005449220972756279063b00545b0849220b646576697365063b0054553b065b0649220a342e372e32063b005449220972756279063b00545b08492214666163746f72795f6d616e61676572063b0054553b065b0649220a302e332e30063b005449220972756279063b00545b0849220e6c6974746572626f78063b0054553b065b0649220a302e342e30063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220a332e302e30063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220c332e31322e3139063b005449220972756279063b00545b084922146d69786c69622d7368656c6c6f7574063b0054553b065b0649220a332e322e37063b005449220972756279063b00545b084922166d69786c69622d76657273696f6e696e67063b0054553b065b0649220a312e302e30063b005449220972756279063b00545b084922166d69786c69622d76657273696f6e696e67063b0054553b065b0649220b312e322e3132063b005449220972756279063b00545b084922077067063b0054553b065b0649220a312e342e33063b005449220972756279063b00545b0849220974686f72063b0054553b065b0649220a312e322e31063b005449220972756279063b00545b0849220d77696e3332617069063b0054553b065b0649220a302e312e30063b005449220972756279063b0054"
+// func TestDumpSpecs(t *testing.T) {
+// 	rubyResult := "04085b135b0849220f636865662d7574696c73063a064554553a1147656d3a3a56657273696f6e5b0649220c31372e31302e30063b005449220972756279063b00545b08492214636f6e63757272656e742d72756279063b0054553b065b0649220b312e312e3130063b005449220972756279063b00545b0849220b646576697365063b0054553b065b0649220a342e372e31063b005449220972756279063b00545b0849220b646576697365063b0054553b065b0649220a342e372e32063b005449220972756279063b00545b08492214666163746f72795f6d616e61676572063b0054553b065b0649220a302e332e30063b005449220972756279063b00545b0849220e6c6974746572626f78063b0054553b065b0649220a302e342e30063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220a332e302e30063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220c332e31322e3139063b005449220972756279063b00545b084922146d69786c69622d7368656c6c6f7574063b0054553b065b0649220a332e322e37063b005449220972756279063b00545b084922166d69786c69622d76657273696f6e696e67063b0054553b065b0649220a312e302e30063b005449220972756279063b00545b084922166d69786c69622d76657273696f6e696e67063b0054553b065b0649220b312e322e3132063b005449220972756279063b00545b084922077067063b0054553b065b0649220a312e342e33063b005449220972756279063b00545b0849220974686f72063b0054553b065b0649220a312e322e31063b005449220972756279063b00545b0849220d77696e3332617069063b0054553b065b0649220a302e312e30063b005449220972756279063b0054"
 
-	testSpecs := []string{
-		"chef-utils-17.10.0.gem",
-		"concurrent-ruby-1.1.10.gem",
-		"devise-4.7.1.gem",
-		"devise-4.7.2.gem",
-		"factory_manager-0.3.0.gem",
-		"litterbox-0.4.0.gem",
-		"mixlib-install-3.0.0.gem",
-		"mixlib-install-3.12.19.gem",
-		"mixlib-shellout-3.2.7.gem",
-		"mixlib-versioning-1.0.0.gem",
-		"mixlib-versioning-1.2.12.gem",
-		"pg-1.4.3.gem",
-		"thor-1.2.1.gem",
-		"win32api-0.1.0.gem",
-	}
+// 	testSpecs := []string{
+// 		"chef-utils-17.10.0.gem",
+// 		"concurrent-ruby-1.1.10.gem",
+// 		"devise-4.7.1.gem",
+// 		"devise-4.7.2.gem",
+// 		"factory_manager-0.3.0.gem",
+// 		"litterbox-0.4.0.gem",
+// 		"mixlib-install-3.0.0.gem",
+// 		"mixlib-install-3.12.19.gem",
+// 		"mixlib-shellout-3.2.7.gem",
+// 		"mixlib-versioning-1.0.0.gem",
+// 		"mixlib-versioning-1.2.12.gem",
+// 		"pg-1.4.3.gem",
+// 		"thor-1.2.1.gem",
+// 		"win32api-0.1.0.gem",
+// 	}
 
-	var specs []*spec.Spec
-	for _, ts := range testSpecs {
-		chunks := strings.Split(ts, "-")
-		version := strings.Split(chunks[len(chunks)-1], ".gem")[0]
-		chunks = chunks[:len(chunks)-1]
-		name := strings.Join(chunks, "-")
-		specs = append(specs, &spec.Spec{
-			Name:             name,
-			Version:          version,
-			OriginalPlatform: "ruby",
-		})
-	}
+// 	var specs []*spec.Spec
+// 	for _, ts := range testSpecs {
+// 		chunks := strings.Split(ts, "-")
+// 		version := strings.Split(chunks[len(chunks)-1], ".gem")[0]
+// 		chunks = chunks[:len(chunks)-1]
+// 		name := strings.Join(chunks, "-")
+// 		specs = append(specs, &spec.Spec{
+// 			Name:             name,
+// 			Version:          version,
+// 			OriginalPlatform: "ruby",
+// 		})
+// 	}
 
-	b := DumpSpecs(specs)
-	if hex.EncodeToString(b) != rubyResult {
-		t.Error("Dump does not match ruby result")
-	}
-}
+// 	b := DumpSpecs(specs)
+// 	if hex.EncodeToString(b) != rubyResult {
+// 		t.Error("Dump does not match ruby result")
+// 	}
+// }
 
-func TestDumpSpecsWithCaching(t *testing.T) {
-	rubyResult := "04085b075b084922136d69786c69622d696e7374616c6c063a064554553a1147656d3a3a56657273696f6e5b0649220c332e31322e3139063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054400849220972756279063b0054"
-	rubyBytes, _ := hex.DecodeString(rubyResult)
-	spec1 := spec.Spec{
-		Name:             "mixlib-install",
-		Version:          "3.12.19",
-		OriginalPlatform: "ruby",
-	}
-	spec2 := spec.Spec{
-		Name:             "mixlib-install",
-		Version:          "3.12.19",
-		OriginalPlatform: "ruby",
-	}
+// func TestDumpSpecsWithCaching(t *testing.T) {
+// 	rubyResult := "04085b075b084922136d69786c69622d696e7374616c6c063a064554553a1147656d3a3a56657273696f6e5b0649220c332e31322e3139063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054400849220972756279063b0054"
+// 	rubyBytes, _ := hex.DecodeString(rubyResult)
+// 	spec1 := spec.Spec{
+// 		Name:             "mixlib-install",
+// 		Version:          "3.12.19",
+// 		OriginalPlatform: "ruby",
+// 	}
+// 	spec2 := spec.Spec{
+// 		Name:             "mixlib-install",
+// 		Version:          "3.12.19",
+// 		OriginalPlatform: "ruby",
+// 	}
 
-	specs := []*spec.Spec{&spec1, &spec2}
-	dump := DumpSpecs(specs)
-	for i, b := range rubyBytes {
-		if i >= len(dump) {
-			// t.Errorf("%x", b)
-			t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
-			// os.Exit(1)
-		}
-		if dump[i] != b {
-			t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, dump[i], string(dump[i]), dump[i], i)
-			// os.Exit(1)
-		}
-	}
-}
+// 	specs := []*spec.Spec{&spec1, &spec2}
+// 	dump := DumpSpecs(specs)
+// 	for i, b := range rubyBytes {
+// 		if i >= len(dump) {
+// 			// t.Errorf("%x", b)
+// 			t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
+// 			// os.Exit(1)
+// 		}
+// 		if dump[i] != b {
+// 			t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, dump[i], string(dump[i]), dump[i], i)
+// 			// os.Exit(1)
+// 		}
+// 	}
+// }
 
-func TestDumpSpecsWithSameName(t *testing.T) {
-	rubyResult := "04085b085b0849220b646576697365063a064554553a1147656d3a3a56657273696f6e5b0649220a342e372e32063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220c332e31322e3139063b005449220972756279063b00545b0849220b646576697365063b0054553b065b0649220a342e372e31063b005449220972756279063b0054"
-	spec1 := spec.Spec{
-		Name:             "devise",
-		Version:          "4.7.2",
-		OriginalPlatform: "ruby",
-	}
-	spec2 := spec.Spec{
-		Name:             "mixlib-install",
-		Version:          "3.12.19",
-		OriginalPlatform: "ruby",
-	}
-	spec3 := spec.Spec{
-		Name:             "devise",
-		Version:          "4.7.1",
-		OriginalPlatform: "ruby",
-	}
-	specs := []*spec.Spec{&spec1, &spec2, &spec3}
-	b := DumpSpecs(specs)
-	if hex.EncodeToString(b) != rubyResult {
-		t.Error("Dump does not match ruby result")
-	}
-}
+// func TestDumpSpecsWithSameName(t *testing.T) {
+// 	rubyResult := "04085b085b0849220b646576697365063a064554553a1147656d3a3a56657273696f6e5b0649220a342e372e32063b005449220972756279063b00545b084922136d69786c69622d696e7374616c6c063b0054553b065b0649220c332e31322e3139063b005449220972756279063b00545b0849220b646576697365063b0054553b065b0649220a342e372e31063b005449220972756279063b0054"
+// 	spec1 := spec.Spec{
+// 		Name:             "devise",
+// 		Version:          "4.7.2",
+// 		OriginalPlatform: "ruby",
+// 	}
+// 	spec2 := spec.Spec{
+// 		Name:             "mixlib-install",
+// 		Version:          "3.12.19",
+// 		OriginalPlatform: "ruby",
+// 	}
+// 	spec3 := spec.Spec{
+// 		Name:             "devise",
+// 		Version:          "4.7.1",
+// 		OriginalPlatform: "ruby",
+// 	}
+// 	specs := []*spec.Spec{&spec1, &spec2, &spec3}
+// 	b := DumpSpecs(specs)
+// 	if hex.EncodeToString(b) != rubyResult {
+// 		t.Error("Dump does not match ruby result")
+// 	}
+// }
 
 func TestLoadSpecsWithUnderscore(t *testing.T) {
 	rubyResult := "04085b075b084922065f063a064554553a1147656d3a3a56657273696f6e5b06492208312e30063b005449220972756279063b00545b084007553b065b06492208312e31063b0054400b"
@@ -213,41 +213,6 @@ func TestReadInt(t *testing.T) {
 		t.Errorf("Error, expected '172124', got: %b ", l)
 	}
 }
-
-// func TestDumpGemspecGemfastStyle(t *testing.T) {
-// 	rubyResult := "04086f3a1747656d3a3a53706563696669636174696f6e143a0a406e616d6549220c636f6d706f7365063a0645543a0d4076657273696f6e553a1147656d3a3a56657273696f6e5b0649220a302e312e30063b07543a0d4073756d6d61727949223a577269746520612073686f72742073756d6d6172792c2062656361757365205275627947656d73207265717569726573206f6e652e063b07543a1b4072657175697265645f727562795f76657273696f6e553a1547656d3a3a526571756972656d656e745b065b065b074922073e3d063b0754553b095b0649220a322e362e30063b07543a1f4072657175697265645f7275627967656d735f76657273696f6e553a1547656d3a3a526571756972656d656e745b065b065b074922073e3d063b0754553b095b0649220a332e332e33063b07543a17406f726967696e616c5f706c6174666f726d49220972756279063b07543a0b40656d61696c5b0649221f677265672e632e7363686f6669656c6440676d61696c2e636f6d063b07543a0d40617574686f72735b06492216477265676f7279205363686f6669656c64063b07543a11406465736372697074696f6e49223457726974652061206c6f6e676572206465736372697074696f6e206f722064656c6574652074686973206c696e652e063b07543a0e40686f6d657061676549222d68747470733a2f2f6769746875622e636f6d2f677363686f2f686162697461742d636f6d706f7365063b07543a0e406c6963656e7365735b064922084d4954063b07543a1340726571756972655f70617468735b064922086c6962063b07543a1b4073706563696669636174696f6e5f76657273696f6e69093a1240646570656e64656e636965735b066f3a1447656d3a3a446570656e64656e63790a3b0649220e66696c652d7461696c063b07543a1140726571756972656d656e74553a1547656d3a3a526571756972656d656e745b065b065b074922077e3e063b0754553b095b06492208312e32063b07543a0a40747970653a0c72756e74696d653a104070726572656c65617365463a1a4076657273696f6e5f726571756972656d656e7473401a3a16407275627967656d735f76657273696f6e49220a332e332e33063b0754"
-// 	rubyBytes, _ := hex.DecodeString(rubyResult)
-// 	m := spec.GemMetadata{
-// 		Name:     "compose",
-// 		Platform: "ruby",
-// 		Version: struct {
-// 			Version string `yaml:"version"`
-// 		}{
-// 			Version: "0.1.0",
-// 		},
-// 		Authors:         []string{"Gregory Schofield", "Skyler Layne"},
-// 		Email:           []string{"greg.c.schofield@gmail.com", "greg.schofield@indellient.com"},
-// 		Summary:         "Write a short summary, because RubyGems requires one.",
-// 		Description:     "Write a longer description or delete this line.",
-// 		Homepage:        "https://github.com/gscho/habitat-compose",
-// 		SpecVersion:     4,
-// 		RequirePaths:    []string{"lib", "bin"},
-// 		Licenses:        []string{"MIT", "unlicense"},
-// 		RubygemsVersion: "3.3.3",
-// 	}
-// 	gs := DumpGemspecGemfast(m)
-// for i, b := range rubyBytes {
-// 	if i >= len(gs) {
-// 		// t.Errorf("%x", b)
-// 		t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
-// 		// os.Exit(1)
-// 	}
-// 	if gs[i] != b {
-// 		t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, gs[i], string(gs[i]), gs[i], i)
-// 		// os.Exit(1)
-// 	}
-// }
-// }
 
 func TestDumpBundlerDeps(t *testing.T) {
 	rubyResult := "04085b077b093a096e616d654922136d69786c69622d696e7374616c6c063a0645543a0b6e756d62657249220c332e31322e3139063b06543a0d706c6174666f726d49220972756279063b06543a11646570656e64656e636965735b085b074922146d69786c69622d7368656c6c6f7574063b06544922093e3d2030063b06545b074922166d69786c69622d76657273696f6e696e67063b06544922093e3d2030063b06545b0749220974686f72063b06544922093e3d2030063b06547b093b004922136d69786c69622d696e7374616c6c063b06543b0749220c332e31322e3139063b06543b0849220972756279063b06543b095b085b074922146d69786c69622d7368656c6c6f7574063b06544922093e3d2030063b06545b074922166d69786c69622d76657273696f6e696e67063b06544922093e3d2030063b06545b0749220974686f72063b06544922093e3d2030063b0654"

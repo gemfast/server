@@ -2,6 +2,7 @@ specs*
 latest_specs*
 prerelease_specs*
 *.gem
+!test/fixtures/gem_list/*.gem
 *.rb
 gemfast.db
 bin/gemfast
