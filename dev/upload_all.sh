@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-gems="$HOME/.rvm/src/ruby-3.1.2/gems"
+gems="/var/gemfast/gems"
+cd $gems
 for gem in *.gem; do
   [ -f "$gem" ] || break
   echo "Uploading $gem"
