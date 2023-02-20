@@ -2,13 +2,16 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"os/user"
 
+	"github.com/joho/godotenv"
+	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 )
 
-var Env *envConfig
+var Env envConfig
 
 func InitConfig() {
 	configureZeroLog()
@@ -20,7 +23,6 @@ type envConfig struct {
 	Dir             string `mapstructure:"GEMFAST_DIR"`
 	GemDir          string `mapstructure:"GEMFAST_GEM_DIR"`
 	DBDir           string `mapstructure:"GEMFAST_DB_DIR"`
-	BinPath         string `mapstructure:"GEMFAST_BIN_PATH"`
 	URL             string `mapstructure:"GEMFAST_URL"`
 	Port            string `mapstructure:"GEMFAST_PORT"`
 
@@ -35,32 +37,51 @@ func configureZeroLog() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 }
 
-func loadEnvVariables() (config *envConfig) {
-	viper.BindEnv("GEMFAST_LOG_LEVEL")
-	viper.SetDefault("GEMFAST_DIR", "/var/gemfast")
-	viper.SetDefault("GEMFAST_GEM_DIR", fmt.Sprintf("%s/gems", viper.Get("GEMFAST_DIR")))
-	viper.SetDefault("GEMFAST_DB_DIR", "/var/gemfast/db")
-	viper.SetDefault("GEMFAST_BIN_PATH", "/usr/bin/gemfast")
-	viper.SetDefault("GEMFAST_URL", "http://localhost")
-	viper.SetDefault("GEMFAST_PORT", 8881)
-
-	viper.SetDefault("GEMFAST_AUTH", "local")
-	viper.BindEnv("GEMFAST_ADMIN_PASSWORD")
-	viper.BindEnv("GEMFAST_ADD_LOCAL_USERS")
-
-	viper.AutomaticEnv()
-	viper.AddConfigPath("$HOME/.gemfast")
-	viper.AddConfigPath("/etc/gemfast")
-	viper.SetConfigName("gemfast")
-	viper.SetConfigType("env")
-	viper.ReadInConfig()
-	if err := viper.ReadInConfig(); err != nil {
-		log.Error().Err(err).Msg("unable to read in gemfast.env")
-		return
+func loadEnvVariables() (config envConfig) {
+	var dotEnvMap map[string]string	
+	usr, err := user.Current()
+	if err != nil {
+		log.Error().Err(err).Msg("unable to get current user")
+		os.Exit(1)
 	}
-
-	if err := viper.Unmarshal(&config); err != nil {
-		log.Error().Err(err).Msg("unable to unmarshal gemfast.env")
+	homedirConf := fmt.Sprintf("%s/.gemfast/.env", usr.HomeDir)
+	if _, err := os.Stat("/etc/gemfast/.env"); err == nil {
+		log.Info().Str("configLocation", "/etc/gemfast/.env").Msg("found gemfast config file")
+		dotEnvMap, err = godotenv.Read("/etc/gemfast/.env")
+	} else if _, err := os.Stat(homedirConf); err == nil {
+		log.Info().Str("configLocation", homedirConf).Msg("found gemfast config file")
+		dotEnvMap, err = godotenv.Read(homedirConf)
+	} else {
+		log.Warn().Msg(fmt.Sprintf("unable to find a .env file in /etc/gemfast or %s", homedirConf))
+		log.Warn().Msg("using default configuration values")
+		dotEnvMap = make(map[string]string)
 	}
-	return
+	setEnvDefaults(dotEnvMap)
+	var cfg envConfig
+	err = mapstructure.Decode(dotEnvMap, &cfg)
+	if err != nil {
+		panic(err)
+	}
+	return cfg
+}
+
+func setEnvDefaults(envMap map[string]string) {
+	if _, ok := envMap["GEMFAST_DIR"]; !ok {
+		envMap["GEMFAST_DIR"] = "/var/gemfast" 
+	}
+	if _, ok := envMap["GEMFAST_GEM_DIR"]; !ok {
+		envMap["GEMFAST_GEM_DIR"] = fmt.Sprintf("%s/gems", envMap["GEMFAST_DIR"])
+	}
+	if _, ok := envMap["GEMFAST_DB_DIR"]; !ok {
+		envMap["GEMFAST_DB_DIR"] = fmt.Sprintf("%s/db", envMap["GEMFAST_DIR"])
+	}
+	if _, ok := envMap["GEMFAST_URL"]; !ok {
+		envMap["GEMFAST_URL"] = "http://localhost" 
+	}
+	if _, ok := envMap["GEMFAST_PORT"]; !ok {
+		envMap["GEMFAST_PORT"] = "8881" 
+	}
+	if _, ok := envMap["GEMFAST_AUTH"]; !ok {
+		envMap["GEMFAST_AUTH"] = "local" 
+	}	
 }
