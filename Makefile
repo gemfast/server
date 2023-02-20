@@ -1,5 +1,7 @@
 build:
-	go build -o bin/gemfast ./cmd/gemfast
+	go build
+	mv gemfast bin
+	chmod +x bin/gemfast
 
 run:
 	go run main.go server

@@ -4,4 +4,5 @@ prerelease_specs*
 *.gem
 *.rb
 gemfast.db
-bin/*
+bin/gemfast
+omnibus/pkg

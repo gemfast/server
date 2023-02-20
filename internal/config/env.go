@@ -32,17 +32,17 @@ type envConfig struct {
 
 func configureZeroLog() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 }
 
 func loadEnvVariables() (config *envConfig) {
 	viper.BindEnv("GEMFAST_LOG_LEVEL")
 	viper.SetDefault("GEMFAST_DIR", "/var/gemfast")
 	viper.SetDefault("GEMFAST_GEM_DIR", fmt.Sprintf("%s/gems", viper.Get("GEMFAST_DIR")))
-	viper.SetDefault("GEMFAST_DB_DIR", ".")
+	viper.SetDefault("GEMFAST_DB_DIR", "/var/gemfast/db")
 	viper.SetDefault("GEMFAST_BIN_PATH", "/usr/bin/gemfast")
 	viper.SetDefault("GEMFAST_URL", "http://localhost")
-	viper.SetDefault("GEMFAST_PORT", 8080)
+	viper.SetDefault("GEMFAST_PORT", 8881)
 
 	viper.SetDefault("GEMFAST_AUTH", "local")
 	viper.BindEnv("GEMFAST_ADMIN_PASSWORD")
@@ -55,11 +55,12 @@ func loadEnvVariables() (config *envConfig) {
 	viper.SetConfigType("env")
 	viper.ReadInConfig()
 	if err := viper.ReadInConfig(); err != nil {
-		log.Debug().Err(err).Msg("unable to read in config.env")
+		log.Error().Err(err).Msg("unable to read in gemfast.env")
+		return
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
-		log.Error().Err(err).Msg("unable to unmarshal config.env")
+		log.Error().Err(err).Msg("unable to unmarshal gemfast.env")
 	}
 	return
 }

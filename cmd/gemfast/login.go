@@ -87,7 +87,7 @@ func login(username string) {
 	if err != nil {
 		panic(err)
 	}
-	httpposturl := fmt.Sprintf("%s:%s/login", config.Env.URL, config.Env.Port)
+	httpposturl := fmt.Sprintf("%s:%s/login", config.Env.URL, "2080")
 	login := Login{Username: username, Password: string(pass)}
 	jsonData, _ := json.Marshal(login)
 	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(jsonData))

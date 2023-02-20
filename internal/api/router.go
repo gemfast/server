@@ -13,7 +13,7 @@ import (
 
 func Run() error {
 	gin.SetMode(gin.ReleaseMode)
-	r := gin.New()
+	r := gin.Default()
 	initRouter(r)
 	port := ":" + config.Env.Port
 	log.Info().Str("port", port).Msg("gemfast server ready")
@@ -42,14 +42,14 @@ func configureLocalAuth(r *gin.Engine) {
 	if err != nil {
 		panic(err)
 	}
-	authMiddleware, err := initJwtMiddleware()
+	jwtMiddleware, err := initJwtMiddleware()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize auth middleware")
 	}
-	r.POST("/login", authMiddleware.LoginHandler)
+	r.POST("/login", jwtMiddleware.LoginHandler)
 	localAuth := r.Group("/")
-	localAuth.GET("/refresh-token", authMiddleware.RefreshHandler)
-	localAuth.Use(authMiddleware.MiddlewareFunc())
+	localAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
+	localAuth.Use(jwtMiddleware.MiddlewareFunc())
 	{
 		localAuth.POST("token", createToken)
 	}
