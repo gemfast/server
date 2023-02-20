@@ -17,10 +17,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gscho/gemfast/internal/config"
-	"github.com/gscho/gemfast/internal/marshal"
-	"github.com/gscho/gemfast/internal/models"
-	"github.com/gscho/gemfast/internal/spec"
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/marshal"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/spec"
 
 	"github.com/rs/zerolog/log"
 )

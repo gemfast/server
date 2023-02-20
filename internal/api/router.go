@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gscho/gemfast/internal/config"
-	"github.com/gscho/gemfast/internal/models"
-	"github.com/gscho/gemfast/internal/middleware"
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/middleware"
 	"github.com/rs/zerolog/log"
 )
 

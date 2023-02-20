@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	"github.com/gscho/gemfast/internal/models"
+	"github.com/gemfast/server/internal/models"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

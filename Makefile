@@ -1,7 +1,7 @@
 build:
 	go build
-	mv gemfast bin
-	chmod +x bin/gemfast
+	mv server bin/gemfast-server
+	chmod +x bin/gemfast-server
 
 run:
 	go run main.go server
@@ -14,6 +14,6 @@ test:
 
 clean:
 	go clean
-	rm -f bin/gemfast
+	rm -f bin/gemfast-server
 
 all: clean fmt test build

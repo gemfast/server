@@ -5,7 +5,7 @@ import (
 	b64 "encoding/base64"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gscho/gemfast/internal/models"
+	"github.com/gemfast/server/internal/models"
 )
 
 func GinTokenMiddleware() gin.HandlerFunc {

@@ -1,4 +1,4 @@
-module github.com/gscho/gemfast
+module github.com/gemfast/server
 
 go 1.19
 

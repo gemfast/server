@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gscho/gemfast/internal/db"
+	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
 )
 

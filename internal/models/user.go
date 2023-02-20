@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gscho/gemfast/internal/config"
-	"github.com/gscho/gemfast/internal/db"
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/db"
 
 	"github.com/rs/zerolog/log"
 	"github.com/sethvargo/go-password/password"

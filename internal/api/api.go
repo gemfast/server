@@ -9,11 +9,11 @@ import (
 
 	// jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/gscho/gemfast/internal/config"
-	"github.com/gscho/gemfast/internal/indexer"
-	"github.com/gscho/gemfast/internal/marshal"
-	"github.com/gscho/gemfast/internal/models"
-	"github.com/gscho/gemfast/internal/spec"
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/indexer"
+	"github.com/gemfast/server/internal/marshal"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/spec"
 	"github.com/rs/zerolog/log"
 )
 
