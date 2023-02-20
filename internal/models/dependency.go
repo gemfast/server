@@ -25,6 +25,24 @@ func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
 	return p, nil
 }
 
+func ListGems() {
+	// db.BoltDB.View(func(tx *bolt.Tx) error {
+	// 	// Assume bucket exists and has keys
+	// 	b := tx.Bucket([]byte(db.DEPENDENCY_BUCKET))
+
+	// 	c := b.Cursor()
+
+	// 	for k, v := c.First(); k != nil; k, v = c.Next() {
+	// 		fmt.Printf("key=%s, value=%s\n", k)
+	// 		deps, _ := DependenciesFromBytes(v)
+	// 		fmt.Println(deps)
+
+	// 	}
+
+	// 	return nil
+	// })
+}
+
 func GetDependencies(name string) (*[]Dependency, error) {
 	var existing []byte
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {

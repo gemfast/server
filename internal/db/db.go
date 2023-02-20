@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DEPENDENCY_BUCKET = "dependency"
+	DEPENDENCY_BUCKET = "gem_dependencies"
 	USER_BUCKET       = "user"
 )
 
