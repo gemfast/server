@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	b64 "encoding/base64"
 
@@ -12,14 +13,14 @@ func GinTokenMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, token, ok := c.Request.BasicAuth()
 		if !ok {
-			c.String(http.StatusBadRequest, "unable to parse username and token")
+      c.AbortWithError(http.StatusBadRequest, fmt.Errorf("unable to parse username and token"))
       return
 		}
 		ok = validateToken(username, token)
 		if ok {
      c.Next() 
     } else {
-    	c.String(http.StatusUnauthorized, "invalid api token provided")
+    	c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("unable to parse username and token"))
       return
     }
 	}

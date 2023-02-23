@@ -49,6 +49,7 @@ func saveAndReindex(tmpfile *os.File) error {
 	s := spec.FromFile(tmpfile.Name())
 	filePath := fmt.Sprintf("%s/%s-%s.gem", config.Env.GemDir, s.Name, s.Version)
 	err := os.Rename(tmpfile.Name(), filePath)
+	err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
 	go indexer.Get().UpdateIndex()
 	return err
 }

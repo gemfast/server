@@ -145,7 +145,6 @@ func mkDirs(dir string) {
 func gemList() []string {
 	var gems []string
 	gemDir := fmt.Sprintf("%s", config.Env.GemDir)
-	fmt.Println(gemDir)
 	filepath.WalkDir(gemDir, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e

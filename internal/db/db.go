@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/rs/zerolog/log"
@@ -9,13 +10,19 @@ import (
 )
 
 const (
-	DEPENDENCY_BUCKET = "dependency"
-	USER_BUCKET       = "user"
+	GEM_BUCKET = "gems"
+	GEM_DEPENDENCY_BUCKET = "gem_dependencies"
+	USER_BUCKET       = "users"
 )
 
 var BoltDB *bolt.DB
 
 func Connect() error {
+	err := os.MkdirAll(config.Env.DBDir, os.ModePerm)
+	if err != nil {
+		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could make db directory %s", config.Env.DBDir))
+		return err
+	}
 	dbFile := fmt.Sprintf("%s/gemfast.db", config.Env.DBDir)
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
@@ -23,7 +30,8 @@ func Connect() error {
 		return err
 	}
 	BoltDB = db
-	createBucket(DEPENDENCY_BUCKET)
+	createBucket(GEM_BUCKET)
+	createBucket(GEM_DEPENDENCY_BUCKET)
 	createBucket(USER_BUCKET)
 	log.Info().Str("db", dbFile).Msg("successfully connected to database")
 	return nil

@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
 )
+
+var dlock sync.Mutex
 
 type Dependency struct {
 	Name         string
@@ -28,7 +31,7 @@ func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
 func GetDependencies(name string) (*[]Dependency, error) {
 	var existing []byte
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		deps := tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Get([]byte(name))
+		deps := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))
 		if deps == nil {
 			return errors.New("dependencies not found")
 		}
@@ -42,9 +45,11 @@ func GetDependencies(name string) (*[]Dependency, error) {
 }
 
 func SetDependencies(name string, newDep Dependency) error {
+	dlock.Lock()
+	defer dlock.Unlock()
 	var existing []byte
 	db.BoltDB.View(func(tx *bolt.Tx) error {
-		deps := tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Get([]byte(name))
+		deps := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))
 		existing = deps
 		return nil
 	})
@@ -54,7 +59,7 @@ func SetDependencies(name string, newDep Dependency) error {
 			return fmt.Errorf("could not marshal dependencies to json: %v", err)
 		}
 		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-			err = tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)
+			err = tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)
 			if err != nil {
 				return fmt.Errorf("could not set: %v", err)
 			}
@@ -72,7 +77,7 @@ func SetDependencies(name string, newDep Dependency) error {
 			*deps = append(*deps, newDep)
 			depBytes, _ := json.Marshal(*deps)
 			_ = db.BoltDB.Update(func(tx *bolt.Tx) error {
-				err := tx.Bucket([]byte(db.DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)
+				err := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)
 				if err != nil {
 					return fmt.Errorf("could not set: %v", err)
 				}
