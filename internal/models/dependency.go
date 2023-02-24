@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
 )
-
-var dlock sync.Mutex
 
 type Dependency struct {
 	Name         string
@@ -45,8 +42,6 @@ func GetDependencies(name string) (*[]Dependency, error) {
 }
 
 func SetDependencies(name string, newDep Dependency) error {
-	dlock.Lock()
-	defer dlock.Unlock()
 	var existing []byte
 	db.BoltDB.View(func(tx *bolt.Tx) error {
 		deps := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))

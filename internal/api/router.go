@@ -79,4 +79,5 @@ func configureNoneAuth(r *gin.Engine) {
 	r.GET("/api/v1/dependencies.json", getDependenciesJSON)
 	r.POST("/api/v1/gems", uploadGem)
 	r.POST("/upload", geminaboxUploadGem)
+	r.GET("/api/v1/gems", listGems)
 }

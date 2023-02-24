@@ -2,15 +2,12 @@ package models
 
 import (
 	"encoding/json"
-	// "errors"
+	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
 )
-
-var glock sync.Mutex
 
 type Gem struct {
 	Name     string
@@ -27,25 +24,27 @@ func GemFromBytes(data []byte) (*[]Gem, error) {
 	return p, nil
 }
 
-// func GetGems() (*[]Gem, error) {
-// 	var existing []byte
-// 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-// 		gems := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(name))
-// 		if gems == nil {
-// 			return errors.New("no gems found")
-// 		}
-// 		existing = gems
-// 		return nil
-// 	})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return GemFromBytes(existing)
-// }
+func GetGems() ([][]Gem, error) {
+	var gems [][]Gem
+	err := db.BoltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(db.GEM_BUCKET))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			g, _ := GemFromBytes(v)
+			gems = append(gems, *g)
+		}
+		if gems == nil {
+			return errors.New("no gems found")
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return gems, nil
+}
 
 func SetGem(name string, version string, platform string) error {
-	glock.Lock()
-	defer glock.Unlock()
 	var existing []byte
 	gem := Gem{
 		Name: name,
