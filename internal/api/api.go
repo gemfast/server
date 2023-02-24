@@ -46,8 +46,10 @@ func getGem(c *gin.Context) {
 }
 
 func listGems(c *gin.Context) {
-	gems, err := models.GetGems()
+	gemQuery := c.Query("gem")
+	gems, err := models.GetGems(gemQuery)
 	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to get gems")
 		return
 	}
 	c.JSON(http.StatusOK, gems)

@@ -24,24 +24,37 @@ func GemFromBytes(data []byte) (*[]Gem, error) {
 	return p, nil
 }
 
-func GetGems() ([][]Gem, error) {
+func GetGems(name string) ([][]Gem, error) {
 	var gems [][]Gem
-	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(db.GEM_BUCKET))
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+	if name == "" {
+		err := db.BoltDB.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(db.GEM_BUCKET))
+			c := b.Cursor()
+			for k, v := c.First(); k != nil; k, v = c.Next() {
+				g, _ := GemFromBytes(v)
+				gems = append(gems, *g)
+			}
+			if gems == nil {
+				return errors.New("no gems found")
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return gems, nil
+	} else {
+		err := db.BoltDB.View(func(tx *bolt.Tx) error {
+			v := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(name))
 			g, _ := GemFromBytes(v)
 			gems = append(gems, *g)
+			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
-		if gems == nil {
-			return errors.New("no gems found")
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+		return gems, nil
 	}
-	return gems, nil
 }
 
 func SetGem(name string, version string, platform string) error {
