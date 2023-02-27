@@ -179,8 +179,7 @@ func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 		specFName := fmt.Sprintf("%s.gemspec.rz", s.OriginalName)
 		var marshalName string
 		if update {
-			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDirBase, specFName)
-			marshalName = fmt.Sprintf("%s/%s", indexer.destDir, marshalName)
+			marshalName = fmt.Sprintf("%s/%s/%s", indexer.destDir, indexer.quickMarshalDirBase, specFName)
 		} else {
 			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDir, specFName)
 		}

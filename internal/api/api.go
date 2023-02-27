@@ -1,7 +1,9 @@
 package api
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -36,12 +38,51 @@ func createToken(c *gin.Context) {
 func getGemspecRz(c *gin.Context) {
 	fileName := c.Param("gemspec.rz")
 	filePath := fmt.Sprintf("%s/quick/Marshal.4.8/%s", config.Env.Dir, fileName)
+	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+		out, err := os.Create(filePath)
+	  if err != nil  {
+	    c.String(http.StatusInternalServerError, "Failed to create gem file")
+	  }
+	  defer out.Close()
+	  client := &http.Client{}
+    req, err := http.NewRequest("GET", fmt.Sprintf("https://rubygems.org/quick/Marshal.4.8%s", fileName), nil)
+    if err != nil {
+      panic(err)
+    }
+	  resp, err := client.Do(req)
+	  if err != nil {
+	    c.String(http.StatusInternalServerError, "Failed to connect to upstream")
+	  }
+	  defer resp.Body.Close()
+	  _, err = io.Copy(out, resp.Body)
+	  if err != nil  {
+	    c.String(http.StatusInternalServerError, "Failed to write gem file")
+	  }
+
+	}
 	c.FileAttachment(filePath, fileName)
 }
 
 func getGem(c *gin.Context) {
 	fileName := c.Param("gem")
 	filePath := fmt.Sprintf("%s/%s", config.Env.GemDir, fileName)
+	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+		out, err := os.Create(filePath)
+	  if err != nil  {
+	    c.String(http.StatusInternalServerError, "Failed to create gem file")
+	  }
+	  defer out.Close()
+	  resp, err := http.Get(fmt.Sprintf("https://rubygems.org/gems%s", fileName))
+	  if err != nil {
+	    c.String(http.StatusInternalServerError, "Failed to connect to upstream")
+	  }
+	  defer resp.Body.Close()
+	  _, err = io.Copy(out, resp.Body)
+	  if err != nil  {
+	    c.String(http.StatusInternalServerError, "Failed to write gem file")
+	  }
+
+	} 
 	c.FileAttachment(filePath, fileName)
 }
 

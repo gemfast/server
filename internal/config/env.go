@@ -25,6 +25,7 @@ type envConfig struct {
 	DBDir           string `mapstructure:"GEMFAST_DB_DIR"`
 	URL             string `mapstructure:"GEMFAST_URL"`
 	Port            string `mapstructure:"GEMFAST_PORT"`
+	Mirror          string `mapstructure:"GEMFAST_MIRROR"`
 
 	// Auth
 	AuthMode      string `mapstructure:"GEMFAST_AUTH"`
@@ -83,5 +84,8 @@ func setEnvDefaults(envMap map[string]string) {
 	}
 	if _, ok := envMap["GEMFAST_AUTH"]; !ok {
 		envMap["GEMFAST_AUTH"] = "local" 
-	}	
+	}
+	if _, ok := envMap["GEMFAST_MIRROR"]; !ok {
+		envMap["GEMFAST_MIRROR"] = "" 
+	}
 }

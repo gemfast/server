@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -51,14 +50,15 @@ func configureLocalAuth(r *gin.Engine) {
 	localAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
 	localAuth.Use(jwtMiddleware.MiddlewareFunc())
 	{
-		localAuth.POST("token", createToken)
+		localAuth.POST("/token", createToken)
+		localAuth.GET("/gems", listGems)
 	}
 	tokenAuth := r.Group("/")
 	tokenAuth.Use(middleware.GinTokenMiddleware())
 	{
-		tokenAuth.StaticFile("/specs.4.8.gz", fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
-		tokenAuth.StaticFile("/latest_specs.4.8.gz", fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
-		tokenAuth.StaticFile("/prerelease_specs.4.8.gz", fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
+		tokenAuth.GET("/specs.4.8.gz", specsHandler)
+		tokenAuth.GET("/latest_specs.4.8.gz", specsHandler)
+		tokenAuth.GET("/prerelease_specs.4.8.gz", specsHandler)
 		tokenAuth.GET("/quick/Marshal.4.8/*gemspec.rz", getGemspecRz)
 		tokenAuth.GET("/gems/*gem", getGem)
 		tokenAuth.GET("/api/v1/dependencies", getDependencies)
@@ -69,10 +69,10 @@ func configureLocalAuth(r *gin.Engine) {
 }
 
 func configureNoneAuth(r *gin.Engine) {
-	r.POST("create_token", createToken)
-	r.StaticFile("/specs.4.8.gz", fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
-	r.StaticFile("/latest_specs.4.8.gz", fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
-	r.StaticFile("/prerelease_specs.4.8.gz", fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
+	r.POST("/token", createToken)
+	r.GET("/specs.4.8.gz", specsHandler)
+	r.GET("/latest_specs.4.8.gz", specsHandler)
+	r.GET("/prerelease_specs.4.8.gz", specsHandler)
 	r.GET("/quick/Marshal.4.8/*gemspec.rz", getGemspecRz)
 	r.GET("/gems/*gem", getGem)
 	r.GET("/api/v1/dependencies", getDependencies)
