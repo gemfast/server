@@ -45,7 +45,7 @@ func getGemspecRz(c *gin.Context) {
 	  }
 	  defer out.Close()
 	  client := &http.Client{}
-    req, err := http.NewRequest("GET", fmt.Sprintf("https://rubygems.org/quick/Marshal.4.8%s", fileName), nil)
+    req, err := http.NewRequest("GET", fmt.Sprintf("%s/quick/Marshal.4.8%s", config.Env.MirrorUpstream, fileName), nil)
     if err != nil {
       panic(err)
     }
@@ -72,7 +72,7 @@ func getGem(c *gin.Context) {
 	    c.String(http.StatusInternalServerError, "Failed to create gem file")
 	  }
 	  defer out.Close()
-	  resp, err := http.Get(fmt.Sprintf("https://rubygems.org/gems%s", fileName))
+	  resp, err := http.Get(fmt.Sprintf("%s/gems%s", config.Env.MirrorUpstream, fileName))
 	  if err != nil {
 	    c.String(http.StatusInternalServerError, "Failed to connect to upstream")
 	  }

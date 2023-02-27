@@ -26,6 +26,7 @@ type envConfig struct {
 	URL             string `mapstructure:"GEMFAST_URL"`
 	Port            string `mapstructure:"GEMFAST_PORT"`
 	Mirror          string `mapstructure:"GEMFAST_MIRROR"`
+	MirrorUpstream  string `mapstructure:"GEMFAST_MIRROR_UPSTREAM"`
 
 	// Auth
 	AuthMode      string `mapstructure:"GEMFAST_AUTH"`
@@ -87,5 +88,8 @@ func setEnvDefaults(envMap map[string]string) {
 	}
 	if _, ok := envMap["GEMFAST_MIRROR"]; !ok {
 		envMap["GEMFAST_MIRROR"] = "" 
+	}
+	if _, ok := envMap["GEMFAST_MIRROR_UPSTREAM"]; !ok {
+		envMap["GEMFAST_MIRROR_UPSTREAM"] = "https://rubygems.org" 
 	}
 }
