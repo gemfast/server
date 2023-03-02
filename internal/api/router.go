@@ -48,41 +48,60 @@ func configureLocalAuth(r *gin.Engine) {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize auth middleware")
 	}
-	r.POST("/login", jwtMiddleware.LoginHandler)
-	localAuth := r.Group("/")
-	localAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
-	localAuth.Use(jwtMiddleware.MiddlewareFunc())
+	adminLocalAuth := r.Group("/admin")
+	adminLocalAuth.POST("/login", jwtMiddleware.LoginHandler)
+	adminLocalAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
+	adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
 	{
-		localAuth.POST("/token", createToken)
-		localAuth.GET("/gems", listGems)
+		configureAdmin(adminLocalAuth)
 	}
-	tokenAuth := r.Group("/")
-	tokenAuth.Use(middleware.GinTokenMiddleware())
+	privateTokenAuth := r.Group("/private")
+	privateTokenAuth.Use(middleware.GinTokenMiddleware())
 	{
-		tokenAuth.GET("/specs.4.8.gz", specsHandler)
-		tokenAuth.GET("/latest_specs.4.8.gz", specsHandler)
-		tokenAuth.GET("/prerelease_specs.4.8.gz", specsHandler)
-		tokenAuth.GET("/quick/Marshal.4.8/*gemspec.rz", getGemspecRz)
-		tokenAuth.GET("/gems/*gem", getGem)
-		tokenAuth.GET("/api/v1/dependencies", getDependencies)
-		tokenAuth.GET("/api/v1/dependencies.json", getDependenciesJSON)
-		tokenAuth.POST("/api/v1/gems", uploadGem)
-		tokenAuth.POST("/upload", geminaboxUploadGem)
+		configurePrivate(privateTokenAuth)
+	}
+	if config.Env.Mirror != "" {
+		mirror := r.Group("/")
+		configureMirror(mirror)
 	}
 }
 
 func configureNoneAuth(r *gin.Engine) {
-	r.POST("/token", createToken)
-	r.GET("/specs.4.8.gz", specsHandler)
-	r.GET("/latest_specs.4.8.gz", specsHandler)
-	r.GET("/prerelease_specs.4.8.gz", specsHandler)
-	r.GET("/quick/Marshal.4.8/*gemspec.rz", getGemspecRz)
-	r.GET("/gems/*gem", getGem)
-	r.GET("/api/v1/dependencies", getDependencies)
-	r.GET("/api/v1/dependencies.json", getDependenciesJSON)
-	r.POST("/api/v1/gems", uploadGem)
-	r.POST("/upload", geminaboxUploadGem)
-	r.GET("/gems", listGems)
-	r.GET("/info/*gem", infoHandler)
-	r.GET("/versions", versionsHandler)
+	if config.Env.Mirror != "" {
+		mirror := r.Group("/")
+		configureMirror(mirror)
+	}
+	private := r.Group("/private")
+	configurePrivate(private)
+	admin := r.Group("/admin")
+	admin.GET("/gems", listGems)
+}
+
+func configureMirror(mirror *gin.RouterGroup) {
+	mirror.GET("/specs.4.8.gz", mirroredIndexHandler)
+	mirror.GET("/latest_specs.4.8.gz", mirroredIndexHandler)
+	mirror.GET("/prerelease_specs.4.8.gz", mirroredIndexHandler)
+	mirror.GET("/quick/Marshal.4.8/*gemspec.rz", mirroredGemspecRzHandler)
+	mirror.GET("/gems/*gem", mirroredGemHandler)
+	mirror.GET("/api/v1/dependencies", mirroredDependenciesHandler)
+	mirror.GET("/api/v1/dependencies.json", mirroredDependenciesJSONHandler)
+	mirror.GET("/info/*gem", mirroredInfoHandler)
+	mirror.GET("/versions", mirroredVersionsHandler)
+}
+
+func configurePrivate(private *gin.RouterGroup) {
+	private.GET("/specs.4.8.gz", localIndexHandler)
+	private.GET("/latest_specs.4.8.gz", localIndexHandler)
+	private.GET("/prerelease_specs.4.8.gz", localIndexHandler)
+	private.GET("/quick/Marshal.4.8/*gemspec.rz", localGemspecRzHandler)
+	private.GET("/gems/*gem", localGemHandler)
+	private.GET("/api/v1/dependencies", localDependenciesHandler)
+	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
+	private.POST("/api/v1/gems", localUploadGemHandler)
+	private.POST("/upload", geminaboxUploadGem)
+}
+
+func configureAdmin(admin *gin.RouterGroup) {
+	admin.GET("/gems", listGems)
+	admin.POST("/token", createToken)
 }
