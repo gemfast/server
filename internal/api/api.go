@@ -6,10 +6,12 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
-	// jwt "github.com/appleboy/gin-jwt/v2"
+	
 	"github.com/gin-gonic/gin"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/indexer"
@@ -37,20 +39,20 @@ func createToken(c *gin.Context) {
 
 func getGemspecRz(c *gin.Context) {
 	fileName := c.Param("gemspec.rz")
-	filePath := fmt.Sprintf("%s/quick/Marshal.4.8/%s", config.Env.Dir, fileName)
-	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-		out, err := os.Create(filePath)
+	fp := filepath.Join(config.Env.Dir, "quick/Marshal.4.8", fileName)
+	if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
+		out, err := os.Create(fp)
 	  if err != nil  {
 	    c.String(http.StatusInternalServerError, "Failed to create gem file")
 	  }
 	  defer out.Close()
-	  client := &http.Client{}
-    req, err := http.NewRequest("GET", fmt.Sprintf("%s/quick/Marshal.4.8%s", config.Env.MirrorUpstream, fileName), nil)
-    if err != nil {
+	  path, err := url.JoinPath(config.Env.MirrorUpstream, "quick/Marshal.4.8", fileName)
+	  if err != nil {
+      log.Error().Str("file", fileName).Msg("failed to fetch quick marshal")
       panic(err)
     }
-	  resp, err := client.Do(req)
-	  if err != nil {
+    resp, err := http.Get(path)
+    if err != nil {
 	    c.String(http.StatusInternalServerError, "Failed to connect to upstream")
 	  }
 	  defer resp.Body.Close()
@@ -58,32 +60,48 @@ func getGemspecRz(c *gin.Context) {
 	  if err != nil  {
 	    c.String(http.StatusInternalServerError, "Failed to write gem file")
 	  }
-
 	}
-	c.FileAttachment(filePath, fileName)
+	c.FileAttachment(fp, fileName)
 }
 
 func getGem(c *gin.Context) {
 	fileName := c.Param("gem")
-	filePath := fmt.Sprintf("%s/%s", config.Env.GemDir, fileName)
-	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-		out, err := os.Create(filePath)
+	fp := filepath.Join(config.Env.GemDir, fileName)
+	if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
+		out, err := os.Create(fp)
 	  if err != nil  {
 	    c.String(http.StatusInternalServerError, "Failed to create gem file")
 	  }
 	  defer out.Close()
-	  resp, err := http.Get(fmt.Sprintf("%s/gems%s", config.Env.MirrorUpstream, fileName))
+	  path, err := url.JoinPath(config.Env.MirrorUpstream, "gems", fileName)
+	  if err != nil {
+      c.String(http.StatusInternalServerError, "Failed to fetch gem file")
+      return
+    }
+	  resp, err := http.Get(path)
 	  if err != nil {
 	    c.String(http.StatusInternalServerError, "Failed to connect to upstream")
+	    return
 	  }
 	  defer resp.Body.Close()
+	  if resp.StatusCode != 200 {
+	  	log.Info().Str("upstream", path).Msg("upstream returned a non 200 status code")
+	  	c.String(resp.StatusCode, "Failure returned from upstream")
+	  	return
+	  }
 	  _, err = io.Copy(out, resp.Body)
 	  if err != nil  {
 	    c.String(http.StatusInternalServerError, "Failed to write gem file")
+	    return
 	  }
-
-	} 
-	c.FileAttachment(filePath, fileName)
+	  s := spec.FromFile(fp)
+		err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
+		if err != nil  {
+	    c.String(http.StatusInternalServerError, "Failed to save gem in db")
+	    return
+	  }
+	}
+	c.FileAttachment(fp, fileName)
 }
 
 func listGems(c *gin.Context) {
@@ -98,8 +116,8 @@ func listGems(c *gin.Context) {
 
 func saveAndReindex(tmpfile *os.File) error {
 	s := spec.FromFile(tmpfile.Name())
-	filePath := fmt.Sprintf("%s/%s-%s.gem", config.Env.GemDir, s.Name, s.Version)
-	err := os.Rename(tmpfile.Name(), filePath)
+	fp := fmt.Sprintf("%s/%s-%s.gem", config.Env.GemDir, s.Name, s.Version)
+	err := os.Rename(tmpfile.Name(), fp)
 	err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
 	go indexer.Get().UpdateIndex()
 	return err
@@ -167,7 +185,6 @@ func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency,
 		existingDeps, err := models.GetDependencies(gem)
 		if err != nil {
 			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
-			c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gem))
 			return nil, err
 		}
 		for _, d := range *existingDeps {
@@ -185,8 +202,18 @@ func getDependencies(c *gin.Context) {
 		return
 	}
 	deps, err := fetchGemDependencies(c, gemQuery)
-	if err != nil {
+	if err != nil && config.Env.Mirror == "" {
+		c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
 		return
+	} else if err != nil && config.Env.Mirror != "" {
+		path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+		path += "?gems="
+		path += gemQuery
+		fmt.Println(path)
+		if err != nil {
+			panic(err)
+		}
+		c.Redirect(http.StatusFound, path)
 	}
 	bundlerDeps, err := marshal.DumpBundlerDeps(deps)
 	if err != nil {
@@ -210,4 +237,20 @@ func getDependenciesJSON(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, deps)
+}
+
+func infoHandler(c *gin.Context) {
+	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	if err != nil {
+		panic(err)
+	}
+	c.Redirect(http.StatusFound, path)
+}
+
+func versionsHandler(c *gin.Context) {
+	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	if err != nil {
+		panic(err)
+	}
+	c.Redirect(http.StatusFound, path)
 }

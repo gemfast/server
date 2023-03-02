@@ -16,6 +16,9 @@ func Run() error {
 	initRouter(r)
 	port := ":" + config.Env.Port
 	log.Info().Str("port", port).Msg("gemfast server ready")
+	if config.Env.Mirror != "" {
+		log.Info().Str("upstream", config.Env.MirrorUpstream).Msg("mirroring upstream gem server")
+	}
 	return r.Run(port)
 }
 
@@ -80,4 +83,6 @@ func configureNoneAuth(r *gin.Engine) {
 	r.POST("/api/v1/gems", uploadGem)
 	r.POST("/upload", geminaboxUploadGem)
 	r.GET("/gems", listGems)
+	r.GET("/info/*gem", infoHandler)
+	r.GET("/versions", versionsHandler)
 }

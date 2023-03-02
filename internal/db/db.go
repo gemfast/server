@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 	"os"
-
+	"path/filepath"
 	"github.com/gemfast/server/internal/config"
 	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
@@ -23,7 +23,7 @@ func Connect() error {
 		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could make db directory %s", config.Env.DBDir))
 		return err
 	}
-	dbFile := fmt.Sprintf("%s/gemfast.db", config.Env.DBDir)
+	dbFile := filepath.Join(config.Env.DBDir, "gemfast.db")
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could not open %s", dbFile))
