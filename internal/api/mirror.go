@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,7 +11,7 @@ import (
 	
 	"github.com/gin-gonic/gin"
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/marshal"
+	"github.com/gemfast/server/internal/indexer"
 	"github.com/gemfast/server/internal/models"
 	"github.com/gemfast/server/internal/spec"
 	"github.com/rs/zerolog/log"
@@ -76,11 +75,12 @@ func mirroredGemHandler(c *gin.Context) {
 	    return
 	  }
 	  s := spec.FromFile(fp)
-		err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
+	  err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
 		if err != nil  {
 	    c.String(http.StatusInternalServerError, "Failed to save gem in db")
 	    return
 	  }
+		go indexer.Get().UpdateIndex()
 	}
 	c.FileAttachment(fp, fileName)
 }
@@ -111,44 +111,30 @@ func mirroredVersionsHandler(c *gin.Context) {
 
 func mirroredDependenciesHandler(c *gin.Context) {
 	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
 	if gemQuery == "" {
 		c.Status(http.StatusOK)
 		return
 	}
-	deps, err := fetchGemDependencies(c, gemQuery)
-	if err != nil && config.Env.Mirror == "" {
-		c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
-		return
-	} else if err != nil && config.Env.Mirror != "" {
-		path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
-		path += "?gems="
-		path += gemQuery
-		if err != nil {
-			panic(err)
-		}
-		c.Redirect(http.StatusFound, path)
-	}
-	bundlerDeps, err := marshal.DumpBundlerDeps(deps)
+	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	path += "?gems="
+	path += gemQuery
 	if err != nil {
-		log.Error().Err(err).Msg("failed to marshal gem dependencies")
-		c.String(http.StatusInternalServerError, "failed to marshal gem dependencies")
-		return
+		panic(err)
 	}
-	c.Header("Content-Type", "application/octet-stream; charset=utf-8")
-	c.Writer.Write(bundlerDeps)
+	c.Redirect(http.StatusFound, path)
 }
 
 func mirroredDependenciesJSONHandler(c *gin.Context) {
 	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
 	if gemQuery == "" {
 		c.Status(http.StatusOK)
 		return
 	}
-	deps, err := fetchGemDependencies(c, gemQuery)
+	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	path += "?gems="
+	path += gemQuery
 	if err != nil {
-		return
+		panic(err)
 	}
-	c.JSON(http.StatusOK, deps)
+	c.Redirect(http.StatusFound, path)
 }

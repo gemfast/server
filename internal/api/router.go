@@ -59,6 +59,7 @@ func configureLocalAuth(r *gin.Engine) {
 	privateTokenAuth.Use(middleware.GinTokenMiddleware())
 	{
 		configurePrivate(privateTokenAuth)
+		privateTokenAuth.POST("/upload", geminaboxUploadGem)
 	}
 	if config.Env.Mirror != "" {
 		mirror := r.Group("/")
@@ -75,6 +76,7 @@ func configureNoneAuth(r *gin.Engine) {
 	configurePrivate(private)
 	admin := r.Group("/admin")
 	admin.GET("/gems", listGems)
+	r.POST("/upload", geminaboxUploadGem)
 }
 
 func configureMirror(mirror *gin.RouterGroup) {
@@ -98,7 +100,6 @@ func configurePrivate(private *gin.RouterGroup) {
 	private.GET("/api/v1/dependencies", localDependenciesHandler)
 	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
 	private.POST("/api/v1/gems", localUploadGemHandler)
-	private.POST("/upload", geminaboxUploadGem)
 }
 
 func configureAdmin(admin *gin.RouterGroup) {

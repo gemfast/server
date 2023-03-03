@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	// "github.com/gemfast/server/internal/cache"
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
 )
@@ -27,6 +28,13 @@ func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
 
 func GetDependencies(name string) (*[]Dependency, error) {
 	var existing []byte
+	// existing, err := cache.Get(name)
+	// if err == nil {
+	// 	fmt.Println(fmt.Sprintf("%s:CACHE HIT!", name))
+	// 	return DependenciesFromBytes(existing)
+	// } else {
+	// 	fmt.Println(fmt.Sprintf("%s:CACHE MISS!", name))
+	// }
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		deps := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))
 		if deps == nil {
@@ -58,6 +66,8 @@ func SetDependencies(name string, newDep Dependency) error {
 			if err != nil {
 				return fmt.Errorf("could not set: %v", err)
 			}
+			// fmt.Println("CACHING NEW VALUE")
+			// cache.Set(name, depBytes)
 			return nil
 		})
 	} else {
@@ -76,6 +86,8 @@ func SetDependencies(name string, newDep Dependency) error {
 				if err != nil {
 					return fmt.Errorf("could not set: %v", err)
 				}
+				// fmt.Println("CACHING UPDATED VALUE")
+				// cache.Set(name, depBytes)
 				return nil
 			})
 		}
