@@ -2,17 +2,17 @@ package db
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"github.com/gemfast/server/internal/config"
 	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
+	"os"
+	"path/filepath"
 )
 
 const (
-	GEM_BUCKET = "gems"
+	GEM_BUCKET            = "gems"
 	GEM_DEPENDENCY_BUCKET = "gem_dependencies"
-	USER_BUCKET       = "users"
+	USER_BUCKET           = "users"
 )
 
 var BoltDB *bolt.DB

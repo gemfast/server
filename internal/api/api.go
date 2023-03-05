@@ -7,12 +7,11 @@ import (
 	"os"
 	"strings"
 
-	
-	"github.com/gin-gonic/gin"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/indexer"
 	"github.com/gemfast/server/internal/models"
 	"github.com/gemfast/server/internal/spec"
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,7 +28,7 @@ func createToken(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"token":   token,
+		"token":    token,
 		"username": u.Username,
 	})
 }

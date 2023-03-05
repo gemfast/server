@@ -3,10 +3,10 @@ package api
 import (
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/models"
 	"github.com/gemfast/server/internal/middleware"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
@@ -16,7 +16,7 @@ func Run() error {
 	initRouter(r)
 	port := ":" + config.Env.Port
 	log.Info().Str("port", port).Msg("gemfast server ready")
-	if config.Env.Mirror != "" {
+	if config.Env.MirrorEnabled != "false" {
 		log.Info().Str("upstream", config.Env.MirrorUpstream).Msg("mirroring upstream gem server")
 	}
 	return r.Run(port)
@@ -61,14 +61,14 @@ func configureLocalAuth(r *gin.Engine) {
 		configurePrivate(privateTokenAuth)
 		privateTokenAuth.POST("/upload", geminaboxUploadGem)
 	}
-	if config.Env.Mirror != "" {
+	if config.Env.MirrorEnabled != "false" {
 		mirror := r.Group("/")
 		configureMirror(mirror)
 	}
 }
 
 func configureNoneAuth(r *gin.Engine) {
-	if config.Env.Mirror != "" {
+	if config.Env.MirrorEnabled != "false" {
 		mirror := r.Group("/")
 		configureMirror(mirror)
 	}

@@ -8,10 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	
-	"github.com/gin-gonic/gin"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/marshal"
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,7 +20,7 @@ func localGemspecRzHandler(c *gin.Context) {
 	c.FileAttachment(fp, fileName)
 }
 
-func localGemHandler(c *gin.Context){
+func localGemHandler(c *gin.Context) {
 	fileName := c.Param("gem")
 	fp := filepath.Join(config.Env.GemDir, fileName)
 	c.FileAttachment(fp, fileName)
@@ -39,10 +38,10 @@ func localDependenciesHandler(c *gin.Context) {
 		return
 	}
 	deps, err := fetchGemDependencies(c, gemQuery)
-	if err != nil && config.Env.Mirror == "" {
+	if err != nil && config.Env.MirrorEnabled != "false" {
 		c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
 		return
-	} else if err != nil && config.Env.Mirror != "" {
+	} else if err != nil && config.Env.MirrorEnabled != "false" {
 		path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
 		path += "?gems="
 		path += gemQuery

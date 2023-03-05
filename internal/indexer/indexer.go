@@ -109,14 +109,14 @@ func InitIndexer() error {
 	return nil
 }
 
-func (indexer Indexer) GenerateIndex() (error) {
+func (indexer Indexer) GenerateIndex() error {
 	mkDirs(indexer.quickMarshalDir)
 	mkDirs(config.Env.GemDir)
 	mkDirs(config.Env.DBDir)
 	_, specsMissing := os.Stat(fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
 	_, prereleaseSpecsMissing := os.Stat(fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
 	_, latestSpecsMissing := os.Stat(fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
-	if (specsMissing != nil ||  prereleaseSpecsMissing != nil || latestSpecsMissing != nil) {
+	if specsMissing != nil || prereleaseSpecsMissing != nil || latestSpecsMissing != nil {
 		indexer.buildIndicies()
 		indexer.installIndicies()
 	}

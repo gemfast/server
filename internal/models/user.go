@@ -18,7 +18,7 @@ import (
 type User struct {
 	Username string
 	Password []byte
-	Token string
+	Token    string
 }
 
 func userFromBytes(data []byte) (*User, error) {

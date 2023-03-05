@@ -60,9 +60,9 @@ func GetGems(name string) ([][]Gem, error) {
 func SetGem(name string, version string, platform string) error {
 	var existing []byte
 	gem := Gem{
-		Name: name,
-		Version:   version,
-		Platform:  platform, 
+		Name:     name,
+		Version:  version,
+		Platform: platform,
 	}
 	db.BoltDB.View(func(tx *bolt.Tx) error {
 		existing = tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(gem.Name))
