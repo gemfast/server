@@ -19,19 +19,25 @@ func InitConfig() {
 }
 
 type envConfig struct {
-	LogLevel				string `mapstructure:"GEMFAST_LOG_LEVEL"`
-	Dir             string `mapstructure:"GEMFAST_DIR"`
-	GemDir          string `mapstructure:"GEMFAST_GEM_DIR"`
-	DBDir           string `mapstructure:"GEMFAST_DB_DIR"`
-	URL             string `mapstructure:"GEMFAST_URL"`
-	Port            string `mapstructure:"GEMFAST_PORT"`
-	Mirror          string `mapstructure:"GEMFAST_MIRROR"`
-	MirrorUpstream  string `mapstructure:"GEMFAST_MIRROR_UPSTREAM"`
+	LogLevel          string `mapstructure:"GEMFAST_LOG_LEVEL"`
+	Dir               string `mapstructure:"GEMFAST_DIR"`
+	GemDir            string `mapstructure:"GEMFAST_GEM_DIR"`
+	DBDir             string `mapstructure:"GEMFAST_DB_DIR"`
+	URL               string `mapstructure:"GEMFAST_URL"`
+	Port              string `mapstructure:"GEMFAST_PORT"`
+	MirrorEnabled     string `mapstructure:"GEMFAST_MIRROR_ENABLED"`
+	MirrorUpstream    string `mapstructure:"GEMFAST_MIRROR_UPSTREAM"`
+	FilterEnabled     string `mapstructure:"GEMFAST_FILTER_ENABLED"`
+	FilterDefaultDeny string `mapstructure:"GEMFAST_FILTER_DEFAULT_DENY"`
+	FilterFile        string `mapstructure:"GEMFAST_FILTER_FILE"`
 
 	// Auth
 	AuthMode      string `mapstructure:"GEMFAST_AUTH"`
 	AdminPassword string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
 	AddLocalUsers string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
+
+	//License
+	GemfastLicenseKey string `mapstructure:"GEMFAST_LICENSE_KEY"`
 }
 
 func configureZeroLog() {
@@ -40,7 +46,7 @@ func configureZeroLog() {
 }
 
 func loadEnvVariables() (config envConfig) {
-	var dotEnvMap map[string]string	
+	var dotEnvMap map[string]string
 	usr, err := user.Current()
 	if err != nil {
 		log.Error().Err(err).Msg("unable to get current user")
@@ -69,7 +75,7 @@ func loadEnvVariables() (config envConfig) {
 
 func setEnvDefaults(envMap map[string]string) {
 	if _, ok := envMap["GEMFAST_DIR"]; !ok {
-		envMap["GEMFAST_DIR"] = "/var/gemfast" 
+		envMap["GEMFAST_DIR"] = "/var/gemfast"
 	}
 	if _, ok := envMap["GEMFAST_GEM_DIR"]; !ok {
 		envMap["GEMFAST_GEM_DIR"] = fmt.Sprintf("%s/gems", envMap["GEMFAST_DIR"])
@@ -78,18 +84,27 @@ func setEnvDefaults(envMap map[string]string) {
 		envMap["GEMFAST_DB_DIR"] = fmt.Sprintf("%s/db", envMap["GEMFAST_DIR"])
 	}
 	if _, ok := envMap["GEMFAST_URL"]; !ok {
-		envMap["GEMFAST_URL"] = "http://localhost" 
+		envMap["GEMFAST_URL"] = "http://localhost"
 	}
 	if _, ok := envMap["GEMFAST_PORT"]; !ok {
-		envMap["GEMFAST_PORT"] = "8881" 
+		envMap["GEMFAST_PORT"] = "8881"
 	}
 	if _, ok := envMap["GEMFAST_AUTH"]; !ok {
-		envMap["GEMFAST_AUTH"] = "local" 
+		envMap["GEMFAST_AUTH"] = "local"
 	}
-	if _, ok := envMap["GEMFAST_MIRROR"]; !ok {
-		envMap["GEMFAST_MIRROR"] = "" 
+	if _, ok := envMap["GEMFAST_MIRROR_ENABLED"]; !ok {
+		envMap["GEMFAST_MIRROR_ENABLED"] = "true"
 	}
 	if _, ok := envMap["GEMFAST_MIRROR_UPSTREAM"]; !ok {
-		envMap["GEMFAST_MIRROR_UPSTREAM"] = "https://rubygems.org" 
+		envMap["GEMFAST_MIRROR_UPSTREAM"] = "https://rubygems.org"
+	}
+	if _, ok := envMap["GEMFAST_FILTER_ENABLED"]; !ok {
+		envMap["GEMFAST_FILTER_ENABLED"] = "false"
+	}
+	if _, ok := envMap["GEMFAST_FILTER_DEFAULT_DENY"]; !ok {
+		envMap["GEMFAST_FILTER_DEFAULT_DENY"] = "true"
+	}
+	if _, ok := envMap["GEMFAST_FILTER_FILE"]; !ok {
+		envMap["GEMFAST_FILTER_FILE"] = "/etc/gemfast/filter.conf"
 	}
 }
