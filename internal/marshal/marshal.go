@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gscho/gemfast/internal/models"
-	"github.com/gscho/gemfast/internal/spec"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/spec"
 )
 
 const (

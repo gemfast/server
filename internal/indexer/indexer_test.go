@@ -3,7 +3,7 @@ package indexer
 import (
 	"testing"
 
-	"github.com/gscho/gemfast/internal/config"
+	"github.com/gemfast/server/internal/config"
 )
 
 func TestGemList(t *testing.T) {

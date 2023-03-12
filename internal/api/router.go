@@ -1,13 +1,12 @@
 package api
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/middleware"
+	"github.com/gemfast/server/internal/models"
 	"github.com/gin-gonic/gin"
-	"github.com/gscho/gemfast/internal/config"
-	"github.com/gscho/gemfast/internal/models"
-	"github.com/gscho/gemfast/internal/middleware"
 	"github.com/rs/zerolog/log"
 )
 
@@ -17,6 +16,9 @@ func Run() error {
 	initRouter(r)
 	port := ":" + config.Env.Port
 	log.Info().Str("port", port).Msg("gemfast server ready")
+	if config.Env.MirrorEnabled != "false" {
+		log.Info().Str("upstream", config.Env.MirrorUpstream).Msg("mirroring upstream gem server")
+	}
 	return r.Run(port)
 }
 
@@ -46,37 +48,61 @@ func configureLocalAuth(r *gin.Engine) {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize auth middleware")
 	}
-	r.POST("/login", jwtMiddleware.LoginHandler)
-	localAuth := r.Group("/")
-	localAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
-	localAuth.Use(jwtMiddleware.MiddlewareFunc())
+	adminLocalAuth := r.Group("/admin")
+	adminLocalAuth.POST("/login", jwtMiddleware.LoginHandler)
+	adminLocalAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
+	adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
 	{
-		localAuth.POST("token", createToken)
+		configureAdmin(adminLocalAuth)
 	}
-	tokenAuth := r.Group("/")
-	tokenAuth.Use(middleware.GinTokenMiddleware())
+	privateTokenAuth := r.Group("/private")
+	privateTokenAuth.Use(middleware.GinTokenMiddleware())
 	{
-		tokenAuth.StaticFile("/specs.4.8.gz", fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
-		tokenAuth.StaticFile("/latest_specs.4.8.gz", fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
-		tokenAuth.StaticFile("/prerelease_specs.4.8.gz", fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
-		tokenAuth.GET("/quick/Marshal.4.8/*gemspec.rz", getGemspecRz)
-		tokenAuth.GET("/gems/*gem", getGem)
-		tokenAuth.GET("/api/v1/dependencies", getDependencies)
-		tokenAuth.GET("/api/v1/dependencies.json", getDependenciesJSON)
-		tokenAuth.POST("/api/v1/gems", uploadGem)
-		tokenAuth.POST("/upload", geminaboxUploadGem)
+		configurePrivate(privateTokenAuth)
+		privateTokenAuth.POST("/upload", geminaboxUploadGem)
+	}
+	if config.Env.MirrorEnabled != "false" {
+		mirror := r.Group("/")
+		configureMirror(mirror)
 	}
 }
 
 func configureNoneAuth(r *gin.Engine) {
-	r.POST("create_token", createToken)
-	r.StaticFile("/specs.4.8.gz", fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
-	r.StaticFile("/latest_specs.4.8.gz", fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
-	r.StaticFile("/prerelease_specs.4.8.gz", fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
-	r.GET("/quick/Marshal.4.8/*gemspec.rz", getGemspecRz)
-	r.GET("/gems/*gem", getGem)
-	r.GET("/api/v1/dependencies", getDependencies)
-	r.GET("/api/v1/dependencies.json", getDependenciesJSON)
-	r.POST("/api/v1/gems", uploadGem)
+	if config.Env.MirrorEnabled != "false" {
+		mirror := r.Group("/")
+		configureMirror(mirror)
+	}
+	private := r.Group("/private")
+	configurePrivate(private)
+	admin := r.Group("/admin")
+	admin.GET("/gems", listGems)
 	r.POST("/upload", geminaboxUploadGem)
+}
+
+func configureMirror(mirror *gin.RouterGroup) {
+	mirror.GET("/specs.4.8.gz", mirroredIndexHandler)
+	mirror.GET("/latest_specs.4.8.gz", mirroredIndexHandler)
+	mirror.GET("/prerelease_specs.4.8.gz", mirroredIndexHandler)
+	mirror.GET("/quick/Marshal.4.8/*gemspec.rz", mirroredGemspecRzHandler)
+	mirror.GET("/gems/*gem", mirroredGemHandler)
+	mirror.GET("/api/v1/dependencies", mirroredDependenciesHandler)
+	mirror.GET("/api/v1/dependencies.json", mirroredDependenciesJSONHandler)
+	mirror.GET("/info/*gem", mirroredInfoHandler)
+	mirror.GET("/versions", mirroredVersionsHandler)
+}
+
+func configurePrivate(private *gin.RouterGroup) {
+	private.GET("/specs.4.8.gz", localIndexHandler)
+	private.GET("/latest_specs.4.8.gz", localIndexHandler)
+	private.GET("/prerelease_specs.4.8.gz", localIndexHandler)
+	private.GET("/quick/Marshal.4.8/*gemspec.rz", localGemspecRzHandler)
+	private.GET("/gems/*gem", localGemHandler)
+	private.GET("/api/v1/dependencies", localDependenciesHandler)
+	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
+	private.POST("/api/v1/gems", localUploadGemHandler)
+}
+
+func configureAdmin(admin *gin.RouterGroup) {
+	admin.GET("/gems", listGems)
+	admin.POST("/token", createToken)
 }

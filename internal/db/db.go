@@ -2,28 +2,36 @@ package db
 
 import (
 	"fmt"
-
-	"github.com/gscho/gemfast/internal/config"
+	"github.com/gemfast/server/internal/config"
 	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
+	"os"
+	"path/filepath"
 )
 
 const (
-	DEPENDENCY_BUCKET = "dependency"
-	USER_BUCKET       = "user"
+	GEM_BUCKET            = "gems"
+	GEM_DEPENDENCY_BUCKET = "gem_dependencies"
+	USER_BUCKET           = "users"
 )
 
 var BoltDB *bolt.DB
 
 func Connect() error {
-	dbFile := fmt.Sprintf("%s/gemfast.db", config.Env.DBDir)
+	err := os.MkdirAll(config.Env.DBDir, os.ModePerm)
+	if err != nil {
+		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could make db directory %s", config.Env.DBDir))
+		return err
+	}
+	dbFile := filepath.Join(config.Env.DBDir, "gemfast.db")
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could not open %s", dbFile))
 		return err
 	}
 	BoltDB = db
-	createBucket(DEPENDENCY_BUCKET)
+	createBucket(GEM_BUCKET)
+	createBucket(GEM_DEPENDENCY_BUCKET)
 	createBucket(USER_BUCKET)
 	log.Info().Str("db", dbFile).Msg("successfully connected to database")
 	return nil

@@ -1,32 +1,33 @@
 package middleware
 
 import (
-	"net/http"
 	b64 "encoding/base64"
+	"fmt"
+	"net/http"
 
+	"github.com/gemfast/server/internal/models"
 	"github.com/gin-gonic/gin"
-	"github.com/gscho/gemfast/internal/models"
 )
 
 func GinTokenMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, token, ok := c.Request.BasicAuth()
 		if !ok {
-			c.String(http.StatusBadRequest, "unable to parse username and token")
-      return
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("unable to parse username and token"))
+			return
 		}
 		ok = validateToken(username, token)
 		if ok {
-     c.Next() 
-    } else {
-    	c.String(http.StatusUnauthorized, "invalid api token provided")
-      return
-    }
+			c.Next()
+		} else {
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("unable to parse username and token"))
+			return
+		}
 	}
 }
 
-func validateToken(username string, token string) (bool) {
-	user, err := models.GetUser(username) 
+func validateToken(username string, token string) bool {
+	user, err := models.GetUser(username)
 	if err != nil {
 		return false
 	}

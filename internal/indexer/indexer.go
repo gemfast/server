@@ -17,10 +17,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gscho/gemfast/internal/config"
-	"github.com/gscho/gemfast/internal/marshal"
-	"github.com/gscho/gemfast/internal/models"
-	"github.com/gscho/gemfast/internal/spec"
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/marshal"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/spec"
 
 	"github.com/rs/zerolog/log"
 )
@@ -109,11 +109,18 @@ func InitIndexer() error {
 	return nil
 }
 
-func (indexer Indexer) GenerateIndex() {
+func (indexer Indexer) GenerateIndex() error {
 	mkDirs(indexer.quickMarshalDir)
 	mkDirs(config.Env.GemDir)
-	indexer.buildIndicies()
-	indexer.installIndicies()
+	mkDirs(config.Env.DBDir)
+	_, specsMissing := os.Stat(fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
+	_, prereleaseSpecsMissing := os.Stat(fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
+	_, latestSpecsMissing := os.Stat(fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
+	if specsMissing != nil || prereleaseSpecsMissing != nil || latestSpecsMissing != nil {
+		indexer.buildIndicies()
+		indexer.installIndicies()
+	}
+	return nil
 }
 
 func mkTempDir(name string) (string, error) {
@@ -172,8 +179,7 @@ func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 		specFName := fmt.Sprintf("%s.gemspec.rz", s.OriginalName)
 		var marshalName string
 		if update {
-			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDirBase, specFName)
-			marshalName = fmt.Sprintf("%s/%s", indexer.destDir, marshalName)
+			marshalName = fmt.Sprintf("%s/%s/%s", indexer.destDir, indexer.quickMarshalDirBase, specFName)
 		} else {
 			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDir, specFName)
 		}
@@ -220,7 +226,7 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 }
 
 func (indexer Indexer) compressIndicies() {
-	tmpIndicies := []string{indexer.prereleaseSpecsIdx, indexer.latestSpecsIdx, indexer.latestSpecsIdx}
+	tmpIndicies := []string{indexer.prereleaseSpecsIdx, indexer.latestSpecsIdx, indexer.specsIdx}
 	for _, index := range tmpIndicies {
 		if _, err := os.Stat(index); err == nil {
 			gzipFile(index)
@@ -433,6 +439,7 @@ func saveDependencies(specs []*spec.Spec) {
 				d.Dependencies = append(d.Dependencies, []string{dep.Name, fmt.Sprintf("%s %s", vc.Constraint, vc.Version)})
 			}
 		}
-		models.SetDependencies(d.Name, d)
+		err := models.SetDependencies(d.Name, d)
+		check(err)
 	}
 }

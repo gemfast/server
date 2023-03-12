@@ -2,6 +2,7 @@ specs*
 latest_specs*
 prerelease_specs*
 *.gem
+!test/fixtures/gem_list/*.gem
 gemfast.db
 bin/gemfast
 omnibus/pkg
