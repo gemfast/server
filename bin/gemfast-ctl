@@ -16,9 +16,15 @@ function main() {
   fi
   local action=$1
   case "${action}" in
-    status|start|stop|restart|force-restart|kill)
-      sv "${action}" "caddy"
-      sv "${action}" "gemfast"
+    start|restart)
+      reconfigure
+      ensure-runsvdir
+      /opt/gemfast/embedded/bin/sv ${action} "caddy"
+      /opt/gemfast/embedded/bin/sv ${action} "gemfast"
+      ;;
+    status|stop|force-restart|kill)
+      /opt/gemfast/embedded/bin/sv ${action} "caddy"
+      /opt/gemfast/embedded/bin/sv ${action} "gemfast"
       ;;
     --help|help)
       help
@@ -48,13 +54,12 @@ function ensure-runsvdir() {
 #
 # Wrapper to sv command
 #
-function sv() {
-  local action=$1
-  local service=$2
-  if [ $action == "start" ]; then
-    ensure-runsvdir
-  fi
-  /opt/gemfast/embedded/bin/sv ${action} "${service}"
+function reconfigure() {
+  . /etc/gemfast/.env
+  export GEMFAST_HOST="${GEMFAST_HOST:-localhost}"
+  export GEMFAST_PORT="${GEMFAST_PORT:-8887}"
+  gomplate -i /opt/gemfast/embedded/etc/
+
 }
 
 #

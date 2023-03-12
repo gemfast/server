@@ -1,0 +1,4 @@
+{{ .Env.GEMFAST_URL }}
+
+encode zstd gzip
+reverse_proxy :{{ .Env.GEMFAST_PORT }}

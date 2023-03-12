@@ -1,4 +1,0 @@
-localhost
-
-encode zstd gzip
-reverse_proxy :8881
