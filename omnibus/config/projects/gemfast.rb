@@ -14,11 +14,9 @@ install_dir "#{default_root}/#{name}"
 
 dependency "gemfast"
 dependency "caddy"
-dependency "runit"
+dependency "gomplate"
 
 package :deb do
   compression_level 1
   compression_type :xz
 end
-
-runtime_dependency "cron"

@@ -11,6 +11,8 @@ source url: "https://github.com/caddyserver/caddy/releases/download/v#{version}/
 build do
   mkdir "#{install_dir}/embedded/bin"
   mkdir "#{install_dir}/etc/#{name}"
-  copy "#{project_dir}/omnibus/files/#{name}/Caddyfile", "#{install_dir}/etc/#{name}"
-  copy "#{project_dir}/caddy",                           "#{install_dir}/embedded/bin"
+  mkdir "#{install_dir}/systemd/#{name}"
+  copy "#{project_dir}/omnibus/files/#{name}/Caddyfile.tmpl", "#{install_dir}/etc/#{name}"
+  copy "#{project_dir}/omnibus/files/#{name}/caddy.service", "#{install_dir}/systemd/#{name}"
+  copy "#{project_dir}/caddy", "#{install_dir}/embedded/bin"
 end
