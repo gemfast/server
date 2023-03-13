@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
-useradd -M -U gemfast
-groupadd -f gemfast
+set -eo pipefail
+
+id -u gemfast &>/dev/null || useradd -M -U gemfast
+groupadd -f gemfast &>/dev/null
 usermod -a -G gemfast gemfast
 
 is_darwin()
