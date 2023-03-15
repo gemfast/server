@@ -24,9 +24,11 @@ rm -f $PREFIX/bin/gemfast
 
 ln -sf $INSTALLER_DIR/bin/gemfast $PREFIX/bin || error_exit "Cannot link gemfast to $PREFIX/bin"
 
+mkdir -p /etc/gemfast
 mkdir -p /var/gemfast/db
 chown gemfast:gemfast /var/gemfast
 chown gemfast:gemfast /etc/gemfast
+cp /opt/gemfast/etc/gemfast/.env /etc/gemfast/
 
 for sv in "caddy" "gemfast"
 do
