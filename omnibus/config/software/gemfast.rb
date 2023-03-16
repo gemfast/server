@@ -22,5 +22,5 @@ build do
   copy "#{project_dir}/omnibus/files/#{name}/gemfast.service", "#{install_dir}/systemd/#{name}"
   copy "#{project_dir}/bin/#{name}-server", "#{install_dir}/embedded/bin"
 
-  link "#{install_dir}/embedded/bin/#{name}-server", "#{install_dir}/bin/#{name}"
+  link "#{install_dir}/embedded/bin/#{name}-server", "#{install_dir}/bin/#{name}-server"
 end

@@ -2,38 +2,26 @@
 
 set -eo pipefail
 
-id -u gemfast &>/dev/null || useradd -M -U gemfast
+id -u gemfast &>/dev/null || useradd -m -U gemfast
 groupadd -f gemfast &>/dev/null
 usermod -a -G gemfast gemfast
-
-is_darwin()
-{
-  uname -a | grep "^Darwin" 2>&1 >/dev/null
-}
-
-if is_darwin; then
-    PREFIX="/usr/local"
-    mkdir -p "$PREFIX/bin"
-else
-    PREFIX="/usr"
-fi
-
-INSTALLER_DIR=/opt/gemfast
-
-rm -f $PREFIX/bin/gemfast
-
-ln -sf $INSTALLER_DIR/bin/gemfast $PREFIX/bin || error_exit "Cannot link gemfast to $PREFIX/bin"
-
+rm -f /usr/bin/gemfast
+ln -sf /opt/gemfast/bin/gemfast-server /usr/bin || error_exit "Cannot link gemfast-server to /usr/bin"
 mkdir -p /etc/gemfast
 mkdir -p /var/gemfast/db
-chown gemfast:gemfast /var/gemfast
-chown gemfast:gemfast /etc/gemfast
-cp /opt/gemfast/etc/gemfast/.env /etc/gemfast/
+chown -R gemfast:gemfast /opt/gemfast
+
+if [ ! -f "/etc/gemfast/.env" ]; then
+  cp /opt/gemfast/etc/gemfast/.env /etc/gemfast
+fi
+touch /etc/gemfast/filter.conf
+chown -R gemfast:gemfast /var/gemfast
+chown -R gemfast:gemfast /etc/gemfast
 
 for sv in "caddy" "gemfast"
 do
   cp "/opt/gemfast/systemd/$sv/$sv.service" /etc/systemd/system
-  systemctl enable $sv --now
+  systemctl enable $sv
 done
 
 echo "Thank you for installing Gemfast Server! For help getting started visit https://gemfast.io/docs"
