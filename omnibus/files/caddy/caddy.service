@@ -19,6 +19,7 @@ Documentation=https://caddyserver.com/docs/
 After=network.target network-online.target
 Before=gemfast.service
 Requires=network-online.target
+PartOf=gemfast.service
 
 [Service]
 Type=notify
