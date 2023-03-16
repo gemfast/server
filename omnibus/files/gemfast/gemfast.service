@@ -1,0 +1,16 @@
+[Unit]
+Description=Gemfast Private Rubygems Server
+Documentation=https://gemfast.io
+After=network.target network-online.target caddy.service
+Requires=caddy.service
+
+[Service]
+Type=simple
+User=gemfast
+Group=gemfast
+ExecStart=/opt/gemfast/bin/gemfast-server
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -16,11 +16,11 @@ build do
   mkdir "#{install_dir}/bin"
   mkdir "#{install_dir}/embedded/bin"
   mkdir "#{install_dir}/etc/#{name}"
+  mkdir "#{install_dir}/systemd/#{name}"
   
-  copy "#{project_dir}/omnibus/files/#{name}/gemfast.env", "#{install_dir}/etc/#{name}"
-  copy "#{project_dir}/bin/#{name}-ctl",                   "#{install_dir}/embedded/bin"
-  copy "#{project_dir}/bin/#{name}",                       "#{install_dir}/embedded/bin"
+  copy "#{project_dir}/omnibus/files/#{name}/.env", "#{install_dir}/etc/#{name}"
+  copy "#{project_dir}/omnibus/files/#{name}/gemfast.service", "#{install_dir}/systemd/#{name}"
+  copy "#{project_dir}/bin/#{name}-server", "#{install_dir}/embedded/bin"
 
-  link "#{install_dir}/embedded/bin/#{name}",     "#{install_dir}/bin/#{name}"
-  link "#{install_dir}/embedded/bin/#{name}-ctl", "#{install_dir}/bin/#{name}-ctl"
+  link "#{install_dir}/embedded/bin/#{name}-server", "#{install_dir}/bin/#{name}-server"
 end

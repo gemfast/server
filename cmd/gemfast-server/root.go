@@ -6,7 +6,9 @@ import (
 	"github.com/gemfast/server/internal/api"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
+	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
+	// "github.com/gemfast/server/internal/license"
 	"github.com/rs/zerolog/log"
 )
 
@@ -34,6 +36,11 @@ func Execute() {
 	if err != nil {
 		panic(err)
 	}
+	filter.InitFilter()
+	// err = license.ValidateLicenseKey()
+	// if err != nil {
+	// 	panic(err)
+	// }
 	err = api.Run()
 	if err != nil {
 		panic(err)
