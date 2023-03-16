@@ -19,20 +19,6 @@ func head(c *gin.Context) {
 	c.JSON(http.StatusOK, "{}")
 }
 
-func createToken(c *gin.Context) {
-	user, _ := c.Get(IdentityKey)
-	u, _ := user.(*models.User)
-	token, err := models.CreateUserToken(u)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to generate token for user")
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"token":    token,
-		"username": u.Username,
-	})
-}
-
 func listGems(c *gin.Context) {
 	gemQuery := c.Query("gem")
 	gems, err := models.GetGems(gemQuery)
