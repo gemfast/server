@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -157,21 +158,29 @@ func gemList() []string {
 	return gems
 }
 
-func mapGemsToSpecs(gems []string) []*spec.Spec {
+func mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 	var specs []*spec.Spec
 	var s *spec.Spec
 	for _, g := range gems {
 		fi, err := os.Stat(g)
-		check(err)
+		if err != nil {
+			log.Error().Err(err).Str("gem", g).Msg("Failed to stat gem")
+			return nil, err
+		}
 		if fi.Size() == 0 {
-			log.Trace().Str("gem", g).Msg("skipping zero-length gem")
+			log.Info().Str("gem", g).Msg("skipping zero-length gem")
 			continue
 		} else {
-			s = spec.FromFile(g)
+			log.Info().Str("gem", g).Msg("extracting spec from gem")
+			s, err = spec.FromFile(g)
+			if err != nil {
+				log.Info().Str("gem", g).Msg("failed to extract spec from gem")
+				return nil, err
+			}
 			specs = append(specs, s)
 		}
 	}
-	return specs
+	return specs, nil
 }
 
 func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
@@ -253,11 +262,16 @@ func gzipFile(src string) {
 	ioutil.WriteFile(fmt.Sprintf("%s.gz", src), b.Bytes(), 0666)
 }
 
-func (indexer Indexer) buildIndicies() {
-	specs := mapGemsToSpecs(gemList())
+func (indexer Indexer) buildIndicies() (error) {
+	specs, err := mapGemsToSpecs(gemList())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to map gems to specs")
+		return err
+	}
 	indexer.buildMarshalGemspecs(specs, false)
 	indexer.buildModernIndices(specs)
 	indexer.compressIndicies()
+	return nil
 }
 
 func (indexer Indexer) installIndicies() {
@@ -366,40 +380,23 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 	ch <- bytesWritten
 }
 
-func (indexer Indexer) UpdateIndex() {
+func (indexer Indexer) UpdateIndex(updatedGems []string) (error) {
 	lock.Lock()
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
-	var updatedGems []string
 	mkDirs(indexer.quickMarshalDir)
-	fi, err := os.Stat(indexer.destSpecsIdx)
-	check(err)
-	specsMtime := fi.ModTime()
-	newestMtime, err := time.Parse(time.RFC3339, EPOCH)
-	check(err)
-	for _, gem := range gemList() {
-		fi, err := os.Stat(gem)
-		check(err)
-		gemMtime := fi.ModTime()
-		if gemMtime.Unix() > newestMtime.Unix() {
-			newestMtime = gemMtime
-		}
-		if gemMtime.Unix() > specsMtime.Unix() {
-			updatedGems = append(updatedGems, gem)
-		}
-	}
-
-	if len(updatedGems) == 0 {
-		log.Trace().Msg("no new gems")
-		return
-	}
-
-	specs := mapGemsToSpecs(updatedGems)
+	
+	specs, err := mapGemsToSpecs(updatedGems)
 	pre, rel, latest := spec.PartitionSpecs(specs)
 
-	go saveDependencies(specs)
+	err = saveDependencies(specs)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to update index - unable to save gem dependencies")
+		return err
+	}
 	indexer.buildMarshalGemspecs(specs, true)
 
+	// TODO: capture errors from these goroutines
 	ch := make(chan int, 3)
 	go indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx, ch)
 	go indexer.updateSpecsIndex(latest, indexer.destLatestSpecsIdx, indexer.latestSpecsIdx, ch)
@@ -418,16 +415,64 @@ func (indexer Indexer) UpdateIndex() {
 		destName := fmt.Sprintf("%s/%s", indexer.destDir, file)
 		if _, err := os.Stat(srcName); err == nil {
 			err = os.RemoveAll(destName)
-			check(err)
+			if err != nil {
+				log.Error().Err(err).Str("file", destName).Msg("failed to remove existing file")
+				return err
+			}
 			err = os.Rename(srcName, destName)
-			check(err)
+			if err != nil {
+				log.Error().Err(err).Str("file", destName).Msg("failed to move file")
+				return err
+			}
+			newestMtime, _ := time.Parse(time.RFC3339, EPOCH)
 			err = os.Chtimes(destName, newestMtime, newestMtime)
-			check(err)
+			if err != nil {
+				log.Error().Err(err).Str("file", destName).Msg("failed to update file mtime")
+				return err
+			}
 		}
 	}
+	return nil
 }
 
-func saveDependencies(specs []*spec.Spec) {
+func (indexer Indexer) AddGemToIndex(gem string) (error) {
+	return indexer.UpdateIndex([]string{gem})
+}
+
+func (indexer Indexer) ReIndex() (error) {
+	var updatedGems []string
+	fi, err := os.Stat(indexer.destSpecsIdx)
+	if err != nil {
+		log.Error().Err(err).Str("file", indexer.destSpecsIdx).Msg("destination specs index file does not exist")
+		return err
+	}
+	specsMtime := fi.ModTime()
+	newestMtime, err := time.Parse(time.RFC3339, EPOCH)
+	for _, gem := range gemList() {
+		fi, err := os.Stat(gem)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return err
+		}
+		gemMtime := fi.ModTime()
+		if gemMtime.Unix() > newestMtime.Unix() {
+			newestMtime = gemMtime
+		}
+		if gemMtime.Unix() > specsMtime.Unix() {
+			updatedGems = append(updatedGems, gem)
+		}
+	}
+
+	if len(updatedGems) == 0 {
+		log.Trace().Msg("no new gems")
+		return nil
+	}
+	log.Trace().Str("gems", strings.Join(updatedGems, ",")).Msg("updated gems")
+
+	return indexer.UpdateIndex(updatedGems)
+}
+
+func saveDependencies(specs []*spec.Spec) (error) {
 	for _, s := range specs {
 		d := models.Dependency{
 			Name:     s.Name,
@@ -440,6 +485,10 @@ func saveDependencies(specs []*spec.Spec) {
 			}
 		}
 		err := models.SetDependencies(d.Name, d)
-		check(err)
+		if err != nil {
+			log.Error().Err(err).Str("gem", d.Name).Msg("failed to save dependencies for gem")
+			return err
+		}
 	}
+	return nil
 }

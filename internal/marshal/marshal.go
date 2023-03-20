@@ -215,11 +215,11 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	encArrayNoCache(buff, len(specs))
 	for _, spec := range specs {
 		encArrayAndIncrementIndex(buff, 3, olinktbl, &olinkidx) // Inner Array Len (Always 3 for modern indicies)
-		encString(buff, spec.Name, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		// encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
+		// encString(buff, spec.Name, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
 		encGemVersion(buff, spec.Version, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		encString(buff, spec.OriginalPlatform, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		// encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
+		// encString(buff, spec.OriginalPlatform, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	return buff.Bytes()
@@ -232,7 +232,11 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(SYMBOL_SIGN)
 	encInt(buff, 18)
 	buff.WriteString("Gem::Specification")
-	encInt(buff, meta.NumInstanceVars()) // Number of instance variables
+	num, err := meta.NumInstanceVars()
+	if err != nil {
+		panic(err)
+	}
+	encInt(buff, num) // Number of instance variables
 
 	// Name
 	buff.WriteByte(SYMBOL_SIGN)

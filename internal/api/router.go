@@ -21,7 +21,7 @@ func Run() error {
 }
 
 func initRouter() (r *gin.Engine) {
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)

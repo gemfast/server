@@ -26,34 +26,33 @@ type Spec struct {
 	GemMetadata      GemMetadata
 }
 
-func untar(full_name string, gemfile string) string {
+func untar(full_name string, gemfile string) (string, error) {
 	tmpdir, err := os.MkdirTemp("/tmp", full_name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
-		panic(err)
+		return "", err
 	}
 	log.Trace().Msg(fmt.Sprintf("created tmpdir %s", tmpdir))
 	file, err := os.Open(gemfile)
 
 	if err != nil {
 		log.Error().Err(err).Str("file", gemfile).Msg("failed to open gemfile")
-		panic(err)
+		return "", err
 	}
 	defer file.Close()
 
 	var fileReader io.ReadCloser = file
 	tarBallReader := tar.NewReader(fileReader)
 
-	// Extracting tarred files
-
+	// Extracting tar.gz files
 	for {
 		header, err := tarBallReader.Next()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			fmt.Println(err)
-			os.Exit(1)
+			log.Error().Err(err).Str("gem", full_name).Msg("bad header")
+			return "", err
 		}
 
 		// get the individual filename and extract to the current directory
@@ -62,70 +61,70 @@ func untar(full_name string, gemfile string) string {
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// handle directory
-			fmt.Println("Creating directory :", filename)
-			err = os.MkdirAll(filename, os.FileMode(header.Mode)) // or use 0755 if you prefer
-
+			log.Trace().Str("dir", filename).Msg("extracting directory")
+			err = os.MkdirAll(filename, os.FileMode(header.Mode))
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				log.Error().Err(err).Str("dir", filename).Msg("failed to make directory")
+				return "", err
 			}
 
 		case tar.TypeReg:
 			// handle normal file
-			log.Trace().Msg(fmt.Sprintf("untarring %s", filename))
+			log.Trace().Msg(fmt.Sprintf("extracting file %s", filename))
 			writer, err := os.Create(filename)
-
 			if err != nil {
-				log.Error().Err(err).Str("file", filename).Msg("failed to untar file")
-				panic(err)
+				log.Error().Err(err).Str("file", filename).Msg("failed to create file")
+				return "", err
 			}
+			defer writer.Close()
 
 			io.Copy(writer, tarBallReader)
-
 			err = os.Chmod(filename, os.FileMode(header.Mode))
 
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				log.Error().Err(err).Str("file", filename).Msg("failed to chmod file")
+				return "", err
 			}
-
-			writer.Close()
 		default:
 			log.Error().Err(err).Str("file", filename).Bytes("type", []byte{header.Typeflag}).Msg("unrecognized file type")
+			return "", err
 		}
 	}
-	return tmpdir
+	return tmpdir, nil
 }
 
-func GunzipMetadata(path string) string {
-	file, err := os.Open(fmt.Sprintf("%s/metadata.gz", path))
+func GunzipMetadata(path string) (string, error) {
+	fname := fmt.Sprintf("%s/metadata.gz", path)
+	file, err := os.Open(fname)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Error().Err(err).Str("file", fname).Msg("failed to open file")
+		return "", err
 	}
 	defer file.Close()
 
 	var fileReader io.ReadCloser = file
-	gzreader, e1 := gzip.NewReader(fileReader)
-	if e1 != nil {
-		fmt.Println(e1) // Maybe panic here, depends on your error handling.
+	gzreader, err := gzip.NewReader(fileReader)
+	if err != nil {
+		log.Error().Err(err).Str("file", fname).Msg("failed to create gzip reader")
+		return "", err
 	}
 
-	output, e2 := ioutil.ReadAll(gzreader)
-	if e2 != nil {
-		fmt.Println(e2)
+	output, err := ioutil.ReadAll(gzreader)
+	if err != nil {
+		log.Error().Err(err).Str("file", fname).Msg("failed to read gzip content")
+		return "", err
 	}
 
 	yaml := string(output)
-	return yaml
+	return yaml, nil
 }
 
-func ParseGemMetadata(yamlBytes []byte) GemMetadata {
+func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 	var metadata GemMetadata
 	err := yaml.Unmarshal(yamlBytes, &metadata)
 	if err != nil {
-		fmt.Println(string(yamlBytes))
-		panic(err)
+		log.Error().Err(err).Msg("failed to unmarshal gem metadata")
+		return GemMetadata{}, err
 	}
 	// var email string
 	switch t := metadata.Email.(type) {
@@ -147,9 +146,11 @@ func ParseGemMetadata(yamlBytes []byte) GemMetadata {
 	case nil:
 		{
 			// nothing
+			log.Trace().Str("gem", metadata.Name).Msg("nil email")
 		}
 	default:
-		panic(fmt.Sprintf("Unknown type: %T for email", t))
+		log.Error().Err(err).Str("gem", metadata.Name).Str("type", fmt.Sprintf("%T", t)).Msg("unknown email type in gem metadata")
+		return GemMetadata{}, err
 	}
 
 	var c string
@@ -179,22 +180,37 @@ func ParseGemMetadata(yamlBytes []byte) GemMetadata {
 					}
 				}
 			default:
-				panic(fmt.Sprintf("Unknown type: %T for gem requirement requirements", t))
+				log.Error().Err(err).Str("gem", metadata.Name).Str("type", fmt.Sprintf("%T", t)).Msg("unknown requirements type in gem metadata")
+				return GemMetadata{}, err
 			}
 		}
 		metadata.Dependencies[i] = dep
 	}
-	return metadata
+	return metadata, nil
 }
 
-func FromFile(gemfile string) *Spec {
+func FromFile(gemfile string) (*Spec, error) {
 	path_chunks := strings.Split(gemfile, "/")
 	full := path_chunks[len(path_chunks)-1]
 	ogName := strings.TrimSuffix(full, ".gem")
-	tmpdir := untar(full, gemfile)
+	log.Info().Str("gemfile", gemfile).Msg("untarring gemfile")
+	tmpdir, err := untar(full, gemfile)
 	defer os.RemoveAll(tmpdir)
-	res := GunzipMetadata(tmpdir)
-	metadata := ParseGemMetadata([]byte(res))
+	if err != nil {
+		log.Error().Err(err).Str("gem", full).Msg("failed to untar gem")
+		return &Spec{}, err
+	}
+	log.Info().Str("tmpdir", tmpdir).Msg("gunzip tmpdir")
+	res, err := GunzipMetadata(tmpdir)
+	if err != nil {
+		log.Error().Err(err).Str("gem", full).Msg("failed to gunzip gem metadata")
+		return &Spec{}, err
+	}
+	metadata, err := ParseGemMetadata([]byte(res))
+	if err != nil {
+		log.Error().Err(err).Str("gem", full).Msg("failed to parse gem metadata")
+		return &Spec{}, err
+	}
 	s := Spec{
 		OriginalName:     ogName,
 		OriginalPlatform: metadata.Platform,
@@ -205,7 +221,7 @@ func FromFile(gemfile string) *Spec {
 		LoadedFrom:       full,
 		GemMetadata:      metadata,
 	}
-	return &s
+	return &s, nil
 }
 
 func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
