@@ -4,4 +4,4 @@ import (
 	"testing"
 )
 
-func TestLoadEnvironmentVariables(t *testing.T) { }
+func TestLoadEnvironmentVariables(t *testing.T) {}

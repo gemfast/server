@@ -262,7 +262,7 @@ func gzipFile(src string) {
 	ioutil.WriteFile(fmt.Sprintf("%s.gz", src), b.Bytes(), 0666)
 }
 
-func (indexer Indexer) buildIndicies() (error) {
+func (indexer Indexer) buildIndicies() error {
 	specs, err := mapGemsToSpecs(gemList())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to map gems to specs")
@@ -380,12 +380,12 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 	ch <- bytesWritten
 }
 
-func (indexer Indexer) UpdateIndex(updatedGems []string) (error) {
+func (indexer Indexer) UpdateIndex(updatedGems []string) error {
 	lock.Lock()
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
 	mkDirs(indexer.quickMarshalDir)
-	
+
 	specs, err := mapGemsToSpecs(updatedGems)
 	pre, rel, latest := spec.PartitionSpecs(specs)
 
@@ -435,11 +435,11 @@ func (indexer Indexer) UpdateIndex(updatedGems []string) (error) {
 	return nil
 }
 
-func (indexer Indexer) AddGemToIndex(gem string) (error) {
+func (indexer Indexer) AddGemToIndex(gem string) error {
 	return indexer.UpdateIndex([]string{gem})
 }
 
-func (indexer Indexer) ReIndex() (error) {
+func (indexer Indexer) ReIndex() error {
 	var updatedGems []string
 	fi, err := os.Stat(indexer.destSpecsIdx)
 	if err != nil {
@@ -472,7 +472,7 @@ func (indexer Indexer) ReIndex() (error) {
 	return indexer.UpdateIndex(updatedGems)
 }
 
-func saveDependencies(specs []*spec.Spec) (error) {
+func saveDependencies(specs []*spec.Spec) error {
 	for _, s := range specs {
 		d := models.Dependency{
 			Name:     s.Name,

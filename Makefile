@@ -1,3 +1,5 @@
+.PHONY: all test clean
+	
 build:
 	go build
 	mv server bin/gemfast-server
