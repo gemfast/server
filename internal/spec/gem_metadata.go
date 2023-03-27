@@ -11,6 +11,7 @@ type VersionContraint struct {
 
 type GemRequirement struct {
 	Requirements       []NestedGemRequirement `yaml:"requirements"`
+	VersionRequirements[]NestedGemRequirement `yaml:"version_requirements"`
 	VersionConstraints []VersionContraint
 }
 
@@ -46,6 +47,9 @@ func (gm GemMetadata) NumInstanceVars() (int, error) {
 	ivarCount := 15
 	if gm.Name == "" || len(gm.Authors) == 0 || gm.Version.Version == "" {
 		return -1, fmt.Errorf("Missing required field in gem metadata")
+	}
+	if gm.Summary == "" {
+		ivarCount -= 1
 	}
 	if len(gm.Emails) == 0 {
 		ivarCount -= 1

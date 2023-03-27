@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gemfast/server/internal/models"
-	// "github.com/gemfast/server/internal/spec"
+	"github.com/gemfast/server/internal/spec"
 )
 
 // func TestDumpSpecsWithMultiPlatforms(t *testing.T) {
@@ -236,11 +236,46 @@ func TestDumpBundlerDeps(t *testing.T) {
 	for i, b := range rubyBytes {
 		if i >= len(bd) {
 			// t.Errorf("%x", b)
-			t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
+			t.Errorf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
 			// os.Exit(1)
 		}
 		if bd[i] != b {
-			t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, bd[i], string(bd[i]), bd[i], i)
+			t.Errorf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, bd[i], string(bd[i]), bd[i], i)
+			// os.Exit(1)
+		}
+	}
+}
+
+func TestDumpGemspecGemfast(t *testing.T) {
+	rubyResult := "0408753a1747656d3a3a53706563696669636174696f6e02060204085b1849220a332e342e33063a0645546909492211616374696f6e6d61696c6572063b0054553a1147656d3a3a56657273696f6e5b0649220c372e302e342e33063b005449753a0954696d650de0ca1ec000000000063a097a6f6e65492208555443063b004649223e456d61696c20636f6d706f736974696f6e20616e642064656c6976657279206672616d65776f726b202870617274206f66205261696c73292e063b0054553a1547656d3a3a526571756972656d656e745b065b065b074922073e3d063b0054553b065b0649220a322e362e30063b0054553b095b065b065b074012553b065b0649220630063b0046305b00492200063b005449221b6461766964406c6f75647468696e6b696e672e636f6d063b00545b0649221d4461766964204865696e656d656965722048616e73736f6e063b005449220196456d61696c206f6e205261696c732e20436f6d706f73652c2064656c697665722c20616e64207465737420656d61696c73207573696e67207468652066616d696c69617220636f6e74726f6c6c65722f76696577207061747465726e2e2046697273742d636c61737320737570706f727420666f72206d756c74697061727420656d61696c20616e64206174746163686d656e74732e063b005449221c68747470733a2f2f727562796f6e7261696c732e6f7267063b00545449220972756279063b00545b007b00"
+	rubyBytes, _ := hex.DecodeString(rubyResult)
+	m := spec.GemMetadata{
+		Name:     "actionmailer",
+		Platform: "ruby",
+		Version: struct {
+			Version string `yaml:"version"`
+		}{
+			Version: "7.0.4.3",
+		},
+		Authors:         []string{"David Heinemeier Hansson"},
+		Email:           []string{"david@loudthinking.com"},
+		Summary:         "Email composition and delivery framework (part of Rails).",
+		Description:     "Email on Rails. Compose, deliver, and test emails using the familiar controller/view pattern. First-class support for multipart email and attachments.",
+		Homepage:        "https://rubyonrails.org",
+		SpecVersion:     4,
+		RequirePaths:    []string{"lib"},
+		// Licenses:        []string{"MIT", "unlicense"},
+		RubygemsVersion: "3.4.3",
+	}
+	gs := DumpGemspecGemfast(m)
+	for i, b := range rubyBytes {
+		if i >= len(gs) {
+			// t.Errorf("%x", b)
+			t.Fatalf("Previous byte was '%x' or '%s' or '%d'.\nNext byte would have been '%x', aka '%s' or '%d'", rubyBytes[i-1], string(rubyBytes[i-1]), rubyBytes[i-1], b, string(b), b)
+			// os.Exit(1)
+		}
+		if gs[i] != b {
+			t.Fatalf("Error, expected '%x' or '%s' or '%d'.\nReceived '%x' or '%s' or '%d' at index %d", b, string(b), b, gs[i], string(gs[i]), gs[i], i)
 			// os.Exit(1)
 		}
 	}

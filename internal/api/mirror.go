@@ -47,6 +47,8 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 		if resp.StatusCode != 200 {
 			log.Info().Str("upstream", path).Msg("upstream returned a non 200 status code")
 			c.String(resp.StatusCode, "Failure returned from upstream")
+			out.Close()
+			os.RemoveAll(fp)
 			return
 		}
 		_, err = io.Copy(out, resp.Body)
