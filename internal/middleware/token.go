@@ -21,7 +21,7 @@ func NewTokenMiddleware() gin.HandlerFunc {
 			s := strings.Split(auth[0], ":")
 			if len(s) != 2 {
 				c.AbortWithError(http.StatusBadRequest, fmt.Errorf("malformed Authorization header"))
-				return	
+				return
 			}
 			username = s[0]
 			token = s[1]

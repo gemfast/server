@@ -411,7 +411,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 		encStringNoCache(buff, dep.Name, &olinkidx, slinktbl, &slinkidx)
 
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 12)  //Length of symbol + 1 for the '@' character
+		encInt(buff, 12) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("requirement")
 		buff.WriteByte(USER_MARSHAL_SIGN)
@@ -426,7 +426,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 			buff.WriteByte(ARRAY_SIGN)
 			encInt(buff, 2)
 			encStringNoCache(buff, vc.Constraint, &olinkidx, slinktbl, &slinkidx)
-						
+
 			buff.WriteByte(USER_MARSHAL_SIGN)
 			buff.WriteByte(SYMBOL_LINK_SIGN)
 			encInt(buff, 4)
@@ -436,7 +436,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 
 		}
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 5)  //Length of symbol + 1 for the '@' character
+		encInt(buff, 5) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("type")
 		buff.WriteByte(SYMBOL_SIGN)
@@ -444,7 +444,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 		encInt(buff, strlen)
 		buff.WriteString(dep.Type[1:])
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 11)  //Length of symbol + 1 for the '@' character
+		encInt(buff, 11) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("prerelease")
 		if dep.Prerelease {
@@ -454,7 +454,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 		}
 
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 21)  //Length of symbol + 1 for the '@' character
+		encInt(buff, 21) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("version_requirements")
 		buff.WriteByte(OBJECT_LINK_SIGN)

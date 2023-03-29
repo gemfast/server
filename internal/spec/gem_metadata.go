@@ -10,9 +10,9 @@ type VersionContraint struct {
 }
 
 type GemRequirement struct {
-	Requirements       []NestedGemRequirement `yaml:"requirements"`
-	VersionRequirements[]NestedGemRequirement `yaml:"version_requirements"`
-	VersionConstraints []VersionContraint
+	Requirements        []NestedGemRequirement `yaml:"requirements"`
+	VersionRequirements []NestedGemRequirement `yaml:"version_requirements"`
+	VersionConstraints  []VersionContraint
 }
 
 type GemDependency struct {
