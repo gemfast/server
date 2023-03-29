@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+      - name: Unit Test
+        run: make test
+      - name: Build Omnibus
+        run: make omnibus
+      - name: Upload Omnibus
+        uses: actions/upload-artifact@v3
+        with:
+          name: gemfast-pkg
+          path: omnibus/pkg/*.deb
+          if-no-files-found: error
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          repository: rails/rails
+          path: clones
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+          path: gemfast-pkg.deb
+      - name: Smoke Test
+        run: ./scripts/run_smoke_tests.sh

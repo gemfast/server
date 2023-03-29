@@ -88,7 +88,7 @@ func setEnvDefaults(envMap map[string]string) {
 		envMap["GEMFAST_URL"] = "http://localhost"
 	}
 	if _, ok := envMap["GEMFAST_PORT"]; !ok {
-		envMap["GEMFAST_PORT"] = "8881"
+		envMap["GEMFAST_PORT"] = "2020"
 	}
 	if _, ok := envMap["GEMFAST_AUTH"]; !ok {
 		envMap["GEMFAST_AUTH"] = "local"
