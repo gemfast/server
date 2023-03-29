@@ -189,6 +189,10 @@ func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 		var marshalName string
 		if update {
 			marshalName = fmt.Sprintf("%s/%s/%s", indexer.destDir, indexer.quickMarshalDirBase, specFName)
+			if _, err := os.Stat(marshalName); err == nil {
+				log.Trace().Str("gemspec", marshalName).Msg("skipping marshal gemspec dump")
+				continue
+			}
 		} else {
 			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDir, specFName)
 		}

@@ -1,7 +1,6 @@
 package models
 
 import (
-	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -199,8 +198,13 @@ func generatePassword() (string, error) {
 	return pw, nil
 }
 
-func CreateUserToken(user *User) (string, error) {
-	token, err := password.Generate(32, 10, 10, false, false)
+func CreateUserToken(username string) (string, error) {
+	user, err := GetUser(username)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get existing user")
+		return "", err
+	}
+	token, err := password.Generate(32, 10, 0, true, false)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to generate a token")
 		return "", err
@@ -217,5 +221,8 @@ func CreateUserToken(user *User) (string, error) {
 		}
 		return nil
 	})
-	return b64.StdEncoding.EncodeToString([]byte(token)), err
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
