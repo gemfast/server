@@ -17,11 +17,15 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.19
-      - name: Unit Test
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1.2'
+          bundler: '2.3.7'
+      - name: Unit test
         run: make test
-      - name: Build Omnibus
+      - name: Build omnibus package
         run: make omnibus
-      - name: Upload Omnibus
+      - name: Upload omnibus package
         uses: actions/upload-artifact@v3
         with:
           name: gemfast-pkg
@@ -30,6 +34,7 @@ jobs:
 
   smoke-test:
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v3
       - uses: actions/checkout@v3
@@ -40,5 +45,5 @@ jobs:
         with:
           name: gemfast-pkg
           path: gemfast-pkg.deb
-      - name: Smoke Test
+      - name: Smoke test
         run: ./scripts/run_smoke_tests.sh
