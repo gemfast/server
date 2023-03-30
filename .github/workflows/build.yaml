@@ -47,6 +47,10 @@ jobs:
         with:
           repository: rails/rails
           path: clones
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1.2'
+          bundler: '2.3.7'
       - uses: actions/download-artifact@v3
         with:
           name: gemfast-pkg

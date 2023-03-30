@@ -4,8 +4,6 @@ set -ueo pipefail
 
 ruby --version
 bundle --version
-git --version
-curl --version
 
 sudo dpkg -i gemfast-pkg.deb
 sudo systemctl start gemfast
