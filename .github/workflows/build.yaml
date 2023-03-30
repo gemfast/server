@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: rails/rails
-          path: clones
+          path: clones/rails
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1.2'
