@@ -18,6 +18,6 @@ journalctl -u caddy
 cd ./clones
 
 pushd rails
-bundle config mirror.https://rubygems.org http://localhost:2020
+bundle config mirror.https://rubygems.org http://localhost
 bundle
 popd
