@@ -41,6 +41,8 @@ gem "rake", ">= 13"
 GEMFILE
 
 bundle clean --force
+ls -la /var/gemfast/gems
+
 mv Gemfile.backup Gemfile
 sed -i -e 's/https:\/\/rubygems.org/http:\/\/localhost\/private/g' Gemfile
 rm Gemfile.lock
