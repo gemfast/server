@@ -35,7 +35,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: gemfast-pkg
-          path: omnibus/pkg/*.deb
+          path: omnibus/pkg/
           if-no-files-found: error
 
   smoke-test:
@@ -54,6 +54,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: gemfast-pkg
-          path: gemfast-pkg.deb
+      - name: Test artifact download
+        run: ls -R
       - name: Smoke test
         run: ./scripts/run_smoke_tests.sh

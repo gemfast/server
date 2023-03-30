@@ -5,7 +5,7 @@ set -ueo pipefail
 ruby --version
 bundle --version
 
-sudo dpkg -i gemfast-pkg.deb
+sudo dpkg -i gemfast*.deb
 sudo systemctl start gemfast
 
 cd ./clones
