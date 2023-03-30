@@ -35,7 +35,11 @@ bundle config mirror.https://rubygems.org http://localhost
 bundle
 
 mv Gemfile Gemfile.backup
-touch Gemfile
+cat << GEMFILE > Gemfile
+source "https://rubygems.org"
+gem "rake", ">= 13"
+GEMFILE
+
 bundle clean --force
 mv Gemfile.backup Gemfile
 sed -i -e 's/https:\/\/rubygems.org/http:\/\/localhost\/private/g' Gemfile
