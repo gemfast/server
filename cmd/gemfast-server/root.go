@@ -21,28 +21,25 @@ func init() {
 	config.InitConfig()
 }
 
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 func Execute() {
 	log.Info().Msg("starting services")
 	err := db.Connect()
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 	defer db.BoltDB.Close()
 	err = indexer.InitIndexer()
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 	err = indexer.Get().GenerateIndex()
-	if err != nil {
-		panic(err)
-	}
-	filter.InitFilter()
+	check(err)
+	err = filter.InitFilter()
+	check(err)
 	// err = license.ValidateLicenseKey()
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// check(err)
 	err = api.Run()
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 }

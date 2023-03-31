@@ -47,6 +47,8 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 		if resp.StatusCode != 200 {
 			log.Info().Str("upstream", path).Msg("upstream returned a non 200 status code")
 			c.String(resp.StatusCode, "Failure returned from upstream")
+			out.Close()
+			os.RemoveAll(fp)
 			return
 		}
 		_, err = io.Copy(out, resp.Body)
@@ -54,6 +56,8 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "Failed to write gem file")
 			return
 		}
+	} else {
+		log.Info().Msg("serving existing gemspec.rz")
 	}
 	c.FileAttachment(fp, fileName)
 }
@@ -66,7 +70,8 @@ func mirroredGemHandler(c *gin.Context) {
 		return
 	}
 	fp := filepath.Join(config.Env.GemDir, fileName)
-	if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
+	info, err := os.Stat(fp)
+	if (err != nil && errors.Is(err, os.ErrNotExist)) || info.Size() == 0 {
 		out, err := os.Create(fp)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Failed to create gem file")
@@ -74,7 +79,7 @@ func mirroredGemHandler(c *gin.Context) {
 		defer out.Close()
 		path, err := url.JoinPath(config.Env.MirrorUpstream, "gems", fileName)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Failed to fetch gem file")
+			c.String(http.StatusInternalServerError, "Failed to fetch gem file from upstream")
 			return
 		}
 		resp, err := http.Get(path)
@@ -93,13 +98,25 @@ func mirroredGemHandler(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "Failed to write gem file")
 			return
 		}
-		s := spec.FromFile(fp)
+		out.Close()
+		s, err := spec.FromFile(fp)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Failed to extract gem spec")
+			return
+		}
 		err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Failed to save gem in db")
 			return
 		}
-		go indexer.Get().UpdateIndex()
+		err = indexer.Get().AddGemToIndex(fp)
+		if err != nil {
+			defer os.Remove(fp)
+			c.String(http.StatusInternalServerError, "Failed to index gem")
+			return
+		}
+	} else {
+		log.Info().Msg("serving existing gem")
 	}
 	c.FileAttachment(fp, fileName)
 }

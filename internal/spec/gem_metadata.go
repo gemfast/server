@@ -1,5 +1,7 @@
 package spec
 
+import "fmt"
+
 type NestedGemRequirement interface{}
 
 type VersionContraint struct {
@@ -8,8 +10,9 @@ type VersionContraint struct {
 }
 
 type GemRequirement struct {
-	Requirements       []NestedGemRequirement `yaml:"requirements"`
-	VersionConstraints []VersionContraint
+	Requirements        []NestedGemRequirement `yaml:"requirements"`
+	VersionRequirements []NestedGemRequirement `yaml:"version_requirements"`
+	VersionConstraints  []VersionContraint
 }
 
 type GemDependency struct {
@@ -40,10 +43,13 @@ type GemMetadata struct {
 	Dependencies    []GemDependency `yaml:"dependencies"`
 }
 
-func (gm GemMetadata) NumInstanceVars() int {
+func (gm GemMetadata) NumInstanceVars() (int, error) {
 	ivarCount := 15
-	if gm.Name == "" || len(gm.Authors) == 0 || gm.Summary == "" || gm.Version.Version == "" {
-		panic("Missing required field")
+	if gm.Name == "" || len(gm.Authors) == 0 || gm.Version.Version == "" {
+		return -1, fmt.Errorf("Missing required field in gem metadata")
+	}
+	if gm.Summary == "" {
+		ivarCount -= 1
 	}
 	if len(gm.Emails) == 0 {
 		ivarCount -= 1
@@ -69,5 +75,5 @@ func (gm GemMetadata) NumInstanceVars() int {
 	if len(gm.Dependencies) == 0 {
 		ivarCount -= 1
 	}
-	return ivarCount
+	return ivarCount, nil
 }

@@ -42,14 +42,14 @@ type envConfig struct {
 
 func configureZeroLog() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 }
 
 func loadEnvVariables() (config envConfig) {
 	var dotEnvMap map[string]string
 	usr, err := user.Current()
 	if err != nil {
-		log.Error().Err(err).Msg("unable to get current user")
+		log.Error().Err(err).Msg("Unable to get the current linux user. Please contact support: https://gemfast.io/support")
 		os.Exit(1)
 	}
 	homedirConf := fmt.Sprintf("%s/.gemfast/.env", usr.HomeDir)
@@ -68,7 +68,8 @@ func loadEnvVariables() (config envConfig) {
 	var cfg envConfig
 	err = mapstructure.Decode(dotEnvMap, &cfg)
 	if err != nil {
-		panic(err)
+		log.Error().Err(err).Msg("Unable to decode config into a mapstructure. Please contact support: https://gemfast.io/support")
+		os.Exit(1)
 	}
 	return cfg
 }
@@ -87,7 +88,7 @@ func setEnvDefaults(envMap map[string]string) {
 		envMap["GEMFAST_URL"] = "http://localhost"
 	}
 	if _, ok := envMap["GEMFAST_PORT"]; !ok {
-		envMap["GEMFAST_PORT"] = "8881"
+		envMap["GEMFAST_PORT"] = "2020"
 	}
 	if _, ok := envMap["GEMFAST_AUTH"]; !ok {
 		envMap["GEMFAST_AUTH"] = "local"

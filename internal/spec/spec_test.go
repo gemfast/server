@@ -12,7 +12,7 @@ func TestParseGemMetadata(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	metadata := ParseGemMetadata([]byte(res))
+	metadata, _ := ParseGemMetadata([]byte(res))
 	fmt.Println(metadata.Emails)
 	// fmt.Println(fmt.Sprintf("%T", metadata.Dependencies[1].Requirement.Requirements))
 	// var arg string

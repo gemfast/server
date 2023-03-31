@@ -11,11 +11,14 @@ import (
 
 var Filters []string
 
-func InitFilter() {
+func InitFilter() error {
+	if config.Env.FilterEnabled == "false" {
+		return nil
+	}
 	fp := config.Env.FilterFile
 	file, err := os.Open(fp)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer file.Close()
 
@@ -30,9 +33,10 @@ func InitFilter() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		panic(err)
+		return err
 	}
 	Filters = filters
+	return nil
 }
 
 func IsAllowed(input string) bool {

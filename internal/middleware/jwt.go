@@ -1,4 +1,4 @@
-package api
+package middleware
 
 import (
 	"time"
@@ -17,7 +17,7 @@ type login struct {
 
 const IdentityKey = "id"
 
-func initJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
+func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "gemfast",
 		Key:         []byte("secret key"),

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/marshal"
@@ -27,7 +28,9 @@ func localGemHandler(c *gin.Context) {
 }
 
 func localIndexHandler(c *gin.Context) {
-	c.File(filepath.Join(config.Env.Dir, c.FullPath()))
+	s := strings.Split(c.FullPath(), "/")
+	l := len(s)
+	c.File(filepath.Join(config.Env.Dir, s[l-1]))
 }
 
 func localDependenciesHandler(c *gin.Context) {

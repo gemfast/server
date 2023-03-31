@@ -215,40 +215,38 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	encArrayNoCache(buff, len(specs))
 	for _, spec := range specs {
 		encArrayAndIncrementIndex(buff, 3, olinktbl, &olinkidx) // Inner Array Len (Always 3 for modern indicies)
-		encString(buff, spec.Name, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		// encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
+		// encString(buff, spec.Name, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		encStringNoCache(buff, spec.Name, &olinkidx, slinktbl, &slinkidx)
 		encGemVersion(buff, spec.Version, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		encString(buff, spec.OriginalPlatform, olinktbl, &olinkidx, slinktbl, &slinkidx)
-		// encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
+		// encString(buff, spec.OriginalPlatform, olinktbl, &olinkidx, slinktbl, &slinkidx)
+		encStringNoCache(buff, spec.OriginalPlatform, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	return buff.Bytes()
 }
 
 func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
+	slinkidx := 0
+	slinktbl := make(map[string]int)
+	olinkidx := 0
 	buff := bytes.NewBuffer(nil)
 	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
 	buff.WriteByte(OBJECT_SIGN)
 	buff.WriteByte(SYMBOL_SIGN)
 	encInt(buff, 18)
 	buff.WriteString("Gem::Specification")
-	encInt(buff, meta.NumInstanceVars()) // Number of instance variables
+	num, err := meta.NumInstanceVars()
+	if err != nil {
+		panic(err)
+	}
+	encInt(buff, num) // Number of instance variables
 
 	// Name
 	buff.WriteByte(SYMBOL_SIGN)
 	buff.WriteByte(10)
 	buff.WriteByte(OBJECT_LINK_SIGN)
 	buff.WriteString("name")
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	strlen := len(meta.Name)
-	encInt(buff, strlen)
-	buff.WriteString(meta.Name)
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_SIGN)
-	buff.WriteByte(6)
-	buff.WriteByte('E')
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, meta.Name, &olinkidx, slinktbl, &slinkidx)
 
 	// Version
 	buff.WriteByte(SYMBOL_SIGN)
@@ -261,30 +259,14 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteString("Gem::Version")
 	buff.WriteByte(ARRAY_SIGN)
 	encInt(buff, 1)
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	strlen = len(meta.Version.Version)
-	encInt(buff, strlen)
-	buff.WriteString(meta.Version.Version)
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, meta.Version.Version, &olinkidx, slinktbl, &slinkidx)
 
 	// Summary
 	buff.WriteByte(SYMBOL_SIGN)
 	buff.WriteByte(13)
 	buff.WriteByte(OBJECT_LINK_SIGN)
 	buff.WriteString("summary")
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	strlen = len(meta.Summary)
-	encInt(buff, strlen)
-	buff.WriteString(meta.Summary)
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, meta.Summary, &olinkidx, slinktbl, &slinkidx)
 
 	// Required Ruby Version
 	buff.WriteByte(SYMBOL_SIGN)
@@ -301,27 +283,14 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	encInt(buff, 1)
 	buff.WriteByte(ARRAY_SIGN)
 	encInt(buff, 2)
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	encInt(buff, 2)
-	buff.WriteString(">=")
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, ">=", &olinkidx, slinktbl, &slinkidx)
+
 	buff.WriteByte(USER_MARSHAL_SIGN)
 	buff.WriteByte(SYMBOL_LINK_SIGN)
 	buff.WriteByte(9)
 	buff.WriteByte(ARRAY_SIGN)
 	encInt(buff, 1)
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	encInt(buff, 5)
-	buff.WriteString("2.6.0")
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, "2.6.0", &olinkidx, slinktbl, &slinkidx)
 
 	// Required Rubygems Version
 	buff.WriteByte(SYMBOL_SIGN)
@@ -338,42 +307,20 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	encInt(buff, 1)
 	buff.WriteByte(ARRAY_SIGN)
 	encInt(buff, 2)
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	encInt(buff, 2)
-	buff.WriteString(">=")
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, ">=", &olinkidx, slinktbl, &slinkidx)
 	buff.WriteByte(USER_MARSHAL_SIGN)
 	buff.WriteByte(SYMBOL_LINK_SIGN)
 	buff.WriteByte(9)
 	buff.WriteByte(ARRAY_SIGN)
 	encInt(buff, 1)
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	encInt(buff, 5)
-	buff.WriteString("3.3.3")
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, "3.3.3", &olinkidx, slinktbl, &slinkidx)
 
 	// Original Platform
 	buff.WriteByte(SYMBOL_SIGN)
 	encInt(buff, 18) //Length of symbol + 1 for the '@' character
 	buff.WriteByte(OBJECT_LINK_SIGN)
 	buff.WriteString("original_platform")
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	strlen = len(meta.Platform)
-	encInt(buff, strlen)
-	buff.WriteString(meta.Platform)
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, meta.Platform, &olinkidx, slinktbl, &slinkidx)
 
 	// Email
 	buff.WriteByte(SYMBOL_SIGN)
@@ -384,15 +331,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	arrlen := len(meta.Emails)
 	encInt(buff, arrlen) // Length of array
 	for _, email := range meta.Emails {
-		buff.WriteByte(IVAR_SIGN)
-		buff.WriteByte(RAWSTRING_SIGN)
-		strlen = len(email)
-		encInt(buff, strlen)
-		buff.WriteString(email)
-		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_LINK_SIGN)
-		buff.WriteByte(7)
-		buff.WriteByte(TRUE_SIGN)
+		encStringNoCache(buff, email, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	// Authors
@@ -404,15 +343,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	arrlen = len(meta.Authors)
 	encInt(buff, arrlen)
 	for _, author := range meta.Authors {
-		buff.WriteByte(IVAR_SIGN)
-		buff.WriteByte(RAWSTRING_SIGN)
-		strlen = len(author)
-		encInt(buff, strlen)
-		buff.WriteString(author)
-		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_LINK_SIGN)
-		buff.WriteByte(7)
-		buff.WriteByte(TRUE_SIGN)
+		encStringNoCache(buff, author, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	// Description
@@ -420,30 +351,14 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	encInt(buff, 12) //Length of symbol + 1 for the '@' character
 	buff.WriteByte(OBJECT_LINK_SIGN)
 	buff.WriteString("description")
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	strlen = len(meta.Description)
-	encInt(buff, strlen)
-	buff.WriteString(meta.Description)
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, meta.Description, &olinkidx, slinktbl, &slinkidx)
 
 	// Homepage
 	buff.WriteByte(SYMBOL_SIGN)
 	encInt(buff, 9) //Length of symbol + 1 for the '@' character
 	buff.WriteByte(OBJECT_LINK_SIGN)
 	buff.WriteString("homepage")
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	strlen = len(meta.Homepage)
-	encInt(buff, strlen)
-	buff.WriteString(meta.Homepage)
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encStringNoCache(buff, meta.Homepage, &olinkidx, slinktbl, &slinkidx)
 
 	// Licenses
 	buff.WriteByte(SYMBOL_SIGN)
@@ -454,15 +369,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	arrlen = len(meta.Licenses)
 	encInt(buff, arrlen) // Length of array
 	for _, lic := range meta.Licenses {
-		buff.WriteByte(IVAR_SIGN)
-		buff.WriteByte(RAWSTRING_SIGN)
-		strlen = len(lic)
-		encInt(buff, strlen)
-		buff.WriteString(lic)
-		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_LINK_SIGN)
-		buff.WriteByte(7)
-		buff.WriteByte(TRUE_SIGN)
+		encStringNoCache(buff, lic, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	// Require Paths
@@ -474,15 +381,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	arrlen = len(meta.RequirePaths)
 	encInt(buff, arrlen) // Length of array
 	for _, rp := range meta.RequirePaths {
-		buff.WriteByte(IVAR_SIGN)
-		buff.WriteByte(RAWSTRING_SIGN)
-		strlen = len(rp)
-		encInt(buff, strlen)
-		buff.WriteString(rp)
-		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_LINK_SIGN)
-		buff.WriteByte(7)
-		buff.WriteByte(TRUE_SIGN)
+		encStringNoCache(buff, rp, &olinkidx, slinktbl, &slinkidx)
 	}
 
 	// Specification Version
@@ -495,12 +394,12 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 
 	// Dependencies
 	buff.WriteByte(SYMBOL_SIGN)
-	encInt(buff, 13)
+	encInt(buff, 13) //Length of symbol + 1 for the '@' character
 	buff.WriteByte(OBJECT_LINK_SIGN)
 	buff.WriteString("dependencies")
 	buff.WriteByte(ARRAY_SIGN)
 	arrlen = len(meta.Dependencies)
-	encInt(buff, arrlen) // Length of array
+	encInt(buff, arrlen) // Length of arr
 	for _, dep := range meta.Dependencies {
 		buff.WriteByte(OBJECT_SIGN)
 		buff.WriteByte(SYMBOL_SIGN)
@@ -509,17 +408,10 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 		buff.WriteByte(10)
 		buff.WriteByte(SYMBOL_LINK_SIGN)
 		buff.WriteByte(6)
-		buff.WriteByte(IVAR_SIGN)
-		buff.WriteByte(RAWSTRING_SIGN)
-		strlen = len(dep.Name)
-		encInt(buff, strlen)
-		buff.WriteString(dep.Name)
-		buff.WriteByte(6)
-		buff.WriteByte(SYMBOL_LINK_SIGN)
-		buff.WriteByte(7)
-		buff.WriteByte(TRUE_SIGN)
+		encStringNoCache(buff, dep.Name, &olinkidx, slinktbl, &slinkidx)
+
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 12)
+		encInt(buff, 12) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("requirement")
 		buff.WriteByte(USER_MARSHAL_SIGN)
@@ -529,44 +421,30 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 		buff.WriteByte(ARRAY_SIGN)
 		encInt(buff, 1)
 		buff.WriteByte(ARRAY_SIGN)
-		encInt(buff, 1)
-		buff.WriteByte(ARRAY_SIGN)
-		encInt(buff, 2)
+		encInt(buff, len(dep.Requirement.VersionConstraints))
 		for _, vc := range dep.Requirement.VersionConstraints {
-			buff.WriteByte(IVAR_SIGN)
-			buff.WriteByte(RAWSTRING_SIGN)
-			strlen = len(vc.Constraint)
-			encInt(buff, strlen)
-			buff.WriteString(vc.Constraint)
-			buff.WriteByte(6)
-			buff.WriteByte(SYMBOL_LINK_SIGN)
-			encInt(buff, 2) // Index of the link
-			buff.WriteByte(TRUE_SIGN)
+			buff.WriteByte(ARRAY_SIGN)
+			encInt(buff, 2)
+			encStringNoCache(buff, vc.Constraint, &olinkidx, slinktbl, &slinkidx)
+
 			buff.WriteByte(USER_MARSHAL_SIGN)
 			buff.WriteByte(SYMBOL_LINK_SIGN)
 			encInt(buff, 4)
 			buff.WriteByte(ARRAY_SIGN)
 			encInt(buff, 1)
-			buff.WriteByte(IVAR_SIGN)
-			buff.WriteByte(RAWSTRING_SIGN)
-			strlen = len(vc.Version)
-			encInt(buff, strlen)
-			buff.WriteString(vc.Version)
-			buff.WriteByte(6)
-			buff.WriteByte(SYMBOL_LINK_SIGN)
-			buff.WriteByte(7)
-			buff.WriteByte(TRUE_SIGN)
+			encStringNoCache(buff, vc.Version, &olinkidx, slinktbl, &slinkidx)
+
 		}
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 5)
+		encInt(buff, 5) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("type")
 		buff.WriteByte(SYMBOL_SIGN)
-		strlen = len(dep.Type) - 1
+		strlen := len(dep.Type) - 1
 		encInt(buff, strlen)
 		buff.WriteString(dep.Type[1:])
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 11)
+		encInt(buff, 11) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("prerelease")
 		if dep.Prerelease {
@@ -574,8 +452,9 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 		} else {
 			buff.WriteByte(FALSE_SIGN)
 		}
+
 		buff.WriteByte(SYMBOL_SIGN)
-		encInt(buff, 21)
+		encInt(buff, 21) //Length of symbol + 1 for the '@' character
 		buff.WriteByte(OBJECT_LINK_SIGN)
 		buff.WriteString("version_requirements")
 		buff.WriteByte(OBJECT_LINK_SIGN)
@@ -583,19 +462,8 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	}
 
 	// Rubygems version
-	buff.WriteByte(SYMBOL_SIGN)
-	encInt(buff, 17) //Length of symbol + 1 for the '@' character
-	buff.WriteByte(OBJECT_LINK_SIGN)
-	buff.WriteString("rubygems_version")
-	buff.WriteByte(IVAR_SIGN)
-	buff.WriteByte(RAWSTRING_SIGN)
-	strlen = len(meta.RubygemsVersion)
-	encInt(buff, strlen)
-	buff.WriteString(meta.RubygemsVersion)
-	buff.WriteByte(6)
-	buff.WriteByte(SYMBOL_LINK_SIGN)
-	buff.WriteByte(7)
-	buff.WriteByte(TRUE_SIGN)
+	encSymbol(buff, []byte("rubygems_version"), slinktbl, &slinkidx)
+	encStringNoCache(buff, meta.RubygemsVersion, &olinkidx, slinktbl, &slinkidx)
 
 	return buff.Bytes()
 }

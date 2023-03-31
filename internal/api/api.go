@@ -19,20 +19,6 @@ func head(c *gin.Context) {
 	c.JSON(http.StatusOK, "{}")
 }
 
-func createToken(c *gin.Context) {
-	user, _ := c.Get(IdentityKey)
-	u, _ := user.(*models.User)
-	token, err := models.CreateUserToken(u)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to generate token for user")
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"token":    token,
-		"username": u.Username,
-	})
-}
-
 func listGems(c *gin.Context) {
 	gemQuery := c.Query("gem")
 	gems, err := models.GetGems(gemQuery)
@@ -44,12 +30,28 @@ func listGems(c *gin.Context) {
 }
 
 func saveAndReindex(tmpfile *os.File) error {
-	s := spec.FromFile(tmpfile.Name())
+	s, err := spec.FromFile(tmpfile.Name())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to read spec from tmpfile")
+		return err
+	}
 	fp := fmt.Sprintf("%s/%s-%s.gem", config.Env.GemDir, s.Name, s.Version)
-	err := os.Rename(tmpfile.Name(), fp)
+	err = os.Rename(tmpfile.Name(), fp)
+	if err != nil {
+		log.Error().Err(err).Str("gem", fp).Msg("failed to rename tmpfile")
+		return err
+	}
 	err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
-	go indexer.Get().UpdateIndex()
-	return err
+	if err != nil {
+		log.Error().Err(err).Str("gem", s.Name).Msg("failed to save gem to db")
+		return err
+	}
+	err = indexer.Get().AddGemToIndex(fp)
+	if err != nil {
+		log.Error().Err(err).Str("gem", s.Name).Msg("failed to add gem to index")
+		return err
+	}
+	return nil
 }
 
 func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency, error) {

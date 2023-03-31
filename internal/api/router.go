@@ -11,18 +11,18 @@ import (
 )
 
 func Run() error {
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
-	initRouter(r)
+	router := initRouter()
 	port := ":" + config.Env.Port
 	log.Info().Str("port", port).Msg("gemfast server ready")
 	if config.Env.MirrorEnabled != "false" {
 		log.Info().Str("upstream", config.Env.MirrorUpstream).Msg("mirroring upstream gem server")
 	}
-	return r.Run(port)
+	return router.Run(port)
 }
 
-func initRouter(r *gin.Engine) {
+func initRouter() (r *gin.Engine) {
+	gin.SetMode(gin.ReleaseMode)
+	r = gin.Default()
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
 	authMode := config.Env.AuthMode
@@ -33,6 +33,7 @@ func initRouter(r *gin.Engine) {
 	case "none":
 		configureNoneAuth(r)
 	}
+	return r
 }
 
 func configureLocalAuth(r *gin.Engine) {
@@ -44,7 +45,7 @@ func configureLocalAuth(r *gin.Engine) {
 	if err != nil {
 		panic(err)
 	}
-	jwtMiddleware, err := initJwtMiddleware()
+	jwtMiddleware, err := middleware.NewJwtMiddleware()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize auth middleware")
 	}
@@ -56,7 +57,7 @@ func configureLocalAuth(r *gin.Engine) {
 		configureAdmin(adminLocalAuth)
 	}
 	privateTokenAuth := r.Group("/private")
-	privateTokenAuth.Use(middleware.GinTokenMiddleware())
+	privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	{
 		configurePrivate(privateTokenAuth)
 		privateTokenAuth.POST("/upload", geminaboxUploadGem)
@@ -104,5 +105,5 @@ func configurePrivate(private *gin.RouterGroup) {
 
 func configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/gems", listGems)
-	admin.POST("/token", createToken)
+	admin.POST("/token", middleware.CreateTokenHandler)
 }

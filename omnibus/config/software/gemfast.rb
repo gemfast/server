@@ -5,7 +5,7 @@ license "BSD-3-Clause"
 skip_transitive_dependency_licensing true
 
 version("local_source") do
-  source path: "/home"
+  source path: "#{project.files_path}/../.."
 end
 
 build do

@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: ${{ github.workspace }}/omnibus/Gemfile
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1.2'
+          bundler: '2.3.7'
+          bundler-cache: true
+      - name: Unit test
+        run: make test
+      - name: Build omnibus package
+        run: |
+          sudo mkdir -p /var/cache/omnibus
+          sudo chown -R $USER: /var/cache/omnibus
+          cd omnibus
+          bundle exec omnibus build gemfast
+      - name: Upload omnibus package
+        uses: actions/upload-artifact@v3
+        with:
+          name: gemfast-pkg
+          path: omnibus/pkg/
+          if-no-files-found: error
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          repository: rails/rails
+          path: clones/rails
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1.2'
+          bundler: '2.3.7'
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: Test artifact download
+        run: ls -R
+      - name: Smoke test
+        run: ./scripts/run_smoke_tests.sh

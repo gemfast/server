@@ -12,8 +12,6 @@ else
   source url: "https://github.com/caddyserver/caddy/releases/download/v#{version}/caddy_#{version}_linux_amd64.tar.gz"
 end
 
-
-
 build do
   mkdir "#{install_dir}/embedded/bin"
   mkdir "#{install_dir}/etc/#{name}"
