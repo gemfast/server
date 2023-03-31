@@ -32,9 +32,11 @@ type envConfig struct {
 	FilterFile        string `mapstructure:"GEMFAST_FILTER_FILE"`
 
 	// Auth
-	AuthMode      string `mapstructure:"GEMFAST_AUTH"`
-	AdminPassword string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
-	AddLocalUsers string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
+	AuthMode           string `mapstructure:"GEMFAST_AUTH"`
+	AdminPassword      string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
+	AddLocalUsers      string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
+	GitHubClientId     string `mapstructure:"GEMFAST_GITHUB_CLIENT_ID"`
+	GitHubClientSecret string `mapstructure:"GEMFAST_GITHUB_CLIENT_SECRET"`
 
 	//License
 	GemfastLicenseKey string `mapstructure:"GEMFAST_LICENSE_KEY"`

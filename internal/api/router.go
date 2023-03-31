@@ -23,17 +23,40 @@ func Run() error {
 func initRouter() (r *gin.Engine) {
 	gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
+	r.LoadHTMLGlob("templates/**/*")
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
 	authMode := config.Env.AuthMode
 	log.Info().Str("auth", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
+	case "github":
+		configureGitHubAuth(r)
 	case "local":
 		configureLocalAuth(r)
 	case "none":
 		configureNoneAuth(r)
 	}
 	return r
+}
+
+func configureGitHubAuth(r *gin.Engine) {
+	adminLocalAuth := r.Group("/admin")
+	adminLocalAuth.POST("/login", middleware.GitHubLoginHandler)
+	adminLocalAuth.GET("/github/callback", middleware.GitHubCallbackHandler)
+	// adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
+	// {
+	// 	configureAdmin(adminLocalAuth)
+	// }
+	// privateTokenAuth := r.Group("/private")
+	// privateTokenAuth.Use(middleware.NewTokenMiddleware())
+	// {
+	// 	configurePrivate(privateTokenAuth)
+	// 	privateTokenAuth.POST("/upload", geminaboxUploadGem)
+	// }
+	// if config.Env.MirrorEnabled != "false" {
+	// 	mirror := r.Group("/")
+	// 	configureMirror(mirror)
+	// }
 }
 
 func configureLocalAuth(r *gin.Engine) {

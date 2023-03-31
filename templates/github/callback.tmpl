@@ -1,0 +1,21 @@
+{{ define "github/callback.tmpl" }}
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <style>
+      font-family: 'Fira Code', monospace;
+    </style>
+  </head>
+  <body style="font-family: 'Fira Code'">
+    <h1>
+      Access Token:
+    </h1>
+    <br>
+    <h2>
+      {{ .accessToken }}
+    </h2>
+  </body>
+</html>
+{{ end }}
