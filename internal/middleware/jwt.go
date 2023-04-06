@@ -30,7 +30,7 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 			if v, ok := data.(models.User); ok {
 				return jwt.MapClaims{
 					IdentityKey: v.Username,
-					RoleKey: v.Role,
+					RoleKey:     v.Role,
 				}
 			} else {
 				log.Error().Msg("failed to map jwt claims")
@@ -41,7 +41,7 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 			claims := jwt.ExtractClaims(c)
 			return &models.User{
 				Username: claims[IdentityKey].(string),
-				Role: claims[RoleKey].(string),
+				Role:     claims[RoleKey].(string),
 			}
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {

@@ -2,19 +2,18 @@ package middleware
 
 import (
 	"fmt"
-	"os"
-	u "github.com/gemfast/server/internal/utils"
 	"github.com/casbin/casbin/v2"
+	u "github.com/gemfast/server/internal/utils"
 	"github.com/rs/zerolog/log"
+	"os"
 )
 
-var	ACL casbin.Enforcer
+var ACL casbin.Enforcer
 
-
-func init() {
+func InitACL() {
 	var policyPath string
 	var authPath string
-	
+
 	for _, path := range []string{"/opt/gemfast/etc/gemfast/gemfast_acl.csv", "gemfast_acl.csv"} {
 		exists, _ := u.FileExists(path)
 		if exists {
@@ -38,6 +37,8 @@ func init() {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize the acl")
 		os.Exit(1)
+	} else {
+		log.Info().Str("path", policyPath).Msg("successfully initialized ACL enforcer")
 	}
 	ACL = *acl
 }

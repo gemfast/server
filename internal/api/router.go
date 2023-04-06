@@ -72,6 +72,7 @@ func configureLocalAuth(r *gin.Engine) {
 		private := r.Group("/private")
 		configurePrivate(private)
 	}
+	middleware.InitACL()
 }
 
 func configureNoneAuth(r *gin.Engine) {

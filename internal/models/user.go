@@ -3,8 +3,8 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
@@ -99,7 +99,7 @@ func CreateAdminUserIfNotExists() error {
 	user = User{
 		Username: "admin",
 		Password: getAdminPassword(),
-		Role: "admin",
+		Role:     "admin",
 	}
 	userBytes, err := json.Marshal(user)
 	if err != nil {
@@ -161,7 +161,7 @@ func CreateLocalUsers() error {
 			userToAdd := User{
 				Username: username,
 				Password: pwbytes,
-				Role: role,
+				Role:     role,
 			}
 			m[username] = true
 			userBytes, err := json.Marshal(userToAdd)

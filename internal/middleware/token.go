@@ -38,7 +38,7 @@ func NewTokenMiddleware() gin.HandlerFunc {
 		if ok {
 			ok, err = ACL.Enforce(user.Role, c.Request.URL.Path, c.Request.Method)
 			if ok {
-				c.Next()	
+				c.Next()
 			} else {
 				c.String(http.StatusUnauthorized, fmt.Sprintf("user does not have access to the request %s %s", c.Request.Method, c.Request.URL.Path))
 				c.Abort()

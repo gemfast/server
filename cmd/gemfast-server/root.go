@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"os"
 
 	"github.com/gemfast/server/internal/api"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
-	// "github.com/gemfast/server/internal/license"
+	"github.com/gemfast/server/internal/license"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,13 +24,16 @@ func init() {
 
 func check(err error) {
 	if err != nil {
-		panic(err)
+		log.Error().Err(err).Msg("error starting gemfast server")
+		os.Exit(1)
 	}
 }
 
 func Execute() {
+	err := license.ValidateLicenseKey()
+	check(err)
 	log.Info().Msg("starting services")
-	err := db.Connect()
+	err = db.Connect()
 	check(err)
 	defer db.BoltDB.Close()
 	err = indexer.InitIndexer()
@@ -38,8 +42,6 @@ func Execute() {
 	check(err)
 	err = filter.InitFilter()
 	check(err)
-	// err = license.ValidateLicenseKey()
-	// check(err)
 	err = api.Run()
 	check(err)
 }
