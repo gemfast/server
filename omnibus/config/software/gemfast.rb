@@ -18,10 +18,11 @@ build do
   mkdir "#{install_dir}/etc/#{name}"
   mkdir "#{install_dir}/systemd/#{name}"
 
-  %w(.env gemfast.service auth_model.conf gemfast_acl.csv).each do |f|
+  %w(.env auth_model.conf gemfast_acl.csv).each do |f|
     copy "#{project_dir}/omnibus/files/#{name}/#{f}", "#{install_dir}/etc/#{name}"
   end
-
+  copy "#{project_dir}/omnibus/files/#{name}/gemfast.service", "#{install_dir}/systemd/#{name}"
   copy "#{project_dir}/bin/#{name}-server", "#{install_dir}/embedded/bin"
+  
   link "#{install_dir}/embedded/bin/#{name}-server", "#{install_dir}/bin/#{name}-server"
 end
