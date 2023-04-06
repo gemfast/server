@@ -59,12 +59,18 @@ func configureLocalAuth(r *gin.Engine) {
 	privateTokenAuth := r.Group("/private")
 	privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	{
-		configurePrivate(privateTokenAuth)
+		if config.Env.AllowAnonymousRead != "true" {
+			configurePrivate(privateTokenAuth)
+		}
 		privateTokenAuth.POST("/upload", geminaboxUploadGem)
 	}
 	if config.Env.MirrorEnabled != "false" {
 		mirror := r.Group("/")
 		configureMirror(mirror)
+	}
+	if config.Env.AllowAnonymousRead == "true" {
+		private := r.Group("/private")
+		configurePrivate(private)
 	}
 }
 

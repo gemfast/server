@@ -15,33 +15,41 @@ func NewTokenMiddleware() gin.HandlerFunc {
 		if !ok {
 			auth := c.Request.Header["Authorization"]
 			if len(auth) == 0 {
-				c.AbortWithError(http.StatusBadRequest, fmt.Errorf("unable to parse username and token"))
+				c.String(http.StatusBadRequest, fmt.Sprintf("unable to parse username and token from request"))
+				c.Abort()
 				return
 			}
 			s := strings.Split(auth[0], ":")
 			if len(s) != 2 {
-				c.AbortWithError(http.StatusBadRequest, fmt.Errorf("malformed Authorization header"))
+				c.String(http.StatusBadRequest, fmt.Sprintf("malformed Authorization header"))
+				c.Abort()
 				return
 			}
 			username = s[0]
 			token = s[1]
 		}
-		ok = validateToken(username, token)
+		user, err := models.GetUser(username)
+		if err != nil {
+			c.String(http.StatusNotFound, fmt.Sprintf("no user found with username %s", username))
+			c.Abort()
+			return
+		}
+		ok = (user.Token == token)
 		if ok {
-			c.Next()
+			ok, err = ACL.Enforce(user.Role, c.Request.URL.Path, c.Request.Method)
+			if ok {
+				c.Next()	
+			} else {
+				c.String(http.StatusUnauthorized, fmt.Sprintf("user does not have access to the request %s %s", c.Request.Method, c.Request.URL.Path))
+				c.Abort()
+				return
+			}
 		} else {
-			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("invalid username and token"))
+			c.String(http.StatusUnauthorized, fmt.Sprintf("invalid username or token"))
+			c.Abort()
 			return
 		}
 	}
-}
-
-func validateToken(username string, token string) bool {
-	user, err := models.GetUser(username)
-	if err != nil {
-		return false
-	}
-	return user.Token == token
 }
 
 func CreateTokenHandler(c *gin.Context) {

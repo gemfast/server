@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"strconv"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
@@ -18,6 +19,7 @@ type User struct {
 	Username string
 	Password []byte
 	Token    string
+	Role     string
 }
 
 func userFromBytes(data []byte) (*User, error) {
@@ -29,15 +31,15 @@ func userFromBytes(data []byte) (*User, error) {
 	return p, nil
 }
 
-func AuthenticateLocalUser(incoming User) (bool, error) {
+func AuthenticateLocalUser(incoming User) (User, error) {
 	current, err := GetUser(incoming.Username)
 	if err != nil {
-		return false, err
+		return User{}, err
 	}
 	if err := bcrypt.CompareHashAndPassword(current.Password, incoming.Password); err != nil {
-		return false, err
+		return User{}, err
 	}
-	return true, nil
+	return current, nil
 }
 
 func GetUser(username string) (User, error) {
@@ -97,6 +99,7 @@ func CreateAdminUserIfNotExists() error {
 	user = User{
 		Username: "admin",
 		Password: getAdminPassword(),
+		Role: "admin",
 	}
 	userBytes, err := json.Marshal(user)
 	if err != nil {
@@ -141,13 +144,24 @@ func CreateLocalUsers() error {
 			u := strings.Split(pair, ":")
 			username := u[0]
 			pw := u[1]
-			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), 14)
+			var role string
+			if len(u) != 3 {
+				role = config.Env.LocalUsersDefaultRole
+			} else {
+				role = u[2]
+			}
+			cost, err := strconv.Atoi(config.Env.BcryptDefaultCost)
+			if err != nil {
+				panic(err)
+			}
+			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), cost)
 			if err != nil {
 				panic(err)
 			}
 			userToAdd := User{
 				Username: username,
 				Password: pwbytes,
+				Role: role,
 			}
 			m[username] = true
 			userBytes, err := json.Marshal(userToAdd)
@@ -180,7 +194,11 @@ func getAdminPassword() []byte {
 	} else {
 		pw = config.Env.AdminPassword
 	}
-	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), 14)
+	cost, err := strconv.Atoi(config.Env.BcryptDefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), cost)
 	if err != nil {
 		panic(err)
 	}

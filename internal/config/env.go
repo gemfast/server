@@ -9,6 +9,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/sethvargo/go-password/password"
 )
 
 var Env envConfig
@@ -33,8 +34,12 @@ type envConfig struct {
 
 	// Auth
 	AuthMode      string `mapstructure:"GEMFAST_AUTH"`
+	BcryptDefaultCost string `mapstructure:"GEMFAST_BCRYPT_DEFAULT_COST"`
 	AdminPassword string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
 	AddLocalUsers string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
+	LocalUsersDefaultRole string `mapstructure:"GEMFAST_LOCAL_USERS_DEFAULT_ROLE"`
+	LocalAuthSecretKey string `mapstructure:"GEMFAST_LOCAL_AUTH_SECRET_KEY"`
+	AllowAnonymousRead string `mapstructure:"GEMFAST_ALLOW_ANONYMOUS_READ"`
 
 	//License
 	GemfastLicenseKey string `mapstructure:"GEMFAST_LICENSE_KEY"`
@@ -93,6 +98,9 @@ func setEnvDefaults(envMap map[string]string) {
 	if _, ok := envMap["GEMFAST_AUTH"]; !ok {
 		envMap["GEMFAST_AUTH"] = "local"
 	}
+	if _, ok := envMap["GEMFAST_BCRYPT_DEFAULT_COST"]; !ok {
+		envMap["GEMFAST_BCRYPT_DEFAULT_COST"] = "10"
+	}
 	if _, ok := envMap["GEMFAST_MIRROR_ENABLED"]; !ok {
 		envMap["GEMFAST_MIRROR_ENABLED"] = "true"
 	}
@@ -107,5 +115,15 @@ func setEnvDefaults(envMap map[string]string) {
 	}
 	if _, ok := envMap["GEMFAST_FILTER_FILE"]; !ok {
 		envMap["GEMFAST_FILTER_FILE"] = "/etc/gemfast/filter.conf"
+	}
+	if _, ok := envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"]; !ok {
+		envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = "read"
+	}
+	if _, ok := envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"]; !ok {
+		s, _ := password.Generate(64, 10, 0, false, false)
+		envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"] = s
+	}
+	if _, ok := envMap["GEMFAST_ALLOW_ANONYMOUS_READ"]; !ok {
+		envMap["GEMFAST_ALLOW_ANONYMOUS_READ"] = "false"
 	}
 }
