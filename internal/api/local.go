@@ -123,5 +123,16 @@ func localYankHandler(c *gin.Context) {
 		c.String(http.StatusNotFound, "no gem matching %s %s %s was found", g, v, p)
 		return
 	}
+	num, err = models.DeleteDependencies(g, v, p)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to yank gem dependencies")
+		c.String(http.StatusInternalServerError, "server failed to yank gem dependencies")
+		return
+	}
+	if num == 0 {
+		c.String(http.StatusNotFound, "no gem dependencies matching %s %s %s was found", g, v, p)
+		return
+	}
+	// indexer.DeleteFromIndex(g, v, p)
 	c.String(http.StatusOK, "successfully yanked")
 }
