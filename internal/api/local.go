@@ -11,6 +11,7 @@ import (
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/marshal"
+	"github.com/gemfast/server/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -102,4 +103,25 @@ func localUploadGemHandler(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusOK, "uploaded successfully")
+}
+
+func localYankHandler(c *gin.Context) {
+	g := c.Query("gem")
+	v := c.Query("version")
+	p := c.Query("platform")
+	if g == "" || v == "" {
+		c.String(http.StatusBadRequest, "must provide both gem and version query parameters")
+		return
+	}
+	num, err := models.DeleteGem(g, v, p)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to yank gem")
+		c.String(http.StatusInternalServerError, "server failed to yank gem")
+		return
+	}
+	if num == 0 {
+		c.String(http.StatusNotFound, "no gem matching %s %s %s was found", g, v, p)
+		return
+	}
+	c.String(http.StatusOK, "successfully yanked")
 }

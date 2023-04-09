@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/slices"
 
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
@@ -46,7 +47,13 @@ func GetGems(name string) ([][]Gem, error) {
 	} else {
 		err := db.BoltDB.View(func(tx *bolt.Tx) error {
 			v := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(name))
-			g, _ := GemFromBytes(v)
+			g, err := GemFromBytes(v)
+			if err != nil {
+				return err
+			}
+			if g == nil {
+			  return fmt.Errorf("no gem versions for gem %s", name)
+			}
 			gems = append(gems, *g)
 			return nil
 		})
@@ -101,4 +108,45 @@ func SetGem(name string, version string, platform string) error {
 		}
 	}
 	return nil
+}
+
+func DeleteGem(name string, version string, platform string) (int, error) {
+	var updatedGems []Gem
+	count := 0
+	if platform == "" {
+		platform = "ruby"
+	}
+	gems, err := GetGems(name)
+	if err != nil {
+		return 0, err
+	}
+	
+	for i, g := range gems[0] {
+		if version == g.Version && platform == g.Platform {
+			updatedGems = slices.Delete(gems[0], i, i+1)
+			count++
+		}
+	}
+	if len(updatedGems) == 0 {
+		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+			err := tx.Bucket([]byte(db.GEM_BUCKET)).Delete([]byte(name))
+			if err != nil {
+				return fmt.Errorf("could not delete: %v", err)
+			}
+			return nil
+		})	
+	} else {
+		gemBytes, _ := json.Marshal(updatedGems)
+		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+			err := tx.Bucket([]byte(db.GEM_BUCKET)).Put([]byte(name), gemBytes)
+			if err != nil {
+				return fmt.Errorf("could not set: %v", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
