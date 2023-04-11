@@ -10,8 +10,10 @@ import (
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/indexer"
 	"github.com/gemfast/server/internal/marshal"
 	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -57,7 +59,7 @@ func localDependenciesHandler(c *gin.Context) {
 	bundlerDeps, err := marshal.DumpBundlerDeps(deps)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal gem dependencies")
-		c.String(http.StatusInternalServerError, "failed to marshal gem dependencies")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to marshal gem dependencies: %v", err))
 		return
 	}
 	c.Header("Content-Type", "application/octet-stream; charset=utf-8")
@@ -86,7 +88,7 @@ func localUploadGemHandler(c *gin.Context) {
 	tmpfile, err := ioutil.TempFile("/tmp", "*.gem")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmp file")
-		c.String(http.StatusInternalServerError, "Failed to index gem")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to index gem: %v", err))
 		return
 	}
 	defer os.Remove(tmpfile.Name())
@@ -94,12 +96,12 @@ func localUploadGemHandler(c *gin.Context) {
 	err = os.WriteFile(tmpfile.Name(), bodyBytes, 0644)
 	if err != nil {
 		log.Error().Err(err).Str("tmpfile", tmpfile.Name()).Msg("failed to save uploaded file")
-		c.String(http.StatusInternalServerError, "failed to index gem")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
 	}
 	if err = saveAndReindex(tmpfile); err != nil {
 		log.Error().Err(err).Msg("failed to reindex gem")
-		c.String(http.StatusInternalServerError, "failed to index gem")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
 	}
 	c.String(http.StatusOK, "uploaded successfully")
@@ -113,10 +115,32 @@ func localYankHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "must provide both gem and version query parameters")
 		return
 	}
+	err := indexer.Get().RemoveGemFromIndex(g, v, p)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to yank gem from index")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem from index: %v", err))
+		return
+	}
+	fileName := g + "-" + v + ".gem"
+	fp := filepath.Join(config.Env.GemDir, fileName)
+	err = utils.RemoveFileIfExists(fp)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to delete gem file system")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to delete gem from file system: %v", err))
+		return
+	}
+	fileName = fileName + "spec.rz"
+	fp = filepath.Join(config.Env.Dir, "quick/Marshal.4.8", fileName)
+	err = utils.RemoveFileIfExists(fp)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to delete gemspec.rz from file system")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to delete gem file system: %v", err))
+		return
+	}
 	num, err := models.DeleteGem(g, v, p)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to yank gem")
-		c.String(http.StatusInternalServerError, "server failed to yank gem")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem: %v", err))
 		return
 	}
 	if num == 0 {
@@ -126,13 +150,12 @@ func localYankHandler(c *gin.Context) {
 	num, err = models.DeleteDependencies(g, v, p)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to yank gem dependencies")
-		c.String(http.StatusInternalServerError, "server failed to yank gem dependencies")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem dependencies: %v", err))
 		return
 	}
 	if num == 0 {
 		c.String(http.StatusNotFound, "no gem dependencies matching %s %s %s was found", g, v, p)
 		return
 	}
-	// indexer.DeleteFromIndex(g, v, p)
 	c.String(http.StatusOK, "successfully yanked")
 }

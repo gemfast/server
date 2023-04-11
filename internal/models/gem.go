@@ -52,7 +52,7 @@ func GetGems(name string) ([][]Gem, error) {
 				return err
 			}
 			if g == nil {
-			  return fmt.Errorf("no gem versions for gem %s", name)
+				return fmt.Errorf("no gem versions for gem %s", name)
 			}
 			gems = append(gems, *g)
 			return nil
@@ -120,7 +120,7 @@ func DeleteGem(name string, version string, platform string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	for i, g := range gems[0] {
 		if version == g.Version && platform == g.Platform {
 			updatedGems = slices.Delete(gems[0], i, i+1)
@@ -134,7 +134,7 @@ func DeleteGem(name string, version string, platform string) (int, error) {
 				return fmt.Errorf("could not delete: %v", err)
 			}
 			return nil
-		})	
+		})
 	} else {
 		gemBytes, _ := json.Marshal(updatedGems)
 		err = db.BoltDB.Update(func(tx *bolt.Tx) error {

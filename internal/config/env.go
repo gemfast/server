@@ -15,8 +15,8 @@ import (
 var Env envConfig
 
 func InitConfig() {
-	configureZeroLog()
 	Env = loadEnvVariables()
+	configureZeroLog()
 }
 
 type envConfig struct {
@@ -48,14 +48,20 @@ type envConfig struct {
 
 func configureZeroLog() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	ll, err := zerolog.ParseLevel(Env.LogLevel)
+	if err != nil {
+		log.Error().Err(err).Msg("unable to parse GEMFAST_LOG_LEVEL to a valid zerolog level")
+		ll = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(ll)
+	log.Info().Str("level", ll.String()).Msg("set global log level")
 }
 
 func loadEnvVariables() (config envConfig) {
 	var dotEnvMap map[string]string
 	usr, err := user.Current()
 	if err != nil {
-		log.Error().Err(err).Msg("Unable to get the current linux user. Please contact support: https://gemfast.io/support")
+		log.Error().Err(err).Msg("unable to get the current linux user. Please contact support: https://gemfast.io/support")
 		os.Exit(1)
 	}
 	homedirConf := fmt.Sprintf("%s/.gemfast/.env", usr.HomeDir)
@@ -82,6 +88,9 @@ func loadEnvVariables() (config envConfig) {
 }
 
 func setEnvDefaults(envMap map[string]string) {
+	if _, ok := envMap["GEMFAST_LOG_LEVEL"]; !ok {
+		envMap["GEMFAST_LOG_LEVEL"] = "info"
+	}
 	if _, ok := envMap["GEMFAST_DIR"]; !ok {
 		envMap["GEMFAST_DIR"] = "/var/gemfast"
 	}

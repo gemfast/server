@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/exp/slices"
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
+	"golang.org/x/exp/slices"
 )
 
 type Dependency struct {
@@ -106,7 +106,7 @@ func DeleteDependencies(name string, version string, platform string) (int, erro
 				return fmt.Errorf("could not delete: %v", err)
 			}
 			return nil
-		})	
+		})
 	} else {
 		depBytes, _ := json.Marshal(updatedDeps)
 		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
