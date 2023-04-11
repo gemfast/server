@@ -23,6 +23,7 @@ func listGems(c *gin.Context) {
 	gemQuery := c.Query("gem")
 	gems, err := models.GetGems(gemQuery)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to get gems")
 		c.String(http.StatusInternalServerError, "Failed to get gems")
 		return
 	}

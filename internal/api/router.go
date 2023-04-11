@@ -108,6 +108,7 @@ func configurePrivate(private *gin.RouterGroup) {
 	private.GET("/api/v1/dependencies", localDependenciesHandler)
 	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
 	private.POST("/api/v1/gems", localUploadGemHandler)
+	private.DELETE("/api/v1/gems/yank", localYankHandler)
 }
 
 func configureAdmin(admin *gin.RouterGroup) {

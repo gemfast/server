@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	// "github.com/gemfast/server/internal/cache"
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
+	"golang.org/x/exp/slices"
 )
 
 type Dependency struct {
@@ -28,13 +27,6 @@ func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
 
 func GetDependencies(name string) (*[]Dependency, error) {
 	var existing []byte
-	// existing, err := cache.Get(name)
-	// if err == nil {
-	// 	fmt.Println(fmt.Sprintf("%s:CACHE HIT!", name))
-	// 	return DependenciesFromBytes(existing)
-	// } else {
-	// 	fmt.Println(fmt.Sprintf("%s:CACHE MISS!", name))
-	// }
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		deps := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))
 		if deps == nil {
@@ -66,8 +58,6 @@ func SetDependencies(name string, newDep Dependency) error {
 			if err != nil {
 				return fmt.Errorf("could not set: %v", err)
 			}
-			// fmt.Println("CACHING NEW VALUE")
-			// cache.Set(name, depBytes)
 			return nil
 		})
 	} else {
@@ -86,11 +76,49 @@ func SetDependencies(name string, newDep Dependency) error {
 				if err != nil {
 					return fmt.Errorf("could not set: %v", err)
 				}
-				// fmt.Println("CACHING UPDATED VALUE")
-				// cache.Set(name, depBytes)
 				return nil
 			})
 		}
 	}
 	return nil
+}
+
+func DeleteDependencies(name string, version string, platform string) (int, error) {
+	var updatedDeps []Dependency
+	count := 0
+	if platform == "" {
+		platform = "ruby"
+	}
+	deps, err := GetDependencies(name)
+	if err != nil {
+		return count, err
+	}
+	for i, d := range *deps {
+		if d.Number == version && platform == d.Platform {
+			updatedDeps = slices.Delete(*deps, i, i+1)
+			count++
+		}
+	}
+	if len(updatedDeps) == 0 {
+		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+			err := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Delete([]byte(name))
+			if err != nil {
+				return fmt.Errorf("could not delete: %v", err)
+			}
+			return nil
+		})
+	} else {
+		depBytes, _ := json.Marshal(updatedDeps)
+		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+			err := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)
+			if err != nil {
+				return fmt.Errorf("could not set: %v", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
