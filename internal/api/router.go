@@ -21,7 +21,7 @@ func Run() error {
 }
 
 func initRouter() (r *gin.Engine) {
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
@@ -60,9 +60,9 @@ func configureLocalAuth(r *gin.Engine) {
 	privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	{
 		if config.Env.AllowAnonymousRead != "true" {
-			configurePrivate(privateTokenAuth)
+			configurePrivateRead(privateTokenAuth)
 		}
-		privateTokenAuth.POST("/upload", geminaboxUploadGem)
+		configurePrivateWrite(privateTokenAuth)
 	}
 	if config.Env.MirrorEnabled != "false" {
 		mirror := r.Group("/")
@@ -70,7 +70,7 @@ func configureLocalAuth(r *gin.Engine) {
 	}
 	if config.Env.AllowAnonymousRead == "true" {
 		private := r.Group("/private")
-		configurePrivate(private)
+		configurePrivateRead(private)
 	}
 	middleware.InitACL()
 }
@@ -81,12 +81,15 @@ func configureNoneAuth(r *gin.Engine) {
 		configureMirror(mirror)
 	}
 	private := r.Group("/private")
-	configurePrivate(private)
+	configurePrivateRead(private)
+	configurePrivateWrite(private)
 	admin := r.Group("/admin")
 	admin.GET("/gems", listGems)
-	r.POST("/upload", geminaboxUploadGem)
+	admin.GET("/users", listUsers)
+	admin.DELETE("/users/:username", deleteUser)
 }
 
+// /
 func configureMirror(mirror *gin.RouterGroup) {
 	mirror.GET("/specs.4.8.gz", mirroredIndexHandler)
 	mirror.GET("/latest_specs.4.8.gz", mirroredIndexHandler)
@@ -99,7 +102,8 @@ func configureMirror(mirror *gin.RouterGroup) {
 	mirror.GET("/versions", mirroredVersionsHandler)
 }
 
-func configurePrivate(private *gin.RouterGroup) {
+// /private
+func configurePrivateRead(private *gin.RouterGroup) {
 	private.GET("/specs.4.8.gz", localIndexHandler)
 	private.GET("/latest_specs.4.8.gz", localIndexHandler)
 	private.GET("/prerelease_specs.4.8.gz", localIndexHandler)
@@ -107,11 +111,19 @@ func configurePrivate(private *gin.RouterGroup) {
 	private.GET("/gems/*gem", localGemHandler)
 	private.GET("/api/v1/dependencies", localDependenciesHandler)
 	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
-	private.POST("/api/v1/gems", localUploadGemHandler)
-	private.DELETE("/api/v1/gems/yank", localYankHandler)
 }
 
+// /private
+func configurePrivateWrite(private *gin.RouterGroup) {
+	private.POST("/api/v1/gems", localUploadGemHandler)
+	private.DELETE("/api/v1/gems/yank", localYankHandler)
+	private.POST("/upload", geminaboxUploadGem)
+}
+
+// /admin
 func configureAdmin(admin *gin.RouterGroup) {
-	admin.GET("/gems", listGems)
 	admin.POST("/token", middleware.CreateTokenHandler)
+	admin.GET("/gems", listGems)
+	admin.GET("/users", listUsers)
+	admin.DELETE("/users/:username", deleteUser)
 }

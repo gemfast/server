@@ -518,7 +518,7 @@ func (indexer Indexer) RemoveGemFromIndex(name string, version string, platform 
 	toDelete.OriginalPlatform = platform
 	i := spec.FindIndexOf(specs, &toDelete)
 	if i == -1 {
-	  return fmt.Errorf("unable to find gem in specs index")
+		return fmt.Errorf("unable to find gem in specs index")
 	}
 	specs = slices.Delete(specs, i, i+1)
 	indexer.buildModernIndices(specs)

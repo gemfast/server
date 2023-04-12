@@ -20,6 +20,7 @@ type User struct {
 	Password []byte
 	Token    string
 	Role     string
+	Type     string
 }
 
 func userFromBytes(data []byte) (*User, error) {
@@ -100,6 +101,7 @@ func CreateAdminUserIfNotExists() error {
 		Username: "admin",
 		Password: getAdminPassword(),
 		Role:     "admin",
+		Type:     "local",
 	}
 	userBytes, err := json.Marshal(user)
 	if err != nil {
@@ -162,6 +164,7 @@ func CreateLocalUsers() error {
 				Username: username,
 				Password: pwbytes,
 				Role:     role,
+				Type:     "local",
 			}
 			m[username] = true
 			userBytes, err := json.Marshal(userToAdd)
@@ -243,4 +246,21 @@ func CreateUserToken(username string) (string, error) {
 		return "", err
 	}
 	return token, nil
+}
+
+func DeleteUser(username string) (bool, error) {
+	deleted := false
+	err := db.BoltDB.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket([]byte(db.USER_BUCKET)).Delete([]byte(username))
+		if err != nil {
+			return fmt.Errorf("could not delete: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return deleted, err
+	} else {
+		deleted = true
+	}
+	return deleted, nil
 }

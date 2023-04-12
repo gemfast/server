@@ -30,6 +30,50 @@ func listGems(c *gin.Context) {
 	c.JSON(http.StatusOK, gems)
 }
 
+func listUsers(c *gin.Context) {
+	var users []models.User
+	userQuery := c.Query("user")
+	if userQuery != "" {
+		user, err := models.GetUser(userQuery)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get user")
+			c.String(http.StatusInternalServerError, "Failed to get user")
+			return
+		}
+		users = append(users, user)
+		c.JSON(http.StatusOK, users)
+		return
+	} else {
+		users, err := models.GetUsers()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get users")
+			c.String(http.StatusInternalServerError, "Failed to get users")
+			return
+		}
+		c.JSON(http.StatusOK, users)
+		return
+	}
+}
+
+func deleteUser(c *gin.Context) {
+	username := c.Param("username")
+	if username == "" {
+		c.String(http.StatusInternalServerError, "Must provide a username")
+		return
+	}
+	deleted, err := models.DeleteUser(username)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to delete user")
+		return
+	}
+	if !deleted {
+		c.String(http.StatusNotFound, "User not found")
+		return
+	}
+	c.String(http.StatusAccepted, "")
+	return
+}
+
 func saveAndReindex(tmpfile *os.File) error {
 	s, err := spec.FromFile(tmpfile.Name())
 	if err != nil {
