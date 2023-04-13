@@ -10,10 +10,10 @@ import (
 )
 
 type Dependency struct {
-	Name         string
-	Number       string
-	Platform     string
-	Dependencies [][]string
+	Name         string `json:"name"`
+	Number       string `json:"number"`
+	Platform     string `json:"platform"`
+	Dependencies [][]string `json:"dependencies"`
 }
 
 func DependenciesFromBytes(data []byte) (*[]Dependency, error) {

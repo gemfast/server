@@ -31,36 +31,32 @@ func listGems(c *gin.Context) {
 }
 
 func listUsers(c *gin.Context) {
-	var users []models.User
-	userQuery := c.Query("user")
-	if userQuery != "" {
-		user, err := models.GetUser(userQuery)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to get user")
-			c.String(http.StatusInternalServerError, "Failed to get user")
-			return
-		}
-		users = append(users, user)
-		c.JSON(http.StatusOK, users)
-		return
-	} else {
-		users, err := models.GetUsers()
-		if err != nil {
-			log.Error().Err(err).Msg("failed to get users")
-			c.String(http.StatusInternalServerError, "Failed to get users")
-			return
-		}
-		c.JSON(http.StatusOK, users)
+	users, err := models.GetUsers()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get users")
+		c.String(http.StatusInternalServerError, "Failed to get users")
 		return
 	}
+	c.JSON(http.StatusOK, users)
+	return
+}
+
+func getUser(c *gin.Context) {
+	username := c.Param("username")
+	user, err := models.GetUser(username)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get user")
+		c.String(http.StatusInternalServerError, "Failed to get user")
+		return
+	}
+	user.Password = []byte{}
+	user.Token = ""
+	c.JSON(http.StatusOK, user)
+	return
 }
 
 func deleteUser(c *gin.Context) {
 	username := c.Param("username")
-	if username == "" {
-		c.String(http.StatusInternalServerError, "Must provide a username")
-		return
-	}
 	deleted, err := models.DeleteUser(username)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to delete user")
@@ -70,7 +66,25 @@ func deleteUser(c *gin.Context) {
 		c.String(http.StatusNotFound, "User not found")
 		return
 	}
-	c.String(http.StatusAccepted, "")
+	c.String(http.StatusAccepted, "User deleted successfully")
+	return
+}
+
+func setUserRole(c *gin.Context) {
+	username := c.Param("username")
+	role := c.Param("role")
+	user, err := models.GetUser(username)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to get user")
+		return
+	}
+	user.Role = strings.ToLower(role)
+	err = models.UpdateUser(user)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to set user role")
+		return
+	}
+	c.String(http.StatusAccepted, "User role set successfully")
 	return
 }
 

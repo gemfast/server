@@ -11,9 +11,9 @@ import (
 )
 
 type Gem struct {
-	Name     string
-	Version  string
-	Platform string
+	Name     string `json:"name"`
+	Version  string `json:"version"`
+	Platform string `json:platform`
 }
 
 func GemFromBytes(data []byte) (*[]Gem, error) {

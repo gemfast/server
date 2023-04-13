@@ -52,6 +52,7 @@ func configureLocalAuth(r *gin.Engine) {
 	adminLocalAuth := r.Group("/admin")
 	adminLocalAuth.POST("/login", jwtMiddleware.LoginHandler)
 	adminLocalAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
+	adminLocalAuth.POST("/token", middleware.CreateTokenHandler)
 	adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
 	{
 		configureAdmin(adminLocalAuth)
@@ -84,9 +85,7 @@ func configureNoneAuth(r *gin.Engine) {
 	configurePrivateRead(private)
 	configurePrivateWrite(private)
 	admin := r.Group("/admin")
-	admin.GET("/gems", listGems)
-	admin.GET("/users", listUsers)
-	admin.DELETE("/users/:username", deleteUser)
+	configureAdmin(admin)
 }
 
 // /
@@ -122,8 +121,9 @@ func configurePrivateWrite(private *gin.RouterGroup) {
 
 // /admin
 func configureAdmin(admin *gin.RouterGroup) {
-	admin.POST("/token", middleware.CreateTokenHandler)
 	admin.GET("/gems", listGems)
 	admin.GET("/users", listUsers)
+	admin.GET("/users/:username", getUser)
 	admin.DELETE("/users/:username", deleteUser)
+	admin.PUT("/users/:username/role/:role", setUserRole)
 }
