@@ -23,7 +23,7 @@ type User struct {
 	Type     string `json:"type"`
 }
 
-func ValidUserRoles() ([]string){
+func ValidUserRoles() []string {
 	return []string{"admin", "read", "write"}
 }
 
@@ -252,7 +252,7 @@ func CreateUserToken(username string) (string, error) {
 	return token, nil
 }
 
-func UpdateUser(user User) (error) {
+func UpdateUser(user User) error {
 	ok := func(user User) bool {
 		for _, role := range ValidUserRoles() {
 			if role == user.Role {

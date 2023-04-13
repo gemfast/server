@@ -122,6 +122,7 @@ func configurePrivateWrite(private *gin.RouterGroup) {
 // /admin
 func configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/gems", listGems)
+	admin.GET("/gems/:gem", getGem)
 	admin.GET("/users", listUsers)
 	admin.GET("/users/:username", getUser)
 	admin.DELETE("/users/:username", deleteUser)

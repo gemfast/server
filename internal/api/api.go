@@ -20,14 +20,25 @@ func head(c *gin.Context) {
 }
 
 func listGems(c *gin.Context) {
-	gemQuery := c.Query("gem")
-	gems, err := models.GetGems(gemQuery)
+	// gemQuery := c.Query("gem")
+	gems, err := models.GetGems()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gems")
 		c.String(http.StatusInternalServerError, "Failed to get gems")
 		return
 	}
 	c.JSON(http.StatusOK, gems)
+}
+
+func getGem(c *gin.Context) {
+	name := c.Param("gem")
+	gem, err := models.GetGem(name)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get gem")
+		c.String(http.StatusInternalServerError, "Failed to get gem")
+		return
+	}
+	c.JSON(http.StatusOK, gem)
 }
 
 func listUsers(c *gin.Context) {
@@ -98,11 +109,6 @@ func saveAndReindex(tmpfile *os.File) error {
 	err = os.Rename(tmpfile.Name(), fp)
 	if err != nil {
 		log.Error().Err(err).Str("gem", fp).Msg("failed to rename tmpfile")
-		return err
-	}
-	err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
-	if err != nil {
-		log.Error().Err(err).Str("gem", s.Name).Msg("failed to save gem to db")
 		return err
 	}
 	err = indexer.Get().AddGemToIndex(fp)

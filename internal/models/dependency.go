@@ -10,9 +10,9 @@ import (
 )
 
 type Dependency struct {
-	Name         string `json:"name"`
-	Number       string `json:"number"`
-	Platform     string `json:"platform"`
+	Name         string     `json:"name"`
+	Number       string     `json:"number"`
+	Platform     string     `json:"platform"`
 	Dependencies [][]string `json:"dependencies"`
 }
 

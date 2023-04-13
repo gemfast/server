@@ -12,8 +12,6 @@ import (
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
-	"github.com/gemfast/server/internal/models"
-	"github.com/gemfast/server/internal/spec"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -99,16 +97,6 @@ func mirroredGemHandler(c *gin.Context) {
 			return
 		}
 		out.Close()
-		s, err := spec.FromFile(fp)
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Failed to extract gem spec")
-			return
-		}
-		err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Failed to save gem in db")
-			return
-		}
 		err = indexer.Get().AddGemToIndex(fp)
 		if err != nil {
 			defer os.Remove(fp)
