@@ -20,7 +20,6 @@ func head(c *gin.Context) {
 }
 
 func listGems(c *gin.Context) {
-	// gemQuery := c.Query("gem")
 	gems, err := models.GetGems()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gems")
