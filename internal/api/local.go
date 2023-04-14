@@ -137,17 +137,7 @@ func localYankHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to delete gem file system: %v", err))
 		return
 	}
-	num, err := models.DeleteGem(g, v, p)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to yank gem")
-		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem: %v", err))
-		return
-	}
-	if num == 0 {
-		c.String(http.StatusNotFound, "no gem matching %s %s %s was found", g, v, p)
-		return
-	}
-	num, err = models.DeleteDependencies(g, v, p)
+	num, err := models.DeleteDependencies(g, v, p)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to yank gem dependencies")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem dependencies: %v", err))

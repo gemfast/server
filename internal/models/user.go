@@ -16,10 +16,15 @@ import (
 )
 
 type User struct {
-	Username string
-	Password []byte
-	Token    string
-	Role     string
+	Username string `json:"username"`
+	Password []byte `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`
+	Role     string `json:"role"`
+	Type     string `json:"type"`
+}
+
+func ValidUserRoles() []string {
+	return []string{"admin", "read", "write"}
 }
 
 func userFromBytes(data []byte) (*User, error) {
@@ -50,7 +55,7 @@ func GetUser(username string) (User, error) {
 		return nil
 	})
 	if len(existing) == 0 {
-		return User{}, nil
+		return User{}, fmt.Errorf("user %s not found", username)
 	}
 	user, err := userFromBytes(existing)
 	if err != nil {
@@ -100,6 +105,7 @@ func CreateAdminUserIfNotExists() error {
 		Username: "admin",
 		Password: getAdminPassword(),
 		Role:     "admin",
+		Type:     "local",
 	}
 	userBytes, err := json.Marshal(user)
 	if err != nil {
@@ -162,6 +168,7 @@ func CreateLocalUsers() error {
 				Username: username,
 				Password: pwbytes,
 				Role:     role,
+				Type:     "local",
 			}
 			m[username] = true
 			userBytes, err := json.Marshal(userToAdd)
@@ -243,4 +250,51 @@ func CreateUserToken(username string) (string, error) {
 		return "", err
 	}
 	return token, nil
+}
+
+func UpdateUser(user User) error {
+	ok := func(user User) bool {
+		for _, role := range ValidUserRoles() {
+			if role == user.Role {
+				return true
+			}
+		}
+		return false
+	}(user)
+	if !ok {
+		return fmt.Errorf("role %s is not a valid role", user.Role)
+	}
+
+	userBytes, err := json.Marshal(user)
+	if err != nil {
+		return fmt.Errorf("could not marshal user to json: %v", err)
+	}
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+		if err != nil {
+			return fmt.Errorf("could not set: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteUser(username string) (bool, error) {
+	deleted := false
+	err := db.BoltDB.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket([]byte(db.USER_BUCKET)).Delete([]byte(username))
+		if err != nil {
+			return fmt.Errorf("could not delete: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return deleted, err
+	} else {
+		deleted = true
+	}
+	return deleted, nil
 }

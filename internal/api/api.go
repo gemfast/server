@@ -20,14 +20,82 @@ func head(c *gin.Context) {
 }
 
 func listGems(c *gin.Context) {
-	gemQuery := c.Query("gem")
-	gems, err := models.GetGems(gemQuery)
+	gems, err := models.GetGems()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gems")
 		c.String(http.StatusInternalServerError, "Failed to get gems")
 		return
 	}
 	c.JSON(http.StatusOK, gems)
+}
+
+func getGem(c *gin.Context) {
+	name := c.Param("gem")
+	gem, err := models.GetGem(name)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get gem")
+		c.String(http.StatusInternalServerError, "Failed to get gem")
+		return
+	}
+	c.JSON(http.StatusOK, gem)
+}
+
+func listUsers(c *gin.Context) {
+	users, err := models.GetUsers()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get users")
+		c.String(http.StatusInternalServerError, "Failed to get users")
+		return
+	}
+	c.JSON(http.StatusOK, users)
+	return
+}
+
+func getUser(c *gin.Context) {
+	username := c.Param("username")
+	user, err := models.GetUser(username)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get user")
+		c.String(http.StatusInternalServerError, "Failed to get user")
+		return
+	}
+	user.Password = []byte{}
+	user.Token = ""
+	c.JSON(http.StatusOK, user)
+	return
+}
+
+func deleteUser(c *gin.Context) {
+	username := c.Param("username")
+	deleted, err := models.DeleteUser(username)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to delete user")
+		return
+	}
+	if !deleted {
+		c.String(http.StatusNotFound, "User not found")
+		return
+	}
+	c.String(http.StatusAccepted, "User deleted successfully")
+	return
+}
+
+func setUserRole(c *gin.Context) {
+	username := c.Param("username")
+	role := c.Param("role")
+	user, err := models.GetUser(username)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to get user")
+		return
+	}
+	user.Role = strings.ToLower(role)
+	err = models.UpdateUser(user)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to set user role")
+		return
+	}
+	c.String(http.StatusAccepted, "User role set successfully")
+	return
 }
 
 func saveAndReindex(tmpfile *os.File) error {
@@ -40,11 +108,6 @@ func saveAndReindex(tmpfile *os.File) error {
 	err = os.Rename(tmpfile.Name(), fp)
 	if err != nil {
 		log.Error().Err(err).Str("gem", fp).Msg("failed to rename tmpfile")
-		return err
-	}
-	err = models.SetGem(s.Name, s.Version, s.OriginalPlatform)
-	if err != nil {
-		log.Error().Err(err).Str("gem", s.Name).Msg("failed to save gem to db")
 		return err
 	}
 	err = indexer.Get().AddGemToIndex(fp)
