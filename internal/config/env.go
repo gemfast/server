@@ -9,13 +9,14 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/sethvargo/go-password/password"
 )
 
 var Env envConfig
 
 func InitConfig() {
-	configureZeroLog()
 	Env = loadEnvVariables()
+	configureZeroLog()
 }
 
 type envConfig struct {
@@ -32,26 +33,37 @@ type envConfig struct {
 	FilterFile        string `mapstructure:"GEMFAST_FILTER_FILE"`
 
 	// Auth
-	AuthMode           string `mapstructure:"GEMFAST_AUTH"`
-	AdminPassword      string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
-	AddLocalUsers      string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
+	AuthMode              string `mapstructure:"GEMFAST_AUTH"`
+	BcryptDefaultCost     string `mapstructure:"GEMFAST_BCRYPT_DEFAULT_COST"`
+	AdminPassword         string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
+	AddLocalUsers         string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
+	LocalUsersDefaultRole string `mapstructure:"GEMFAST_LOCAL_USERS_DEFAULT_ROLE"`
+	LocalAuthSecretKey    string `mapstructure:"GEMFAST_LOCAL_AUTH_SECRET_KEY"`
+	AllowAnonymousRead    string `mapstructure:"GEMFAST_ALLOW_ANONYMOUS_READ"`
 	GitHubClientId     string `mapstructure:"GEMFAST_GITHUB_CLIENT_ID"`
 	GitHubClientSecret string `mapstructure:"GEMFAST_GITHUB_CLIENT_SECRET"`
 
 	//License
 	GemfastLicenseKey string `mapstructure:"GEMFAST_LICENSE_KEY"`
+	GemfastTrialMode  string `mapstructure:"GEMFAST_TRIAL_MODE"`
 }
 
 func configureZeroLog() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	ll, err := zerolog.ParseLevel(Env.LogLevel)
+	if err != nil {
+		log.Error().Err(err).Msg("unable to parse GEMFAST_LOG_LEVEL to a valid zerolog level")
+		ll = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(ll)
+	log.Info().Str("level", ll.String()).Msg("set global log level")
 }
 
 func loadEnvVariables() (config envConfig) {
 	var dotEnvMap map[string]string
 	usr, err := user.Current()
 	if err != nil {
-		log.Error().Err(err).Msg("Unable to get the current linux user. Please contact support: https://gemfast.io/support")
+		log.Error().Err(err).Msg("unable to get the current linux user. Please contact support: https://gemfast.io/support")
 		os.Exit(1)
 	}
 	homedirConf := fmt.Sprintf("%s/.gemfast/.env", usr.HomeDir)
@@ -67,6 +79,7 @@ func loadEnvVariables() (config envConfig) {
 		dotEnvMap = make(map[string]string)
 	}
 	setEnvDefaults(dotEnvMap)
+	setExportedEnv(dotEnvMap)
 	var cfg envConfig
 	err = mapstructure.Decode(dotEnvMap, &cfg)
 	if err != nil {
@@ -77,6 +90,9 @@ func loadEnvVariables() (config envConfig) {
 }
 
 func setEnvDefaults(envMap map[string]string) {
+	if _, ok := envMap["GEMFAST_LOG_LEVEL"]; !ok {
+		envMap["GEMFAST_LOG_LEVEL"] = "info"
+	}
 	if _, ok := envMap["GEMFAST_DIR"]; !ok {
 		envMap["GEMFAST_DIR"] = "/var/gemfast"
 	}
@@ -95,6 +111,9 @@ func setEnvDefaults(envMap map[string]string) {
 	if _, ok := envMap["GEMFAST_AUTH"]; !ok {
 		envMap["GEMFAST_AUTH"] = "local"
 	}
+	if _, ok := envMap["GEMFAST_BCRYPT_DEFAULT_COST"]; !ok {
+		envMap["GEMFAST_BCRYPT_DEFAULT_COST"] = "10"
+	}
 	if _, ok := envMap["GEMFAST_MIRROR_ENABLED"]; !ok {
 		envMap["GEMFAST_MIRROR_ENABLED"] = "true"
 	}
@@ -110,4 +129,50 @@ func setEnvDefaults(envMap map[string]string) {
 	if _, ok := envMap["GEMFAST_FILTER_FILE"]; !ok {
 		envMap["GEMFAST_FILTER_FILE"] = "/etc/gemfast/filter.conf"
 	}
+	if _, ok := envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"]; !ok {
+		envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = "read"
+	}
+	if _, ok := envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"]; !ok {
+		s, _ := password.Generate(64, 10, 0, false, false)
+		envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"] = s
+	}
+	if _, ok := envMap["GEMFAST_ALLOW_ANONYMOUS_READ"]; !ok {
+		envMap["GEMFAST_ALLOW_ANONYMOUS_READ"] = "false"
+	}
+	if _, ok := envMap["GEMFAST_TRIAL_MODE"]; !ok {
+		envMap["GEMFAST_TRIAL_MODE"] = "true"
+	}
+}
+
+func setExportedEnv(envMap map[string]string) {
+	envMap["GEMFAST_LOG_LEVEL"] = getEnv("GEMFAST_LOG_LEVEL", envMap["GEMFAST_LOG_LEVEL"])
+	envMap["GEMFAST_DIR"] = getEnv("GEMFAST_DIR", envMap["GEMFAST_DIR"])
+	envMap["GEMFAST_GEM_DIR"] = getEnv("GEMFAST_GEM_DIR", envMap["GEMFAST_GEM_DIR"])
+	envMap["GEMFAST_DB_DIR"] = getEnv("GEMFAST_DB_DIR", envMap["GEMFAST_DB_DIR"])
+	envMap["GEMFAST_URL"] = getEnv("GEMFAST_URL", envMap["GEMFAST_URL"])
+	envMap["GEMFAST_PORT"] = getEnv("GEMFAST_PORT", envMap["GEMFAST_PORT"])
+	envMap["GEMFAST_AUTH"] = getEnv("GEMFAST_AUTH", envMap["GEMFAST_AUTH"])
+	envMap["GEMFAST_BCRYPT_DEFAULT_COST"] = getEnv("GEMFAST_BCRYPT_DEFAULT_COST", envMap["GEMFAST_BCRYPT_DEFAULT_COST"])
+	envMap["GEMFAST_MIRROR_ENABLED"] = getEnv("GEMFAST_MIRROR_ENABLED", envMap["GEMFAST_MIRROR_ENABLED"])
+	envMap["GEMFAST_MIRROR_UPSTREAM"] = getEnv("GEMFAST_MIRROR_UPSTREAM", envMap["GEMFAST_MIRROR_UPSTREAM"])
+	envMap["GEMFAST_FILTER_ENABLED"] = getEnv("GEMFAST_FILTER_ENABLED", envMap["GEMFAST_FILTER_ENABLED"])
+	envMap["GEMFAST_FILTER_DEFAULT_DENY"] = getEnv("GEMFAST_FILTER_DEFAULT_DENY", envMap["GEMFAST_FILTER_DEFAULT_DENY"])
+	envMap["GEMFAST_FILTER_FILE"] = getEnv("GEMFAST_FILTER_FILE", envMap["GEMFAST_FILTER_FILE"])
+	envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = getEnv("GEMFAST_LOCAL_USERS_DEFAULT_ROLE", envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"])
+	envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"] = getEnv("GEMFAST_LOCAL_AUTH_SECRET_KEY", envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"])
+	envMap["GEMFAST_ALLOW_ANONYMOUS_READ"] = getEnv("GEMFAST_ALLOW_ANONYMOUS_READ", envMap["GEMFAST_ALLOW_ANONYMOUS_READ"])
+	envMap["GEMFAST_TRIAL_MODE"] = getEnv("GEMFAST_TRIAL_MODE", envMap["GEMFAST_TRIAL_MODE"])
+	envMap["GEMFAST_ADMIN_PASSWORD"] = getEnv("GEMFAST_ADMIN_PASSWORD", envMap["GEMFAST_ADMIN_PASSWORD"])
+	envMap["GEMFAST_ADD_LOCAL_USERS"] = getEnv("GEMFAST_ADD_LOCAL_USERS", envMap["GEMFAST_ADD_LOCAL_USERS"])
+	envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = getEnv("GEMFAST_LOCAL_USERS_DEFAULT_ROLE", envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"])
+	envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"] = getEnv("GEMFAST_LOCAL_AUTH_SECRET_KEY", envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"])
+	envMap["GEMFAST_LICENSE_KEY"] = getEnv("GEMFAST_LICENSE_KEY", envMap["GEMFAST_LICENSE_KEY"])
+}
+
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+	return value
 }

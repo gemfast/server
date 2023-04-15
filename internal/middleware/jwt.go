@@ -3,6 +3,7 @@ package middleware
 import (
 	"time"
 
+	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/models"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -16,18 +17,20 @@ type login struct {
 }
 
 const IdentityKey = "id"
+const RoleKey = "role"
 
 func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
-		Realm:       "gemfast",
-		Key:         []byte("secret key"),
-		Timeout:     time.Hour,
-		MaxRefresh:  time.Duration(time.Now().Year()),
+		Realm:       "zone",
+		Key:         []byte(config.Env.LocalAuthSecretKey),
+		Timeout:     time.Hour * 12,
+		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(models.User); ok {
 				return jwt.MapClaims{
 					IdentityKey: v.Username,
+					RoleKey:     v.Role,
 				}
 			} else {
 				log.Error().Msg("failed to map jwt claims")
@@ -38,6 +41,7 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 			claims := jwt.ExtractClaims(c)
 			return &models.User{
 				Username: claims[IdentityKey].(string),
+				Role:     claims[RoleKey].(string),
 			}
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
@@ -53,13 +57,16 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 			if err != nil {
 				return nil, jwt.ErrFailedAuthentication
 			}
-			if authenticated {
-				return user, nil
-			}
-			return nil, jwt.ErrFailedAuthentication
+			return authenticated, nil
 		},
 		Authorizator: func(data interface{}, c *gin.Context) bool {
-			return true
+			claims := jwt.ExtractClaims(c)
+			role := claims[RoleKey].(string)
+			ok, _ := ACL.Enforce(role, c.Request.URL.Path, c.Request.Method)
+			if ok {
+				return true
+			}
+			return false
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{

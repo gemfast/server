@@ -1,0 +1,6 @@
+p, admin, /*, *
+p, anonymous, /admin/login, *
+p, write, /admin/refresh-token, *
+p, write, /admin/token, *
+p, write, /private/*, *
+p, read, /private/*, GET

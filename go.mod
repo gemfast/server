@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/appleboy/gin-jwt/v2 v2.8.0
+	github.com/casbin/casbin/v2 v2.41.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/joho/godotenv v1.5.1
@@ -18,6 +19,7 @@ require (
 )
 
 require (
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
@@ -40,6 +42,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect

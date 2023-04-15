@@ -193,14 +193,14 @@ func FromFile(gemfile string) (*Spec, error) {
 	path_chunks := strings.Split(gemfile, "/")
 	full := path_chunks[len(path_chunks)-1]
 	ogName := strings.TrimSuffix(full, ".gem")
-	log.Info().Str("gemfile", gemfile).Msg("untarring gemfile")
+	log.Trace().Str("gemfile", gemfile).Msg("untarring gemfile")
 	tmpdir, err := untar(full, gemfile)
 	defer os.RemoveAll(tmpdir)
 	if err != nil {
 		log.Error().Err(err).Str("gem", full).Msg("failed to untar gem")
 		return &Spec{}, err
 	}
-	log.Info().Str("tmpdir", tmpdir).Msg("gunzip tmpdir")
+	log.Trace().Str("tmpdir", tmpdir).Msg("gunzip tmpdir")
 	res, err := GunzipMetadata(tmpdir)
 	if err != nil {
 		log.Error().Err(err).Str("gem", full).Msg("failed to gunzip gem metadata")
@@ -249,4 +249,36 @@ func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
 		latest = append(latest, v)
 	}
 	return prerelease, released, latest
+}
+
+func FindIndexOf(specs []*Spec, s *Spec) int {
+	idx := func() int {
+		k := s.Name
+		l := 0
+		h := len(specs) - 1
+		for l <= h {
+			mid := (l + h) / 2
+
+			if specs[mid].Name == k {
+				return mid
+			} else if specs[mid].Name < k {
+				l = mid + 1
+			} else {
+				h = mid - 1
+			}
+		}
+		return -1
+	}()
+	if idx == -1 {
+		return idx
+	}
+	for i := idx; i < len(specs); i++ {
+		spec := specs[i]
+		if spec.Name != s.Name {
+			break
+		} else if spec.Version == s.Version && spec.OriginalPlatform == s.OriginalPlatform {
+			return i
+		}
+	}
+	return -1
 }

@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
@@ -15,9 +16,15 @@ import (
 )
 
 type User struct {
-	Username string
-	Password []byte
-	Token    string
+	Username string `json:"username"`
+	Password []byte `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`
+	Role     string `json:"role"`
+	Type     string `json:"type"`
+}
+
+func ValidUserRoles() []string {
+	return []string{"admin", "read", "write"}
 }
 
 func userFromBytes(data []byte) (*User, error) {
@@ -29,15 +36,15 @@ func userFromBytes(data []byte) (*User, error) {
 	return p, nil
 }
 
-func AuthenticateLocalUser(incoming User) (bool, error) {
+func AuthenticateLocalUser(incoming User) (User, error) {
 	current, err := GetUser(incoming.Username)
 	if err != nil {
-		return false, err
+		return User{}, err
 	}
 	if err := bcrypt.CompareHashAndPassword(current.Password, incoming.Password); err != nil {
-		return false, err
+		return User{}, err
 	}
-	return true, nil
+	return current, nil
 }
 
 func GetUser(username string) (User, error) {
@@ -48,7 +55,7 @@ func GetUser(username string) (User, error) {
 		return nil
 	})
 	if len(existing) == 0 {
-		return User{}, nil
+		return User{}, fmt.Errorf("user %s not found", username)
 	}
 	user, err := userFromBytes(existing)
 	if err != nil {
@@ -97,6 +104,8 @@ func CreateAdminUserIfNotExists() error {
 	user = User{
 		Username: "admin",
 		Password: getAdminPassword(),
+		Role:     "admin",
+		Type:     "local",
 	}
 	userBytes, err := json.Marshal(user)
 	if err != nil {
@@ -141,13 +150,25 @@ func CreateLocalUsers() error {
 			u := strings.Split(pair, ":")
 			username := u[0]
 			pw := u[1]
-			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), 14)
+			var role string
+			if len(u) != 3 {
+				role = config.Env.LocalUsersDefaultRole
+			} else {
+				role = u[2]
+			}
+			cost, err := strconv.Atoi(config.Env.BcryptDefaultCost)
+			if err != nil {
+				panic(err)
+			}
+			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), cost)
 			if err != nil {
 				panic(err)
 			}
 			userToAdd := User{
 				Username: username,
 				Password: pwbytes,
+				Role:     role,
+				Type:     "local",
 			}
 			m[username] = true
 			userBytes, err := json.Marshal(userToAdd)
@@ -180,7 +201,11 @@ func getAdminPassword() []byte {
 	} else {
 		pw = config.Env.AdminPassword
 	}
-	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), 14)
+	cost, err := strconv.Atoi(config.Env.BcryptDefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), cost)
 	if err != nil {
 		panic(err)
 	}
@@ -225,4 +250,51 @@ func CreateUserToken(username string) (string, error) {
 		return "", err
 	}
 	return token, nil
+}
+
+func UpdateUser(user User) error {
+	ok := func(user User) bool {
+		for _, role := range ValidUserRoles() {
+			if role == user.Role {
+				return true
+			}
+		}
+		return false
+	}(user)
+	if !ok {
+		return fmt.Errorf("role %s is not a valid role", user.Role)
+	}
+
+	userBytes, err := json.Marshal(user)
+	if err != nil {
+		return fmt.Errorf("could not marshal user to json: %v", err)
+	}
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+		if err != nil {
+			return fmt.Errorf("could not set: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteUser(username string) (bool, error) {
+	deleted := false
+	err := db.BoltDB.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket([]byte(db.USER_BUCKET)).Delete([]byte(username))
+		if err != nil {
+			return fmt.Errorf("could not delete: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return deleted, err
+	} else {
+		deleted = true
+	}
+	return deleted, nil
 }

@@ -7,6 +7,11 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/marshal"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/spec"
+	"golang.org/x/exp/slices"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -17,11 +22,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/marshal"
-	"github.com/gemfast/server/internal/models"
-	"github.com/gemfast/server/internal/spec"
 
 	"github.com/rs/zerolog/log"
 )
@@ -171,10 +171,10 @@ func mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 			log.Info().Str("gem", g).Msg("skipping zero-length gem")
 			continue
 		} else {
-			log.Info().Str("gem", g).Msg("extracting spec from gem")
+			log.Trace().Str("gem", g).Msg("extracting spec from gem")
 			s, err = spec.FromFile(g)
 			if err != nil {
-				log.Info().Str("gem", g).Msg("failed to extract spec from gem")
+				log.Error().Err(err).Str("gem", g).Msg("failed to extract spec from gem")
 				return nil, err
 			}
 			specs = append(specs, s)
@@ -410,40 +410,14 @@ func (indexer Indexer) UpdateIndex(updatedGems []string) error {
 	<-ch
 	<-ch
 
-	indexer.compressIndicies()
-
-	reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
-	for _, file := range indexer.files {
-		file = reg.ReplaceAllString(file, "${1}")
-		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
-		destName := fmt.Sprintf("%s/%s", indexer.destDir, file)
-		if _, err := os.Stat(srcName); err == nil {
-			err = os.RemoveAll(destName)
-			if err != nil {
-				log.Error().Err(err).Str("file", destName).Msg("failed to remove existing file")
-				return err
-			}
-			err = os.Rename(srcName, destName)
-			if err != nil {
-				log.Error().Err(err).Str("file", destName).Msg("failed to move file")
-				return err
-			}
-			newestMtime, _ := time.Parse(time.RFC3339, EPOCH)
-			err = os.Chtimes(destName, newestMtime, newestMtime)
-			if err != nil {
-				log.Error().Err(err).Str("file", destName).Msg("failed to update file mtime")
-				return err
-			}
-		}
-	}
-	return nil
+	return indexer.compressAndMoveIndices()
 }
 
 func (indexer Indexer) AddGemToIndex(gem string) error {
 	return indexer.UpdateIndex([]string{gem})
 }
 
-func (indexer Indexer) ReIndex() error {
+func (indexer Indexer) Reindex() error {
 	var updatedGems []string
 	fi, err := os.Stat(indexer.destSpecsIdx)
 	if err != nil {
@@ -495,4 +469,58 @@ func saveDependencies(specs []*spec.Spec) error {
 		}
 	}
 	return nil
+}
+
+func (indexer Indexer) compressAndMoveIndices() error {
+	indexer.compressIndicies()
+
+	reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
+	for _, file := range indexer.files {
+		file = reg.ReplaceAllString(file, "${1}")
+		srcName := fmt.Sprintf("%s/%s", indexer.dir, file)
+		destName := fmt.Sprintf("%s/%s", indexer.destDir, file)
+		if _, err := os.Stat(srcName); err == nil {
+			err = os.RemoveAll(destName)
+			if err != nil {
+				log.Error().Err(err).Str("file", destName).Msg("failed to remove existing file")
+				return err
+			}
+			err = os.Rename(srcName, destName)
+			if err != nil {
+				log.Error().Err(err).Str("file", destName).Msg("failed to move file")
+				return err
+			}
+			newestMtime, _ := time.Parse(time.RFC3339, EPOCH)
+			err = os.Chtimes(destName, newestMtime, newestMtime)
+			if err != nil {
+				log.Error().Err(err).Str("file", destName).Msg("failed to update file mtime")
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (indexer Indexer) RemoveGemFromIndex(name string, version string, platform string) error {
+	lock.Lock()
+	defer lock.Unlock()
+	if platform == "" {
+		platform = "ruby"
+	}
+	specs, err := mapGemsToSpecs(gemList())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to map gems to specs")
+		return err
+	}
+	var toDelete spec.Spec
+	toDelete.Name = name
+	toDelete.Version = version
+	toDelete.OriginalPlatform = platform
+	i := spec.FindIndexOf(specs, &toDelete)
+	if i == -1 {
+		return fmt.Errorf("unable to find gem in specs index")
+	}
+	specs = slices.Delete(specs, i, i+1)
+	indexer.buildModernIndices(specs)
+	return indexer.compressAndMoveIndices()
 }
