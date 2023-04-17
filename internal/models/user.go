@@ -85,6 +85,18 @@ func GetUsers() ([]User, error) {
 	return users, nil
 }
 
+func CreateUser(user User) error {
+	userBytes, err := json.Marshal(user)
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+		if err != nil {
+			return fmt.Errorf("could not set: %v", err)
+		}
+		return nil
+	})
+	return err
+}
+
 func CreateAdminUserIfNotExists() error {
 	user, err := GetUser("admin")
 	if err != nil {

@@ -7,15 +7,37 @@
     <style>
       font-family: 'Fira Code', monospace;
     </style>
+    <script>
+      function copyAccessToken() {
+        var accessToken = document.getElementById("accessToken");
+        var value = accessToken.innerText || accessToken.textContent;
+        navigator.clipboard.writeText(value);
+        var copySuccess = document.getElementById("copySuccess");
+        copySuccess.innerText = "copied!";
+      }
+    </script>
   </head>
-  <body style="font-family: 'Fira Code'">
+  <body style="font-family: 'Fira Code'; text-align: center;">
+    {{if .accessToken }}
     <h1>
       Access Token:
     </h1>
     <br>
-    <h2>
+    <p id="copySuccess">(click to copy)</p>
+    <h2 onclick="copyAccessToken()" style="background-color: grey; display: inline-block;" id="accessToken">
       {{ .accessToken }}
     </h2>
+    {{else}}
+    <h1>
+      Error:
+    </h1>
+    <h2 style="color: #800000;">
+      {{ .errorDesc }}
+      <p><a href="{{ .errorURI }}">GitHub error link</a></p>
+    </h2>
+    {{end}}
+    <br>
+    <p><a href="https://gemfast.io/docs">gemfast.io/docs</a></p>
   </body>
 </html>
 {{ end }}

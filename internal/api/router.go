@@ -21,7 +21,7 @@ func Run() error {
 }
 
 func initRouter() (r *gin.Engine) {
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
 	r.LoadHTMLGlob("templates/**/*")
 	r.Use(gin.Recovery())
@@ -42,11 +42,12 @@ func initRouter() (r *gin.Engine) {
 func configureGitHubAuth(r *gin.Engine) {
 	adminLocalAuth := r.Group("/admin")
 	adminLocalAuth.POST("/login", middleware.GitHubLoginHandler)
-	adminLocalAuth.GET("/github/callback", middleware.GitHubCallbackHandler)
-	// adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
-	// {
-	// 	configureAdmin(adminLocalAuth)
-	// }
+	slash := r.Group("/")
+	slash.GET("/github/callback", middleware.GitHubCallbackHandler)
+	adminLocalAuth.Use( middleware.NewGitHubMiddleware())
+	{
+		configureAdmin(adminLocalAuth)
+	}
 	// privateTokenAuth := r.Group("/private")
 	// privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	// {
