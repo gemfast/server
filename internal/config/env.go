@@ -33,16 +33,17 @@ type envConfig struct {
 	FilterFile        string `mapstructure:"GEMFAST_FILTER_FILE"`
 
 	// Auth
-	AuthMode              string `mapstructure:"GEMFAST_AUTH"`
-	BcryptDefaultCost     string `mapstructure:"GEMFAST_BCRYPT_DEFAULT_COST"`
-	AdminPassword         string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
-	AddLocalUsers         string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
-	LocalUsersDefaultRole string `mapstructure:"GEMFAST_LOCAL_USERS_DEFAULT_ROLE"`
-	LocalAuthSecretKey    string `mapstructure:"GEMFAST_LOCAL_AUTH_SECRET_KEY"`
-	AllowAnonymousRead    string `mapstructure:"GEMFAST_ALLOW_ANONYMOUS_READ"`
+	AuthMode               string `mapstructure:"GEMFAST_AUTH"`
+	BcryptDefaultCost      string `mapstructure:"GEMFAST_BCRYPT_DEFAULT_COST"`
+	AdminPassword          string `mapstructure:"GEMFAST_ADMIN_PASSWORD"`
+	AddLocalUsers          string `mapstructure:"GEMFAST_ADD_LOCAL_USERS"`
+	LocalUsersDefaultRole  string `mapstructure:"GEMFAST_LOCAL_USERS_DEFAULT_ROLE"`
+	LocalAuthSecretKey     string `mapstructure:"GEMFAST_LOCAL_AUTH_SECRET_KEY"`
+	AllowAnonymousRead     string `mapstructure:"GEMFAST_ALLOW_ANONYMOUS_READ"`
 	GitHubUsersDefaultRole string `mapstructure:"GEMFAST_GITHUB_USERS_DEFAULT_ROLE"`
-	GitHubClientId     string `mapstructure:"GEMFAST_GITHUB_CLIENT_ID"`
-	GitHubClientSecret string `mapstructure:"GEMFAST_GITHUB_CLIENT_SECRET"`
+	GitHubClientId         string `mapstructure:"GEMFAST_GITHUB_CLIENT_ID"`
+	GitHubClientSecret     string `mapstructure:"GEMFAST_GITHUB_CLIENT_SECRET"`
+	GitHubUserOrgs         string `mapstructure:"GEMFAST_GITHUB_USER_ORGS"`
 
 	//License
 	GemfastLicenseKey string `mapstructure:"GEMFAST_LICENSE_KEY"`
@@ -134,7 +135,7 @@ func setEnvDefaults(envMap map[string]string) {
 		envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = "read"
 	}
 	if _, ok := envMap["GEMFAST_GITHUB_USERS_DEFAULT_ROLE"]; !ok {
-		envMap["GEMFAST_GITHUB_USERS_DEFAULT_ROLE"] = "read"	
+		envMap["GEMFAST_GITHUB_USERS_DEFAULT_ROLE"] = "read"
 	}
 	if _, ok := envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"]; !ok {
 		s, _ := password.Generate(64, 10, 0, false, false)
@@ -170,6 +171,7 @@ func setExportedEnv(envMap map[string]string) {
 	envMap["GEMFAST_ADD_LOCAL_USERS"] = getEnv("GEMFAST_ADD_LOCAL_USERS", envMap["GEMFAST_ADD_LOCAL_USERS"])
 	envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = getEnv("GEMFAST_LOCAL_USERS_DEFAULT_ROLE", envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"])
 	envMap["GEMFAST_GITHUB_USERS_DEFAULT_ROLE"] = getEnv("GEMFAST_GITHUB_USERS_DEFAULT_ROLE", envMap["GEMFAST_GITHUB_USERS_DEFAULT_ROLE"])
+	envMap["GEMFAST_GITHUB_USER_ORGS"] = getEnv("GEMFAST_GITHUB_USER_ORGS", envMap["GEMFAST_GITHUB_USER_ORGS"])
 	envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"] = getEnv("GEMFAST_LOCAL_AUTH_SECRET_KEY", envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"])
 	envMap["GEMFAST_LICENSE_KEY"] = getEnv("GEMFAST_LICENSE_KEY", envMap["GEMFAST_LICENSE_KEY"])
 }
