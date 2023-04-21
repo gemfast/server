@@ -21,7 +21,7 @@ func Run() error {
 }
 
 func initRouter() (r *gin.Engine) {
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
@@ -93,8 +93,8 @@ func configureMirror(mirror *gin.RouterGroup) {
 	mirror.GET("/specs.4.8.gz", mirroredIndexHandler)
 	mirror.GET("/latest_specs.4.8.gz", mirroredIndexHandler)
 	mirror.GET("/prerelease_specs.4.8.gz", mirroredIndexHandler)
-	mirror.GET("/quick/Marshal.4.8/*gemspec.rz", mirroredGemspecRzHandler)
-	mirror.GET("/gems/*gem", mirroredGemHandler)
+	mirror.GET("/quick/Marshal.4.8/:gemspec.rz", mirroredGemspecRzHandler)
+	mirror.GET("/gems/:gem", mirroredGemHandler)
 	mirror.GET("/api/v1/dependencies", mirroredDependenciesHandler)
 	mirror.GET("/api/v1/dependencies.json", mirroredDependenciesJSONHandler)
 	mirror.GET("/info/*gem", mirroredInfoHandler)
@@ -106,8 +106,8 @@ func configurePrivateRead(private *gin.RouterGroup) {
 	private.GET("/specs.4.8.gz", localIndexHandler)
 	private.GET("/latest_specs.4.8.gz", localIndexHandler)
 	private.GET("/prerelease_specs.4.8.gz", localIndexHandler)
-	private.GET("/quick/Marshal.4.8/*gemspec.rz", localGemspecRzHandler)
-	private.GET("/gems/*gem", localGemHandler)
+	private.GET("/quick/Marshal.4.8/:gemspec.rz", localGemspecRzHandler)
+	private.GET("/gems/:gem", localGemHandler)
 	private.GET("/api/v1/dependencies", localDependenciesHandler)
 	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
 }

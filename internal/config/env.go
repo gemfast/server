@@ -31,6 +31,8 @@ type envConfig struct {
 	FilterEnabled     string `mapstructure:"GEMFAST_FILTER_ENABLED"`
 	FilterDefaultDeny string `mapstructure:"GEMFAST_FILTER_DEFAULT_DENY"`
 	FilterFile        string `mapstructure:"GEMFAST_FILTER_FILE"`
+	CVEFilterEnabled  string `mapstructure:"GEMFAST_CVE_FILTER_ENABLED"`
+	MaxCVESeverity    string `mapstructure:"GEMFAST_CVE_MAX_SEVERITY"`
 
 	// Auth
 	AuthMode              string `mapstructure:"GEMFAST_AUTH"`
@@ -126,6 +128,12 @@ func setEnvDefaults(envMap map[string]string) {
 	}
 	if _, ok := envMap["GEMFAST_FILTER_FILE"]; !ok {
 		envMap["GEMFAST_FILTER_FILE"] = "/etc/gemfast/filter.conf"
+	}
+	if _, ok := envMap["GEMFAST_CVE_FILTER_ENABLED"]; !ok {
+		envMap["GEMFAST_CVE_FILTER_ENABLED"] = "true"
+	}
+	if _, ok := envMap["GEMFAST_CVE_MAX_SEVERITY"]; !ok {
+		envMap["GEMFAST_CVE_MAX_SEVERITY"] = "high"
 	}
 	if _, ok := envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"]; !ok {
 		envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = "read"

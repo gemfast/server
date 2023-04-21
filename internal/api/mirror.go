@@ -8,10 +8,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/cve"
 	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
+	"github.com/gemfast/server/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -22,6 +25,15 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 	if !gemAllowed {
 		c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gemspec %s due to filter", fileName))
 		return
+	}
+	if strings.ToLower(config.Env.CVEFilterEnabled) == "true" {
+		gv := strings.Split(fileName, ".gemspec.rz")
+		gem := models.GemFromGemParameter(gv[0])
+		cves := cve.GetCVEs(gem.Name, gem.Number)
+		if len(cves) != 0 {
+			c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gem %s due to CVE: %s", fileName, cves[0].URL))
+			return
+		}
 	}
 	fp := filepath.Join(config.Env.Dir, "quick/Marshal.4.8", fileName)
 	if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
@@ -55,7 +67,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 			return
 		}
 	} else {
-		log.Info().Msg("serving existing gemspec.rz")
+		log.Trace().Msg("serving existing gemspec.rz")
 	}
 	c.FileAttachment(fp, fileName)
 }
@@ -64,8 +76,17 @@ func mirroredGemHandler(c *gin.Context) {
 	fileName := c.Param("gem")
 	gemAllowed := filter.IsAllowed(fileName)
 	if !gemAllowed {
-		c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gemspec %s due to filter", fileName))
+		c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gems %s due to filter", fileName))
 		return
+	}
+	if strings.ToLower(config.Env.CVEFilterEnabled) == "true" {
+		gv := strings.Split(fileName, ".gem")
+		gem := models.GemFromGemParameter(gv[0])
+		cves := cve.GetCVEs(gem.Name, gem.Number)
+		if len(cves) != 0 {
+			c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gem %s due to CVE", fileName))
+			return
+		}
 	}
 	fp := filepath.Join(config.Env.GemDir, fileName)
 	info, err := os.Stat(fp)
@@ -104,7 +125,7 @@ func mirroredGemHandler(c *gin.Context) {
 			return
 		}
 	} else {
-		log.Info().Msg("serving existing gem")
+		log.Trace().Msg("serving existing gem")
 	}
 	c.FileAttachment(fp, fileName)
 }
