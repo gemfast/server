@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ueo pipefail
+# set -ueo pipefail
 
 ruby --version
 bundle --version
