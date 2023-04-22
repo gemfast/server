@@ -21,7 +21,7 @@ func Run() error {
 }
 
 func initRouter() (r *gin.Engine) {
-	// gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
 	r.LoadHTMLGlob("templates/**/*")
 	r.Use(gin.Recovery())
@@ -48,16 +48,7 @@ func configureGitHubAuth(r *gin.Engine) {
 	{
 		configureAdmin(adminLocalAuth)
 	}
-	// privateTokenAuth := r.Group("/private")
-	// privateTokenAuth.Use(middleware.NewTokenMiddleware())
-	// {
-	// 	configurePrivate(privateTokenAuth)
-	// 	privateTokenAuth.POST("/upload", geminaboxUploadGem)
-	// }
-	// if config.Env.MirrorEnabled != "false" {
-	// 	mirror := r.Group("/")
-	// 	configureMirror(mirror)
-	// }
+	configurePrivate(r)
 }
 
 func configureLocalAuth(r *gin.Engine) {
@@ -81,23 +72,7 @@ func configureLocalAuth(r *gin.Engine) {
 	{
 		configureAdmin(adminLocalAuth)
 	}
-	privateTokenAuth := r.Group("/private")
-	privateTokenAuth.Use(middleware.NewTokenMiddleware())
-	{
-		if config.Env.AllowAnonymousRead != "true" {
-			configurePrivateRead(privateTokenAuth)
-		}
-		configurePrivateWrite(privateTokenAuth)
-	}
-	if config.Env.MirrorEnabled != "false" {
-		mirror := r.Group("/")
-		configureMirror(mirror)
-	}
-	if config.Env.AllowAnonymousRead == "true" {
-		private := r.Group("/private")
-		configurePrivateRead(private)
-	}
-	middleware.InitACL()
+	configurePrivate(r)
 }
 
 func configureNoneAuth(r *gin.Engine) {
@@ -123,6 +98,27 @@ func configureMirror(mirror *gin.RouterGroup) {
 	mirror.GET("/api/v1/dependencies.json", mirroredDependenciesJSONHandler)
 	mirror.GET("/info/*gem", mirroredInfoHandler)
 	mirror.GET("/versions", mirroredVersionsHandler)
+}
+
+// /private
+func configurePrivate(r *gin.Engine) {
+	privateTokenAuth := r.Group("/private")
+	privateTokenAuth.Use(middleware.NewTokenMiddleware())
+	{
+		if config.Env.AllowAnonymousRead != "true" {
+			configurePrivateRead(privateTokenAuth)
+		}
+		configurePrivateWrite(privateTokenAuth)
+	}
+	if config.Env.MirrorEnabled != "false" {
+		mirror := r.Group("/")
+		configureMirror(mirror)
+	}
+	if config.Env.AllowAnonymousRead == "true" {
+		private := r.Group("/private")
+		configurePrivateRead(private)
+	}
+	middleware.InitACL()
 }
 
 // /private
