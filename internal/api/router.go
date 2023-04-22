@@ -1,6 +1,8 @@
 package api
 
 import (
+	"embed"
+	"html/template"
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
@@ -9,6 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
+
+//go:embed templates/*
+var f embed.FS
 
 func Run() error {
 	router := initRouter()
@@ -23,17 +28,33 @@ func Run() error {
 func initRouter() (r *gin.Engine) {
 	gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
+	tmpl := template.Must(template.New("").ParseFS(f, "templates/github/*.tmpl"))
+	r.SetHTMLTemplate(tmpl)
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
 	authMode := config.Env.AuthMode
 	log.Info().Str("auth", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
+	case "github":
+		configureGitHubAuth(r)
 	case "local":
 		configureLocalAuth(r)
 	case "none":
 		configureNoneAuth(r)
 	}
 	return r
+}
+
+func configureGitHubAuth(r *gin.Engine) {
+	adminLocalAuth := r.Group("/admin")
+	adminLocalAuth.POST("/login", middleware.GitHubLoginHandler)
+	slash := r.Group("/")
+	slash.GET("/github/callback", middleware.GitHubCallbackHandler)
+	adminLocalAuth.Use(middleware.NewGitHubMiddleware())
+	{
+		configureAdmin(adminLocalAuth)
+	}
+	configurePrivate(r)
 }
 
 func configureLocalAuth(r *gin.Engine) {
@@ -57,23 +78,7 @@ func configureLocalAuth(r *gin.Engine) {
 	{
 		configureAdmin(adminLocalAuth)
 	}
-	privateTokenAuth := r.Group("/private")
-	privateTokenAuth.Use(middleware.NewTokenMiddleware())
-	{
-		if config.Env.AllowAnonymousRead != "true" {
-			configurePrivateRead(privateTokenAuth)
-		}
-		configurePrivateWrite(privateTokenAuth)
-	}
-	if config.Env.MirrorEnabled != "false" {
-		mirror := r.Group("/")
-		configureMirror(mirror)
-	}
-	if config.Env.AllowAnonymousRead == "true" {
-		private := r.Group("/private")
-		configurePrivateRead(private)
-	}
-	middleware.InitACL()
+	configurePrivate(r)
 }
 
 func configureNoneAuth(r *gin.Engine) {
@@ -99,6 +104,27 @@ func configureMirror(mirror *gin.RouterGroup) {
 	mirror.GET("/api/v1/dependencies.json", mirroredDependenciesJSONHandler)
 	mirror.GET("/info/*gem", mirroredInfoHandler)
 	mirror.GET("/versions", mirroredVersionsHandler)
+}
+
+// /private
+func configurePrivate(r *gin.Engine) {
+	privateTokenAuth := r.Group("/private")
+	privateTokenAuth.Use(middleware.NewTokenMiddleware())
+	{
+		if config.Env.AllowAnonymousRead != "true" {
+			configurePrivateRead(privateTokenAuth)
+		}
+		configurePrivateWrite(privateTokenAuth)
+	}
+	if config.Env.MirrorEnabled != "false" {
+		mirror := r.Group("/")
+		configureMirror(mirror)
+	}
+	if config.Env.AllowAnonymousRead == "true" {
+		private := r.Group("/private")
+		configurePrivateRead(private)
+	}
+	middleware.InitACL()
 }
 
 // /private
