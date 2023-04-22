@@ -1,6 +1,8 @@
 package api
 
 import (
+	"embed"
+	"html/template"
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
@@ -9,6 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
+
+//go:embed templates/*
+var f embed.FS
 
 func Run() error {
 	router := initRouter()
@@ -23,7 +28,8 @@ func Run() error {
 func initRouter() (r *gin.Engine) {
 	gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
-	r.LoadHTMLGlob("templates/**/*")
+	tmpl := template.Must(template.New("").ParseFS(f, "templates/github/*.tmpl"))
+	r.SetHTMLTemplate(tmpl)
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
 	authMode := config.Env.AuthMode
