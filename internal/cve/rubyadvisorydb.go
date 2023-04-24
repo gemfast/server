@@ -1,7 +1,6 @@
 package cve
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
@@ -40,9 +39,8 @@ func init() {
 }
 
 func InitRubyAdvisoryDB() error {
-	cacheAdvisoryDB("/opt/gemfast/shared/ruby-advisory-db/gems")
+	cacheAdvisoryDB(config.Env.RubyAdvisoryDBDir)
 	log.Info().Msg("successfully cached ruby advisory DB")
-	fmt.Println(isPatched("image_processing", "1.12.2"))
 	return nil
 }
 
