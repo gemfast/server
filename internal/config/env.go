@@ -31,6 +31,9 @@ type envConfig struct {
 	FilterEnabled     string `mapstructure:"GEMFAST_FILTER_ENABLED"`
 	FilterDefaultDeny string `mapstructure:"GEMFAST_FILTER_DEFAULT_DENY"`
 	FilterFile        string `mapstructure:"GEMFAST_FILTER_FILE"`
+	CVEFilterEnabled  string `mapstructure:"GEMFAST_CVE_FILTER_ENABLED"`
+	MaxCVESeverity    string `mapstructure:"GEMFAST_CVE_MAX_SEVERITY"`
+	RubyAdvisoryDBDir string `mapstructure:"GEMFAST_RUBY_ADVISORY_DB_DIR"`
 
 	// Auth
 	AuthMode               string `mapstructure:"GEMFAST_AUTH"`
@@ -131,6 +134,15 @@ func setEnvDefaults(envMap map[string]string) {
 	if _, ok := envMap["GEMFAST_FILTER_FILE"]; !ok {
 		envMap["GEMFAST_FILTER_FILE"] = "/etc/gemfast/filter.conf"
 	}
+	if _, ok := envMap["GEMFAST_CVE_FILTER_ENABLED"]; !ok {
+		envMap["GEMFAST_CVE_FILTER_ENABLED"] = "true"
+	}
+	if _, ok := envMap["GEMFAST_CVE_MAX_SEVERITY"]; !ok {
+		envMap["GEMFAST_CVE_MAX_SEVERITY"] = "high"
+	}
+	if _, ok := envMap["GEMFAST_RUBY_ADVISORY_DB_DIR"]; !ok {
+		envMap["GEMFAST_RUBY_ADVISORY_DB_DIR"] = "/opt/gemfast/share/ruby-advisory-db/gems"
+	}
 	if _, ok := envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"]; !ok {
 		envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = "read"
 	}
@@ -163,6 +175,9 @@ func setExportedEnv(envMap map[string]string) {
 	envMap["GEMFAST_FILTER_ENABLED"] = getEnv("GEMFAST_FILTER_ENABLED", envMap["GEMFAST_FILTER_ENABLED"])
 	envMap["GEMFAST_FILTER_DEFAULT_DENY"] = getEnv("GEMFAST_FILTER_DEFAULT_DENY", envMap["GEMFAST_FILTER_DEFAULT_DENY"])
 	envMap["GEMFAST_FILTER_FILE"] = getEnv("GEMFAST_FILTER_FILE", envMap["GEMFAST_FILTER_FILE"])
+	envMap["GEMFAST_CVE_FILTER_ENABLED"] = getEnv("GEMFAST_CVE_FILTER_ENABLED", envMap["GEMFAST_CVE_FILTER_ENABLED"])
+	envMap["GEMFAST_CVE_MAX_SEVERITY"] = getEnv("GEMFAST_CVE_MAX_SEVERITY", envMap["GEMFAST_CVE_MAX_SEVERITY"])
+	envMap["GEMFAST_RUBY_ADVISORY_DB_DIR"] = getEnv("GEMFAST_RUBY_ADVISORY_DB_DIR", envMap["GEMFAST_RUBY_ADVISORY_DB_DIR"])
 	envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"] = getEnv("GEMFAST_LOCAL_USERS_DEFAULT_ROLE", envMap["GEMFAST_LOCAL_USERS_DEFAULT_ROLE"])
 	envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"] = getEnv("GEMFAST_LOCAL_AUTH_SECRET_KEY", envMap["GEMFAST_LOCAL_AUTH_SECRET_KEY"])
 	envMap["GEMFAST_ALLOW_ANONYMOUS_READ"] = getEnv("GEMFAST_ALLOW_ANONYMOUS_READ", envMap["GEMFAST_ALLOW_ANONYMOUS_READ"])

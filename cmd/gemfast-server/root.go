@@ -6,6 +6,7 @@ import (
 
 	"github.com/gemfast/server/internal/api"
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/cve"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
@@ -33,6 +34,7 @@ func Execute() {
 	err := license.ValidateLicenseKey()
 	check(err)
 	log.Info().Msg("starting services")
+	cve.InitRubyAdvisoryDB()
 	err = db.Connect()
 	check(err)
 	defer db.BoltDB.Close()
