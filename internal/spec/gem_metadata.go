@@ -30,23 +30,25 @@ type GemMetadata struct {
 	Version  struct {
 		Version string `yaml:"version"`
 	}
-	Authors         []string `yaml:"authors"`
-	Emails          []string
-	Email           Email           `yaml:"email"`
-	Summary         string          `yaml:"summary"`
-	Description     string          `yaml:"description"`
-	Homepage        string          `yaml:"homepage"`
-	SpecVersion     int             `yaml:"specification_version"`
-	RequirePaths    []string        `yaml:"require_paths"`
-	Licenses        []string        `yaml:"licenses"`
-	RubygemsVersion string          `yaml:"rubygems_version"`
-	Dependencies    []GemDependency `yaml:"dependencies"`
+	Authors                 []string `yaml:"authors"`
+	Emails                  []string
+	Email                   Email           `yaml:"email"`
+	Summary                 string          `yaml:"summary"`
+	Description             string          `yaml:"description"`
+	Homepage                string          `yaml:"homepage"`
+	SpecVersion             int             `yaml:"specification_version"`
+	RequirePaths            []string        `yaml:"require_paths"`
+	Licenses                []string        `yaml:"licenses"`
+	RubygemsVersion         string          `yaml:"rubygems_version"`
+	Dependencies            []GemDependency `yaml:"dependencies"`
+	RequiredRubyVersion     GemRequirement  `yaml:"required_ruby_version"`
+	RequiredRubyGemsVersion GemRequirement  `yaml:"required_rubygems_version"`
 }
 
 func (gm GemMetadata) NumInstanceVars() (int, error) {
 	ivarCount := 15
 	if gm.Name == "" || len(gm.Authors) == 0 || gm.Version.Version == "" {
-		return -1, fmt.Errorf("Missing required field in gem metadata")
+		return -1, fmt.Errorf("missing required field in gem metadata")
 	}
 	if gm.Summary == "" {
 		ivarCount -= 1

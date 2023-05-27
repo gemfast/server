@@ -4,16 +4,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/exp/slices"
 )
 
 type Dependency struct {
-	Name         string     `json:"name"`
-	Number       string     `json:"number"`
-	Platform     string     `json:"platform"`
+	// TODO: reuse the Gem struct
+	Name     string `json:"name"`
+	Number   string `json:"number"`
+	Platform string `json:"platform"`
+
 	Dependencies [][]string `json:"dependencies"`
+	InfoChecksum string     `json:"info_checksum"`
+	Checksum     string     `json:"checksum"`
+	Ruby         string     `json:"ruby"`
+	RubyGems     string     `json:"rubygems"`
 }
 
 func DependenciesFromBytes(data []byte) (*[]Dependency, error) {
@@ -41,7 +48,7 @@ func GetDependencies(name string) (*[]Dependency, error) {
 	return DependenciesFromBytes(existing)
 }
 
-func SetDependencies(name string, newDep Dependency) error {
+func SaveDependencies(name string, newDep *Dependency) error {
 	var existing []byte
 	db.BoltDB.View(func(tx *bolt.Tx) error {
 		deps := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))
@@ -49,7 +56,7 @@ func SetDependencies(name string, newDep Dependency) error {
 		return nil
 	})
 	if existing == nil {
-		depBytes, err := json.Marshal([]Dependency{newDep})
+		depBytes, err := json.Marshal([]Dependency{*newDep})
 		if err != nil {
 			return fmt.Errorf("could not marshal dependencies to json: %v", err)
 		}
@@ -69,7 +76,7 @@ func SetDependencies(name string, newDep Dependency) error {
 		}
 		newHash := newDep.Number + newDep.Platform
 		if !hashed[newHash] {
-			*deps = append(*deps, newDep)
+			*deps = append(*deps, *newDep)
 			depBytes, _ := json.Marshal(*deps)
 			_ = db.BoltDB.Update(func(tx *bolt.Tx) error {
 				err := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Put([]byte(name), depBytes)

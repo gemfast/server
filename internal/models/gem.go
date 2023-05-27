@@ -3,7 +3,9 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/gemfast/server/internal/db"
 	bolt "go.etcd.io/bbolt"
@@ -75,4 +77,53 @@ func GetGems() ([][]Gem, error) {
 		return nil, err
 	}
 	return gems, nil
+}
+
+func GetAllGemversions() []string {
+	t := time.Now()
+	rfc := t.Format(time.RFC3339)
+	arr := []string{fmt.Sprintf("created_at: %s", rfc), "---"}
+	m := make(map[string][]string)
+	db.BoltDB.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			g, _ := GemFromBytes(v)
+			gemVersions := *g
+			for _, gemVersion := range gemVersions {
+				m[gemVersion.Name] = append(m[gemVersion.Name], gemVersion.Number)
+			}
+		}
+
+		return nil
+	})
+
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		sort.Strings(m[k])
+		arr = append(arr, k+" "+strings.Join(m[k], ","))
+	}
+	return arr
+}
+
+func GetGemVersions(name string) ([]string, error) {
+	var versions []string
+	err := db.BoltDB.View(func(tx *bolt.Tx) error {
+		g := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))
+		gem, _ := GemFromBytes(g)
+		for _, gemVersion := range *gem {
+			versions = append(versions, gemVersion.Number)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return versions, nil
 }

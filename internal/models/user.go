@@ -192,7 +192,7 @@ func CreateLocalUsers() error {
 		}
 		b = tx.Bucket([]byte(db.USER_BUCKET))
 		for _, username := range usernames {
-			if m[username] != true {
+			if !m[username] {
 				log.Trace().Str("username", username).Msg("removed user")
 				b.Delete([]byte(username))
 			}

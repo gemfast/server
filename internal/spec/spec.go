@@ -3,6 +3,7 @@ package spec
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,22 +25,32 @@ type Spec struct {
 	PreRelease       bool
 	LoadedFrom       string
 	GemMetadata      GemMetadata
+	Checksum         string
+	Ruby             string //TODO: parse required_ruby_version from metadata
+	RubyGems         string //TODO: parse required_rubygems_version from metadata
 }
 
-func untar(full_name string, gemfile string) (string, error) {
+func untar(full_name string, gemfile string) ([]byte, string, error) {
 	tmpdir, err := os.MkdirTemp("/tmp", full_name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
-		return "", err
+		return nil, "", err
 	}
 	log.Trace().Msg(fmt.Sprintf("created tmpdir %s", tmpdir))
 	file, err := os.Open(gemfile)
 
 	if err != nil {
 		log.Error().Err(err).Str("file", gemfile).Msg("failed to open gemfile")
-		return "", err
+		return nil, "", err
 	}
 	defer file.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
+		log.Error().Err(err).Str("file", gemfile).Msg("failed to hash gemfile")
+		return nil, "", err
+	}
+	file.Seek(0, 0) // reset file pointer to beginning of file
 
 	var fileReader io.ReadCloser = file
 	tarBallReader := tar.NewReader(fileReader)
@@ -52,45 +63,45 @@ func untar(full_name string, gemfile string) (string, error) {
 				break
 			}
 			log.Error().Err(err).Str("gem", full_name).Msg("bad header")
-			return "", err
+			return nil, "", err
 		}
 
 		// get the individual filename and extract to the current directory
-		filename := fmt.Sprintf("%s/%s", tmpdir, header.Name)
+		dest := fmt.Sprintf("%s/%s", tmpdir, header.Name)
 
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// handle directory
-			log.Trace().Str("dir", filename).Msg("extracting directory")
-			err = os.MkdirAll(filename, os.FileMode(header.Mode))
+			log.Trace().Str("dir", dest).Msg("extracting directory")
+			err = os.MkdirAll(dest, os.FileMode(header.Mode))
 			if err != nil {
-				log.Error().Err(err).Str("dir", filename).Msg("failed to make directory")
-				return "", err
+				log.Error().Err(err).Str("dir", dest).Msg("failed to make directory")
+				return nil, "", err
 			}
 
 		case tar.TypeReg:
 			// handle normal file
-			log.Trace().Msg(fmt.Sprintf("extracting file %s", filename))
-			writer, err := os.Create(filename)
+			log.Trace().Msg(fmt.Sprintf("extracting file to %s", dest))
+			writer, err := os.Create(dest)
 			if err != nil {
-				log.Error().Err(err).Str("file", filename).Msg("failed to create file")
-				return "", err
+				log.Error().Err(err).Str("file", dest).Msg("failed to create files")
+				return nil, "", err
 			}
 			defer writer.Close()
 
 			io.Copy(writer, tarBallReader)
-			err = os.Chmod(filename, os.FileMode(header.Mode))
+			err = os.Chmod(dest, os.FileMode(header.Mode))
 
 			if err != nil {
-				log.Error().Err(err).Str("file", filename).Msg("failed to chmod file")
-				return "", err
+				log.Error().Err(err).Str("file", dest).Msg("failed to chmod file")
+				return nil, "", err
 			}
 		default:
-			log.Error().Err(err).Str("file", filename).Bytes("type", []byte{header.Typeflag}).Msg("unrecognized file type")
-			return "", err
+			log.Error().Err(err).Str("file", dest).Bytes("type", []byte{header.Typeflag}).Msg("unrecognized file type")
+			return nil, "", err
 		}
 	}
-	return tmpdir, nil
+	return h.Sum(nil), tmpdir, nil
 }
 
 func GunzipMetadata(path string) (string, error) {
@@ -186,6 +197,63 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 		}
 		metadata.Dependencies[i] = dep
 	}
+	for _, req := range metadata.RequiredRubyVersion.Requirements {
+		switch t := req.(type) {
+		case []interface{}:
+			{
+				for _, entry := range t {
+					if fmt.Sprintf("%T", entry) == "string" {
+						c = fmt.Sprintf("%s", entry)
+					} else {
+						vmap := entry.(map[string]interface{})
+						v = fmt.Sprintf("%s", vmap["version"])
+
+					}
+					if c != "" && v != "" {
+						vc := VersionContraint{
+							Constraint: c,
+							Version:    v,
+						}
+						metadata.RequiredRubyVersion.VersionConstraints = append(metadata.RequiredRubyVersion.VersionConstraints, vc)
+						c = ""
+						v = ""
+					}
+				}
+			}
+		default:
+			log.Error().Err(err).Str("gem", metadata.Name).Str("type", fmt.Sprintf("%T", t)).Msg("unknown ruby requirement type in gem metadata")
+			return GemMetadata{}, err
+
+		}
+	}
+	for _, req := range metadata.RequiredRubyGemsVersion.Requirements {
+		switch t := req.(type) {
+		case []interface{}:
+			{
+				for _, entry := range t {
+					if fmt.Sprintf("%T", entry) == "string" {
+						c = fmt.Sprintf("%s", entry)
+					} else {
+						vmap := entry.(map[string]interface{})
+						v = fmt.Sprintf("%s", vmap["version"])
+
+					}
+					if c != "" && v != "" {
+						vc := VersionContraint{
+							Constraint: c,
+							Version:    v,
+						}
+						metadata.RequiredRubyGemsVersion.VersionConstraints = append(metadata.RequiredRubyGemsVersion.VersionConstraints, vc)
+						c = ""
+						v = ""
+					}
+				}
+			}
+		default:
+			log.Error().Err(err).Str("gem", metadata.Name).Str("type", fmt.Sprintf("%T", t)).Msg("unknown rubygems requirement type in gem metadata")
+			return GemMetadata{}, err
+		}
+	}
 	return metadata, nil
 }
 
@@ -194,7 +262,8 @@ func FromFile(gemfile string) (*Spec, error) {
 	full := path_chunks[len(path_chunks)-1]
 	ogName := strings.TrimSuffix(full, ".gem")
 	log.Trace().Str("gemfile", gemfile).Msg("untarring gemfile")
-	tmpdir, err := untar(full, gemfile)
+	sum, tmpdir, err := untar(full, gemfile)
+	log.Info().Str("checksum", fmt.Sprintf("%x", sum)).Msg("checksum of gem")
 	defer os.RemoveAll(tmpdir)
 	if err != nil {
 		log.Error().Err(err).Str("gem", full).Msg("failed to untar gem")
@@ -220,6 +289,9 @@ func FromFile(gemfile string) (*Spec, error) {
 		PreRelease:       false,
 		LoadedFrom:       full,
 		GemMetadata:      metadata,
+		Checksum:         fmt.Sprintf("%x", sum),
+		Ruby:             metadata.RequiredRubyVersion.VersionConstraints[0].Constraint + " " + metadata.RequiredRubyVersion.VersionConstraints[0].Version,
+		RubyGems:         metadata.RequiredRubyGemsVersion.VersionConstraints[0].Constraint + " " + metadata.RequiredRubyGemsVersion.VersionConstraints[0].Version,
 	}
 	return &s, nil
 }

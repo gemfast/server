@@ -7,11 +7,6 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/marshal"
-	"github.com/gemfast/server/internal/models"
-	"github.com/gemfast/server/internal/spec"
-	"golang.org/x/exp/slices"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -22,6 +17,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/marshal"
+	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/spec"
+	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
 )
@@ -51,7 +52,7 @@ const (
 	RUBY_PLATFORM = "ruby"
 )
 
-var indexer Indexer
+var indexer *Indexer
 
 func check(e error) {
 	if e != nil {
@@ -59,14 +60,14 @@ func check(e error) {
 	}
 }
 
-func Get() Indexer {
+func Get() *Indexer {
 	return indexer
 }
 
 func InitIndexer() error {
-	gemfastDir := fmt.Sprintf("%s", config.Env.Dir)
+	gemfastDir := config.Env.Dir
 	marshalName := "Marshal.4.8"
-	indexer = Indexer{destDir: gemfastDir}
+	indexer = &Indexer{destDir: gemfastDir}
 	tmpdir, err := mkTempDir("gem_generate_index")
 	if err != nil {
 		return err
@@ -110,7 +111,7 @@ func InitIndexer() error {
 	return nil
 }
 
-func (indexer Indexer) GenerateIndex() error {
+func (indexer *Indexer) GenerateIndex() error {
 	mkDirs(indexer.quickMarshalDir)
 	mkDirs(config.Env.GemDir)
 	mkDirs(config.Env.DBDir)
@@ -145,7 +146,7 @@ func mkDirs(dir string) {
 
 func gemList() []string {
 	var gems []string
-	gemDir := fmt.Sprintf("%s", config.Env.GemDir)
+	gemDir := config.Env.GemDir
 	filepath.WalkDir(gemDir, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e
@@ -183,7 +184,7 @@ func mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 	return specs, nil
 }
 
-func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
+func (indexer *Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 	for _, s := range specs {
 		specFName := fmt.Sprintf("%s.gemspec.rz", s.OriginalName)
 		var marshalName string
@@ -211,7 +212,7 @@ func (indexer Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 	}
 }
 
-func (indexer Indexer) buildModernIndices(specs []*spec.Spec) {
+func (indexer *Indexer) buildModernIndices(specs []*spec.Spec) {
 	pre, rel, latest := spec.PartitionSpecs(specs)
 	buildModernIndex(rel, indexer.specsIdx, "specs")
 	buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs")
@@ -238,7 +239,7 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 	}
 }
 
-func (indexer Indexer) compressIndicies() {
+func (indexer *Indexer) compressIndicies() {
 	tmpIndicies := []string{indexer.prereleaseSpecsIdx, indexer.latestSpecsIdx, indexer.specsIdx}
 	for _, index := range tmpIndicies {
 		if _, err := os.Stat(index); err == nil {
@@ -266,7 +267,7 @@ func gzipFile(src string) {
 	ioutil.WriteFile(fmt.Sprintf("%s.gz", src), b.Bytes(), 0666)
 }
 
-func (indexer Indexer) buildIndicies() error {
+func (indexer *Indexer) buildIndicies() error {
 	specs, err := mapGemsToSpecs(gemList())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to map gems to specs")
@@ -278,7 +279,7 @@ func (indexer Indexer) buildIndicies() error {
 	return nil
 }
 
-func (indexer Indexer) installIndicies() {
+func (indexer *Indexer) installIndicies() {
 	destName := fmt.Sprintf("%s/%s", indexer.destDir, indexer.quickMarshalDirBase)
 	err := os.MkdirAll(filepath.Dir(destName), os.ModePerm)
 	check(err)
@@ -303,7 +304,7 @@ func (indexer Indexer) installIndicies() {
 	check(err)
 }
 
-func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string, ch chan<- int) {
+func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string, ch chan<- int) {
 	if len(updated) == 0 {
 		log.Info().Str("name", src).Msg("no new gems for index")
 		ch <- 0
@@ -316,6 +317,11 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 
 	var fileReader io.ReadCloser = file
 	out, err := ioutil.ReadAll(fileReader)
+	if err != nil {
+		log.Error().Err(err).Str("name", src).Msg("failed to read index")
+		ch <- 0
+		return
+	}
 	buff := bytes.NewBuffer(out)
 
 	specsIdx = marshal.LoadSpecs(buff)
@@ -384,13 +390,18 @@ func (indexer Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest s
 	ch <- bytesWritten
 }
 
-func (indexer Indexer) UpdateIndex(updatedGems []string) error {
+// TODO: refactor this to not reopen the gemspec files that have been uploaded
+func (indexer *Indexer) UpdateIndex(updatedGems []string) error {
 	lock.Lock()
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
 	mkDirs(indexer.quickMarshalDir)
 
 	specs, err := mapGemsToSpecs(updatedGems)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to update index - unable to map gems to specs")
+		return err
+	}
 	pre, rel, latest := spec.PartitionSpecs(specs)
 
 	err = saveDependencies(specs)
@@ -413,11 +424,11 @@ func (indexer Indexer) UpdateIndex(updatedGems []string) error {
 	return indexer.compressAndMoveIndices()
 }
 
-func (indexer Indexer) AddGemToIndex(gem string) error {
+func (indexer *Indexer) AddGemToIndex(gem string) error {
 	return indexer.UpdateIndex([]string{gem})
 }
 
-func (indexer Indexer) Reindex() error {
+func (indexer *Indexer) Reindex() error {
 	var updatedGems []string
 	fi, err := os.Stat(indexer.destSpecsIdx)
 	if err != nil {
@@ -426,6 +437,10 @@ func (indexer Indexer) Reindex() error {
 	}
 	specsMtime := fi.ModTime()
 	newestMtime, err := time.Parse(time.RFC3339, EPOCH)
+	if err != nil {
+		log.Error().Err(err).Msg("unable to parse epoch time")
+		return err
+	}
 	for _, gem := range gemList() {
 		fi, err := os.Stat(gem)
 		if err != nil {
@@ -452,17 +467,20 @@ func (indexer Indexer) Reindex() error {
 
 func saveDependencies(specs []*spec.Spec) error {
 	for _, s := range specs {
-		d := models.Dependency{
+		d := &models.Dependency{
 			Name:     s.Name,
 			Number:   s.Version,
 			Platform: s.OriginalPlatform,
+			Checksum: s.Checksum,
+			Ruby:     s.Ruby,
+			RubyGems: s.RubyGems,
 		}
 		for _, dep := range s.GemMetadata.Dependencies {
 			for _, vc := range dep.Requirement.VersionConstraints {
 				d.Dependencies = append(d.Dependencies, []string{dep.Name, fmt.Sprintf("%s %s", vc.Constraint, vc.Version)})
 			}
 		}
-		err := models.SetDependencies(d.Name, d)
+		err := models.SaveDependencies(d.Name, d)
 		if err != nil {
 			log.Error().Err(err).Str("gem", d.Name).Msg("failed to save dependencies for gem")
 			return err
@@ -471,7 +489,7 @@ func saveDependencies(specs []*spec.Spec) error {
 	return nil
 }
 
-func (indexer Indexer) compressAndMoveIndices() error {
+func (indexer *Indexer) compressAndMoveIndices() error {
 	indexer.compressIndicies()
 
 	reg := regexp.MustCompile(fmt.Sprintf("^%s/?", indexer.dir))
@@ -501,7 +519,7 @@ func (indexer Indexer) compressAndMoveIndices() error {
 	return nil
 }
 
-func (indexer Indexer) RemoveGemFromIndex(name string, version string, platform string) error {
+func (indexer *Indexer) RemoveGemFromIndex(name string, version string, platform string) error {
 	lock.Lock()
 	defer lock.Unlock()
 	if platform == "" {
