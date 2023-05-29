@@ -137,6 +137,8 @@ func configurePrivateRead(private *gin.RouterGroup) {
 	private.GET("/api/v1/dependencies", localDependenciesHandler)
 	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
 	private.GET("/versions", localVersionsHandler)
+	private.GET("/info/:gem", localInfoHandler)
+	private.GET("/names", localNamesHandler)
 }
 
 // /private

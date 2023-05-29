@@ -151,11 +151,36 @@ func localYankHandler(c *gin.Context) {
 }
 
 func localVersionsHandler(c *gin.Context) {
-	arr := models.GetAllGemversions()
+	versions := models.GetAllGemversions()
 	// if err != nil {
 	// 	log.Error().Err(err).Msg("failed to get gem versions")
 	// 	c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get gem versions: %v", err))
 	// 	return
 	// }
-	c.String(http.StatusOK, strings.Join(arr, "\n"))
+	c.String(http.StatusOK, strings.Join(versions, "\n"))
+}
+
+func localNamesHandler(c *gin.Context) {
+	names := models.GetAllGemNames()
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("failed to get gem names")
+	// 	c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get gem names: %v", err))
+	// 	return
+	// }
+	c.String(http.StatusOK, (strings.Join(names, "\n") + "\n"))
+}
+
+func localInfoHandler(c *gin.Context) {
+	gem := c.Param("gem")
+	if gem == "" {
+		c.String(http.StatusBadRequest, "must provide gem name")
+		return
+	}
+	info, err := models.GetGemInfo(gem)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get gem info")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get gem info: %v", err))
+		return
+	}
+	c.String(http.StatusOK, (strings.Join(info, "\n") + "\n"))
 }

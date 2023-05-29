@@ -85,7 +85,6 @@ func GetAllGemversions() []string {
 	arr := []string{fmt.Sprintf("created_at: %s", rfc), "---"}
 	m := make(map[string][]string)
 	db.BoltDB.View(func(tx *bolt.Tx) error {
-		// Assume bucket exists and has keys
 		b := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
@@ -112,18 +111,59 @@ func GetAllGemversions() []string {
 	return arr
 }
 
-func GetGemVersions(name string) ([]string, error) {
+func GetGemInfo(name string) ([]string, error) {
 	var versions []string
+	versions = []string{"---"}
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		g := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET)).Get([]byte(name))
-		gem, _ := GemFromBytes(g)
-		for _, gemVersion := range *gem {
-			versions = append(versions, gemVersion.Number)
+		deps, _ := DependenciesFromBytes(g)
+		for _, d := range *deps {
+			versions = append(versions, d.Line())
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+	sort.Strings(versions)
 	return versions, nil
+}
+
+func GetAllGemNames() []string {
+	var names []string
+	names = []string{"---"}
+	db.BoltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(db.GEM_DEPENDENCY_BUCKET))
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			names = append(names, string(k))
+		}
+		return nil
+	})
+	return names
+}
+
+func (d *Dependency) Line() string {
+	var l string
+	if d.Platform == "" || d.Platform == "ruby" {
+		l = d.Number
+	} else {
+		l = fmt.Sprintf("%s-%s", d.Number, d.Platform)
+	}
+	l += " "
+	arrlen := len(d.Dependencies)
+	for i, dep := range d.Dependencies {
+		l += dep[0] + ":" + dep[1]
+		if i+1 != arrlen {
+			l += ","
+		}
+	}
+	l += fmt.Sprintf("|checksum:%s", d.Checksum)
+	if d.Ruby != "" && d.Ruby != ">= 0" {
+		l += fmt.Sprintf(",ruby:%s", d.Ruby)
+	}
+	if d.RubyGems != "" && d.RubyGems != ">= 0" {
+		l += fmt.Sprintf(",rubygems:%s", d.RubyGems)
+	}
+	return l
 }

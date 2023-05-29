@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -130,6 +131,7 @@ func GunzipMetadata(path string) (string, error) {
 	return yaml, nil
 }
 
+// TODO: break this method up into smaller methods
 func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 	var metadata GemMetadata
 	err := yaml.Unmarshal(yamlBytes, &metadata)
@@ -207,7 +209,6 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 					} else {
 						vmap := entry.(map[string]interface{})
 						v = fmt.Sprintf("%s", vmap["version"])
-
 					}
 					if c != "" && v != "" {
 						vc := VersionContraint{
@@ -263,7 +264,7 @@ func FromFile(gemfile string) (*Spec, error) {
 	ogName := strings.TrimSuffix(full, ".gem")
 	log.Trace().Str("gemfile", gemfile).Msg("untarring gemfile")
 	sum, tmpdir, err := untar(full, gemfile)
-	log.Info().Str("checksum", fmt.Sprintf("%x", sum)).Msg("checksum of gem")
+	log.Trace().Str("checksum", fmt.Sprintf("%x", sum)).Msg("checksum of gem")
 	defer os.RemoveAll(tmpdir)
 	if err != nil {
 		log.Error().Err(err).Str("gem", full).Msg("failed to untar gem")
@@ -290,10 +291,32 @@ func FromFile(gemfile string) (*Spec, error) {
 		LoadedFrom:       full,
 		GemMetadata:      metadata,
 		Checksum:         fmt.Sprintf("%x", sum),
-		Ruby:             metadata.RequiredRubyVersion.VersionConstraints[0].Constraint + " " + metadata.RequiredRubyVersion.VersionConstraints[0].Version,
-		RubyGems:         metadata.RequiredRubyGemsVersion.VersionConstraints[0].Constraint + " " + metadata.RequiredRubyGemsVersion.VersionConstraints[0].Version,
 	}
+	setRequiredRubyVersion(&s)
+	setRequiredRubyGemsVersion(&s)
 	return &s, nil
+}
+
+func setRequiredRubyVersion(s *Spec) {
+	if len(s.GemMetadata.RequiredRubyVersion.VersionConstraints) > 0 {
+		var toAdd []string
+		for _, vc := range s.GemMetadata.RequiredRubyVersion.VersionConstraints {
+			toAdd = append(toAdd, vc.Constraint+" "+vc.Version)
+		}
+		sort.Strings(toAdd)
+		s.Ruby = strings.Join(toAdd, "&")
+	}
+}
+
+func setRequiredRubyGemsVersion(s *Spec) {
+	if len(s.GemMetadata.RequiredRubyGemsVersion.VersionConstraints) > 0 {
+		var toAdd []string
+		for _, vc := range s.GemMetadata.RequiredRubyGemsVersion.VersionConstraints {
+			toAdd = append(toAdd, vc.Constraint+" "+vc.Version)
+		}
+		sort.Strings(toAdd)
+		s.RubyGems = strings.Join(toAdd, "&")
+	}
 }
 
 func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
@@ -301,8 +324,9 @@ func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
 	var released []*Spec
 	var latest []*Spec
 	hash := make(map[string]*Spec)
+	r := regexp.MustCompile("[a-zA-Z]")
 	for _, s := range specs {
-		match, _ := regexp.MatchString("[a-zA-Z]", s.Version)
+		match := r.MatchString(s.Version)
 		if match {
 			prerelease = append(prerelease, s)
 		} else {
