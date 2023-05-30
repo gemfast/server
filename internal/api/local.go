@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/indexer"
-	"github.com/gemfast/server/internal/marshal"
 	"github.com/gemfast/server/internal/models"
 	"github.com/gemfast/server/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -37,47 +35,47 @@ func localIndexHandler(c *gin.Context) {
 }
 
 func localDependenciesHandler(c *gin.Context) {
-	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
-	if gemQuery == "" {
-		c.Status(http.StatusOK)
-		return
-	}
-	deps, err := fetchGemDependencies(c, gemQuery)
-	if err != nil && config.Env.MirrorEnabled != "false" {
-		c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
-		return
-	} else if err != nil && config.Env.MirrorEnabled != "false" {
-		path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
-		path += "?gems="
-		path += gemQuery
-		if err != nil {
-			panic(err)
-		}
-		c.Redirect(http.StatusFound, path)
-	}
-	bundlerDeps, err := marshal.DumpBundlerDeps(deps)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to marshal gem dependencies")
-		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to marshal gem dependencies: %v", err))
-		return
-	}
-	c.Header("Content-Type", "application/octet-stream; charset=utf-8")
-	c.Writer.Write(bundlerDeps)
+	// gemQuery := c.Query("gems")
+	// log.Trace().Str("gems", gemQuery).Msg("received gems")
+	// if gemQuery == "" {
+	// 	c.Status(http.StatusOK)
+	// 	return
+	// }
+	// deps, err := fetchGemDependencies(c, gemQuery)
+	// if err != nil && config.Env.MirrorEnabled != "false" {
+	// 	c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
+	// 	return
+	// } else if err != nil && config.Env.MirrorEnabled != "false" {
+	// 	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	// 	path += "?gems="
+	// 	path += gemQuery
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	c.Redirect(http.StatusFound, path)
+	// }
+	// bundlerDeps, err := marshal.DumpBundlerDeps(deps)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("failed to marshal gem dependencies")
+	// 	c.String(http.StatusInternalServerError, fmt.Sprintf("failed to marshal gem dependencies: %v", err))
+	// 	return
+	// }
+	// c.Header("Content-Type", "application/octet-stream; charset=utf-8")
+	// c.Writer.Write(bundlerDeps)
 }
 
 func localDependenciesJSONHandler(c *gin.Context) {
-	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
-	if gemQuery == "" {
-		c.Status(http.StatusOK)
-		return
-	}
-	deps, err := fetchGemDependencies(c, gemQuery)
-	if err != nil {
-		return
-	}
-	c.JSON(http.StatusOK, deps)
+	// gemQuery := c.Query("gems")
+	// log.Trace().Str("gems", gemQuery).Msg("received gems")
+	// if gemQuery == "" {
+	// 	c.Status(http.StatusOK)
+	// 	return
+	// }
+	// deps, err := fetchGemDependencies(c, gemQuery)
+	// if err != nil {
+	// 	return
+	// }
+	c.JSON(http.StatusOK, nil)
 }
 
 func localUploadGemHandler(c *gin.Context) {
@@ -137,14 +135,14 @@ func localYankHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to delete gem file system: %v", err))
 		return
 	}
-	num, err := models.DeleteDependencies(g, v, p)
+	num, err := models.DeleteGemVersion(&models.Gem{Name: g, Number: v, Platform: p})
 	if err != nil {
-		log.Error().Err(err).Msg("failed to yank gem dependencies")
-		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem dependencies: %v", err))
+		log.Error().Err(err).Msg("failed to yank gem")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem: %v", err))
 		return
 	}
 	if num == 0 {
-		c.String(http.StatusNotFound, "no gem dependencies matching %s %s %s was found", g, v, p)
+		c.String(http.StatusNotFound, "no gem matching %s-%s-%s found", g, v, p)
 		return
 	}
 	c.String(http.StatusOK, "successfully yanked")
@@ -182,5 +180,5 @@ func localInfoHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get gem info: %v", err))
 		return
 	}
-	c.String(http.StatusOK, (strings.Join(info, "\n") + "\n"))
+	c.String(http.StatusOK, info+"\n")
 }

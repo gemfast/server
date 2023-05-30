@@ -2,16 +2,17 @@ package db
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/gemfast/server/internal/config"
 	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
-	"os"
-	"path/filepath"
 )
 
 const (
-	GEM_DEPENDENCY_BUCKET = "gem_dependencies"
-	USER_BUCKET           = "users"
+	GEM_BUCKET  = "gems"
+	USER_BUCKET = "users"
 )
 
 var BoltDB *bolt.DB
@@ -29,7 +30,7 @@ func Connect() error {
 		return err
 	}
 	BoltDB = db
-	createBucket(GEM_DEPENDENCY_BUCKET)
+	createBucket(GEM_BUCKET)
 	createBucket(USER_BUCKET)
 	log.Info().Str("db", dbFile).Msg("successfully connected to database")
 	return nil

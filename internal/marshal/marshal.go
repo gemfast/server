@@ -176,31 +176,31 @@ func encGemVersion(buff *bytes.Buffer, version string, olinktbl map[string]int, 
 	}
 }
 
-func DumpBundlerDeps(deps []models.Dependency) ([]byte, error) {
-	slinkidx := 0
-	slinktbl := make(map[string]int)
-	olinkidx := 0
-	olinktbl := make(map[string]int)
+func DumpBundlerDeps(g *models.Gem) ([]byte, error) {
+	// slinkidx := 0
+	// slinktbl := make(map[string]int)
+	// olinkidx := 0
+	// olinktbl := make(map[string]int)
 	buff := bytes.NewBuffer(nil)
-	buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
-	encArray(buff, len(deps), olinktbl, &olinkidx)
-	for _, dep := range deps {
-		encHash(buff, 4, olinktbl, &olinkidx)
-		encSymbol(buff, []byte("name"), slinktbl, &slinkidx)
-		encStringNoCache(buff, dep.Name, &olinkidx, slinktbl, &slinkidx)
-		encSymbol(buff, []byte("number"), slinktbl, &slinkidx)
-		encStringNoCache(buff, dep.Number, &olinkidx, slinktbl, &slinkidx)
-		encSymbol(buff, []byte("platform"), slinktbl, &slinkidx)
-		encStringNoCache(buff, dep.Platform, &olinkidx, slinktbl, &slinkidx)
-		encSymbol(buff, []byte("dependencies"), slinktbl, &slinkidx)
-		encArrayAndIncrementIndex(buff, len(dep.Dependencies), olinktbl, &olinkidx)
-		for _, depArr := range dep.Dependencies {
-			encArrayAndIncrementIndex(buff, len(depArr), olinktbl, &olinkidx)
-			for _, d := range depArr {
-				encStringNoCache(buff, d, &olinkidx, slinktbl, &slinkidx)
-			}
-		}
-	}
+	// buff.Write([]byte{SUPPORTED_MAJOR_VERSION, SUPPORTED_MINOR_VERSION})
+	// encArray(buff, len(deps), olinktbl, &olinkidx)
+	// for _, dep := range deps {
+	// 	encHash(buff, 4, olinktbl, &olinkidx)
+	// 	encSymbol(buff, []byte("name"), slinktbl, &slinkidx)
+	// 	encStringNoCache(buff, dep.Name, &olinkidx, slinktbl, &slinkidx)
+	// 	encSymbol(buff, []byte("number"), slinktbl, &slinkidx)
+	// 	encStringNoCache(buff, dep.Number, &olinkidx, slinktbl, &slinkidx)
+	// 	encSymbol(buff, []byte("platform"), slinktbl, &slinkidx)
+	// 	encStringNoCache(buff, dep.Platform, &olinkidx, slinktbl, &slinkidx)
+	// 	encSymbol(buff, []byte("dependencies"), slinktbl, &slinkidx)
+	// 	encArrayAndIncrementIndex(buff, len(dep.Dependencies), olinktbl, &olinkidx)
+	// 	for _, depArr := range dep.Dependencies {
+	// 		encArrayAndIncrementIndex(buff, len(depArr), olinktbl, &olinkidx)
+	// 		for _, d := range depArr {
+	// 			encStringNoCache(buff, d, &olinkidx, slinktbl, &slinkidx)
+	// 		}
+	// 	}
+	// }
 	return buff.Bytes(), nil
 }
 

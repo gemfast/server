@@ -31,13 +31,13 @@ func listGems(c *gin.Context) {
 
 func getGem(c *gin.Context) {
 	name := c.Param("gem")
-	gem, err := models.GetGem(name)
+	gemVersions, err := models.GetGemVersions(name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gem")
 		c.String(http.StatusInternalServerError, "Failed to get gem")
 		return
 	}
-	c.JSON(http.StatusOK, gem)
+	c.JSON(http.StatusOK, gemVersions)
 }
 
 func listUsers(c *gin.Context) {
@@ -48,7 +48,6 @@ func listUsers(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, users)
-	return
 }
 
 func getUser(c *gin.Context) {
@@ -62,7 +61,6 @@ func getUser(c *gin.Context) {
 	user.Password = []byte{}
 	user.Token = ""
 	c.JSON(http.StatusOK, user)
-	return
 }
 
 func deleteUser(c *gin.Context) {
@@ -77,7 +75,6 @@ func deleteUser(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusAccepted, "User deleted successfully")
-	return
 }
 
 func setUserRole(c *gin.Context) {
@@ -95,7 +92,6 @@ func setUserRole(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusAccepted, "User role set successfully")
-	return
 }
 
 func saveAndReindex(tmpfile *os.File) error {
@@ -118,21 +114,21 @@ func saveAndReindex(tmpfile *os.File) error {
 	return nil
 }
 
-func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency, error) {
-	gems := strings.Split(gemQuery, ",")
-	var deps []models.Dependency
-	for _, gem := range gems {
-		existingDeps, err := models.GetDependencies(gem)
-		if err != nil {
-			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
-			return nil, err
-		}
-		for _, d := range *existingDeps {
-			deps = append(deps, d)
-		}
-	}
-	return deps, nil
-}
+// func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency, error) {
+// 	gems := strings.Split(gemQuery, ",")
+// 	var deps []models.Dependency
+// 	for _, gem := range gems {
+// 		existingDeps, err := models.GetDependencies(gem)
+// 		if err != nil {
+// 			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
+// 			return nil, err
+// 		}
+// 		for _, d := range *existingDeps {
+// 			deps = append(deps, d)
+// 		}
+// 	}
+// 	return deps, nil
+// }
 
 func geminaboxUploadGem(c *gin.Context) {
 	file, err := c.FormFile("file")

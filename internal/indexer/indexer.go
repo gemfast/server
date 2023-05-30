@@ -212,13 +212,6 @@ func (indexer *Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 	}
 }
 
-func (indexer *Indexer) buildModernIndices(specs []*spec.Spec) {
-	pre, rel, latest := spec.PartitionSpecs(specs)
-	buildModernIndex(rel, indexer.specsIdx, "specs")
-	buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs")
-	buildModernIndex(pre, indexer.prereleaseSpecsIdx, "prerelease specs")
-}
-
 func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 	file, err := os.OpenFile(
 		idxFile,
@@ -274,7 +267,10 @@ func (indexer *Indexer) buildIndicies() error {
 		return err
 	}
 	indexer.buildMarshalGemspecs(specs, false)
-	indexer.buildModernIndices(specs)
+	pre, rel, latest := spec.PartitionSpecs(specs)
+	buildModernIndex(rel, indexer.specsIdx, "specs")
+	buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs")
+	buildModernIndex(pre, indexer.prereleaseSpecsIdx, "prerelease specs")
 	indexer.compressIndicies()
 	return nil
 }
@@ -402,15 +398,16 @@ func (indexer *Indexer) UpdateIndex(updatedGems []string) error {
 		log.Error().Err(err).Msg("failed to update index - unable to map gems to specs")
 		return err
 	}
-	pre, rel, latest := spec.PartitionSpecs(specs)
 
-	err = saveDependencies(specs)
+	err = models.SaveGemVersions(specs)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to update index - unable to save gem dependencies")
 		return err
 	}
+
 	indexer.buildMarshalGemspecs(specs, true)
 
+	pre, rel, latest := spec.PartitionSpecs(specs)
 	// TODO: capture errors from these goroutines
 	ch := make(chan int, 3)
 	go indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx, ch)
@@ -465,30 +462,6 @@ func (indexer *Indexer) Reindex() error {
 	return indexer.UpdateIndex(updatedGems)
 }
 
-func saveDependencies(specs []*spec.Spec) error {
-	for _, s := range specs {
-		d := &models.Dependency{
-			Name:     s.Name,
-			Number:   s.Version,
-			Platform: s.OriginalPlatform,
-			Checksum: s.Checksum,
-			Ruby:     s.Ruby,
-			RubyGems: s.RubyGems,
-		}
-		for _, dep := range s.GemMetadata.Dependencies {
-			for _, vc := range dep.Requirement.VersionConstraints {
-				d.Dependencies = append(d.Dependencies, []string{dep.Name, fmt.Sprintf("%s %s", vc.Constraint, vc.Version)})
-			}
-		}
-		err := models.SaveDependencies(d.Name, d)
-		if err != nil {
-			log.Error().Err(err).Str("gem", d.Name).Msg("failed to save dependencies for gem")
-			return err
-		}
-	}
-	return nil
-}
-
 func (indexer *Indexer) compressAndMoveIndices() error {
 	indexer.compressIndicies()
 
@@ -539,6 +512,9 @@ func (indexer *Indexer) RemoveGemFromIndex(name string, version string, platform
 		return fmt.Errorf("unable to find gem in specs index")
 	}
 	specs = slices.Delete(specs, i, i+1)
-	indexer.buildModernIndices(specs)
+	pre, rel, latest := spec.PartitionSpecs(specs)
+	buildModernIndex(rel, indexer.destSpecsIdx, "specs")
+	buildModernIndex(latest, indexer.destLatestSpecsIdx, "latest specs")
+	buildModernIndex(pre, indexer.destPrereleaseSpecsIdx, "prerelease specs")
 	return indexer.compressAndMoveIndices()
 }

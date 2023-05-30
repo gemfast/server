@@ -5,8 +5,8 @@ import "fmt"
 type NestedGemRequirement interface{}
 
 type VersionContraint struct {
-	Constraint string
-	Version    string
+	Constraint string `json:"constraint"`
+	Version    string `json:"version"`
 }
 
 type GemRequirement struct {
