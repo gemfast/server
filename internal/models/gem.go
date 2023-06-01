@@ -17,16 +17,20 @@ import (
 )
 
 type Gem struct {
-	Name         string `json:"name"`
-	Number       string `json:"number"`
-	Platform     string `json:"platform"`
-	Checksum     string `json:"checksum"`
-	InfoChecksum string `json:"info_checksum"`
-	Ruby         string `json:"ruby"`
-	RubyGems     string `json:"rubygems"`
+	Name         string          `json:"name"`
+	Number       string          `json:"number"`
+	Platform     string          `json:"platform"`
+	Checksum     string          `json:"checksum"`
+	InfoChecksum string          `json:"info_checksum"`
+	Ruby         string          `json:"ruby"`
+	RubyGems     string          `json:"rubygems"`
+	Dependencies []GemDependency `json:"dependencies"`
+}
 
-	DevDependencies     map[string][]spec.VersionContraint `json:"dev_dependencies"`
-	RuntimeDependencies map[string][]spec.VersionContraint `json:"runtime_dependencies"`
+type GemDependency struct {
+	Name               string
+	Type               string
+	VersionConstraints string
 }
 
 func GemFromSpec(s *spec.Spec) *Gem {
@@ -125,17 +129,21 @@ func SaveGem(g *Gem) error {
 func SaveGemVersions(specs []*spec.Spec) error {
 	for _, s := range specs {
 		g := GemFromSpec(s)
-		g.RuntimeDependencies = make(map[string][]spec.VersionContraint)
-		g.DevDependencies = make(map[string][]spec.VersionContraint)
+		var versionConstraints []string
+		var constraint string
 		for _, dep := range s.GemMetadata.Dependencies {
 			for _, vc := range dep.Requirement.VersionConstraints {
-
-				if dep.Type == ":runtime" {
-					g.RuntimeDependencies[dep.Name] = append(g.RuntimeDependencies[dep.Name], vc)
-				} else {
-					g.DevDependencies[dep.Name] = append(g.DevDependencies[dep.Name], vc)
-				}
+				constraint = fmt.Sprintf("%s %s", vc.Constraint, vc.Version)
+				versionConstraints = append(versionConstraints, constraint)
 			}
+			sort.Strings(versionConstraints)
+			g.Dependencies = append(g.Dependencies, GemDependency{
+				Name:               dep.Name,
+				Type:               dep.Type,
+				VersionConstraints: strings.Join(versionConstraints, "&"),
+			})
+			versionConstraints = []string{}
+			constraint = ""
 		}
 		err := SaveGem(g)
 		if err != nil {
@@ -226,7 +234,6 @@ func GetAllGemversions() []string {
 				} else {
 					m[gv.Name] = append(m[gv.Name], gv.Number)
 				}
-
 			}
 		}
 
@@ -284,16 +291,10 @@ func CompactIndexInfo(gems []Gem) string {
 			l = fmt.Sprintf("%s-%s", g.Number, g.Platform)
 		}
 		l += " "
-		for k, v := range g.RuntimeDependencies {
-			deps := v
-			var constraints []string
-			var depString string
-			for _, d := range deps {
-				constraints = append(constraints, d.Constraint+" "+d.Version)
+		for _, dep := range g.Dependencies {
+			if dep.Type == ":runtime" {
+				l += dep.Name + ":" + dep.VersionConstraints + ","
 			}
-			sort.Strings(constraints)
-			depString = strings.Join(constraints, "&")
-			l += k + ":" + depString + ","
 		}
 		l = strings.TrimSuffix(l, ",")
 		l += fmt.Sprintf("|checksum:%s", g.Checksum)
