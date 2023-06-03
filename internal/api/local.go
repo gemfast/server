@@ -18,20 +18,20 @@ import (
 
 func localGemspecRzHandler(c *gin.Context) {
 	fileName := c.Param("gemspec.rz")
-	fp := filepath.Join(config.Env.Dir, "quick/Marshal.4.8", fileName)
+	fp := filepath.Join(config.Cfg.Dir, "quick/Marshal.4.8", fileName)
 	c.FileAttachment(fp, fileName)
 }
 
 func localGemHandler(c *gin.Context) {
 	fileName := c.Param("gem")
-	fp := filepath.Join(config.Env.GemDir, fileName)
+	fp := filepath.Join(config.Cfg.GemDir, fileName)
 	c.FileAttachment(fp, fileName)
 }
 
 func localIndexHandler(c *gin.Context) {
 	s := strings.Split(c.FullPath(), "/")
 	l := len(s)
-	c.File(filepath.Join(config.Env.Dir, s[l-1]))
+	c.File(filepath.Join(config.Cfg.Dir, s[l-1]))
 }
 
 func localDependenciesHandler(c *gin.Context) {
@@ -42,11 +42,11 @@ func localDependenciesHandler(c *gin.Context) {
 	// 	return
 	// }
 	// deps, err := fetchGemDependencies(c, gemQuery)
-	// if err != nil && config.Env.MirrorEnabled != "false" {
+	// if err != nil && config.Cfg.MirrorEnabled != "false" {
 	// 	c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
 	// 	return
-	// } else if err != nil && config.Env.MirrorEnabled != "false" {
-	// 	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	// } else if err != nil && config.Cfg.MirrorEnabled != "false" {
+	// 	path, err := url.JoinPath(config.Cfg.MirrorUpstream, c.FullPath())
 	// 	path += "?gems="
 	// 	path += gemQuery
 	// 	if err != nil {
@@ -120,7 +120,7 @@ func localYankHandler(c *gin.Context) {
 		return
 	}
 	fileName := g + "-" + v + ".gem"
-	fp := filepath.Join(config.Env.GemDir, fileName)
+	fp := filepath.Join(config.Cfg.GemDir, fileName)
 	err = utils.RemoveFileIfExists(fp)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to delete gem file system")
@@ -128,7 +128,7 @@ func localYankHandler(c *gin.Context) {
 		return
 	}
 	fileName = fileName + "spec.rz"
-	fp = filepath.Join(config.Env.Dir, "quick/Marshal.4.8", fileName)
+	fp = filepath.Join(config.Cfg.Dir, "quick/Marshal.4.8", fileName)
 	err = utils.RemoveFileIfExists(fp)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to delete gemspec.rz from file system")

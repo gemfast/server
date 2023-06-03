@@ -18,12 +18,12 @@ const (
 var BoltDB *bolt.DB
 
 func Connect() error {
-	err := os.MkdirAll(config.Env.DBDir, os.ModePerm)
+	err := os.MkdirAll(config.Cfg.DBDir, os.ModePerm)
 	if err != nil {
-		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could make db directory %s", config.Env.DBDir))
+		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could make db directory %s", config.Cfg.DBDir))
 		return err
 	}
-	dbFile := filepath.Join(config.Env.DBDir, "gemfast.db")
+	dbFile := filepath.Join(config.Cfg.DBDir, "gemfast.db")
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could not open %s", dbFile))

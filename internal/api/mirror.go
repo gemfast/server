@@ -26,7 +26,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 		c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gemspec %s due to filter", fileName))
 		return
 	}
-	if strings.ToLower(config.Env.CVEFilterEnabled) == "true" {
+	if config.Cfg.CVE.Enabled {
 		gv := strings.Split(fileName, ".gemspec.rz")
 		gem := models.GemFromGemParameter(gv[0])
 		cves := cve.GetCVEs(gem.Name, gem.Number)
@@ -35,7 +35,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 			return
 		}
 	}
-	fp := filepath.Join(config.Env.Dir, "quick/Marshal.4.8", fileName)
+	fp := filepath.Join(config.Cfg.Dir, "quick/Marshal.4.8", fileName)
 	if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
 		out, err := os.Create(fp)
 		if err != nil {
@@ -43,7 +43,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 			return
 		}
 		defer out.Close()
-		path, err := url.JoinPath(config.Env.MirrorUpstream, "quick/Marshal.4.8", fileName)
+		path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, "quick/Marshal.4.8", fileName)
 		if err != nil {
 			log.Error().Str("file", fileName).Msg("failed to fetch quick marshal")
 			panic(err)
@@ -79,7 +79,7 @@ func mirroredGemHandler(c *gin.Context) {
 		c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gems %s due to filter", fileName))
 		return
 	}
-	if strings.ToLower(config.Env.CVEFilterEnabled) == "true" {
+	if config.Cfg.CVE.Enabled {
 		gv := strings.Split(fileName, ".gem")
 		gem := models.GemFromGemParameter(gv[0])
 		cves := cve.GetCVEs(gem.Name, gem.Number)
@@ -88,7 +88,7 @@ func mirroredGemHandler(c *gin.Context) {
 			return
 		}
 	}
-	fp := filepath.Join(config.Env.GemDir, fileName)
+	fp := filepath.Join(config.Cfg.GemDir, fileName)
 	info, err := os.Stat(fp)
 	if (err != nil && errors.Is(err, os.ErrNotExist)) || info.Size() == 0 {
 		out, err := os.Create(fp)
@@ -96,7 +96,7 @@ func mirroredGemHandler(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "Failed to create gem file")
 		}
 		defer out.Close()
-		path, err := url.JoinPath(config.Env.MirrorUpstream, "gems", fileName)
+		path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, "gems", fileName)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Failed to fetch gem file from upstream")
 			return
@@ -131,7 +131,7 @@ func mirroredGemHandler(c *gin.Context) {
 }
 
 func mirroredIndexHandler(c *gin.Context) {
-	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
 	if err != nil {
 		panic(err)
 	}
@@ -139,7 +139,7 @@ func mirroredIndexHandler(c *gin.Context) {
 }
 
 func mirroredInfoHandler(c *gin.Context) {
-	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
 	if err != nil {
 		panic(err)
 	}
@@ -147,7 +147,7 @@ func mirroredInfoHandler(c *gin.Context) {
 }
 
 func mirroredVersionsHandler(c *gin.Context) {
-	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +160,7 @@ func mirroredDependenciesHandler(c *gin.Context) {
 		c.Status(http.StatusOK)
 		return
 	}
-	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
 	path += "?gems="
 	path += gemQuery
 	if err != nil {
@@ -175,7 +175,7 @@ func mirroredDependenciesJSONHandler(c *gin.Context) {
 		c.Status(http.StatusOK)
 		return
 	}
-	path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
 	path += "?gems="
 	path += gemQuery
 	if err != nil {

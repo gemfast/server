@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 
 	"github.com/gemfast/server/internal/api"
 	"github.com/gemfast/server/internal/config"
@@ -20,7 +21,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	config.InitConfig()
+	config.LoadConfig()
 }
 
 func check(err error) {

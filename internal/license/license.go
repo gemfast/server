@@ -2,6 +2,7 @@ package license
 
 import (
 	"fmt"
+
 	"github.com/denisbrodbeck/machineid"
 	"github.com/gemfast/server/internal/config"
 	"github.com/keygen-sh/keygen-go/v2"
@@ -9,7 +10,7 @@ import (
 )
 
 func ValidateLicenseKey() error {
-	if config.Env.GemfastLicenseKey == "" {
+	if config.Cfg.LicenseKey == "" {
 		log.Info().Msg("no license key supplied in GEMFAST_LICENSE_KEY variable")
 		log.Info().Msg("consider purchasing a license from https://gemfast.io")
 		log.Info().Msg("services will be started in trial mode")
@@ -18,7 +19,7 @@ func ValidateLicenseKey() error {
 	}
 	keygen.Account = "5590bc22-b3de-4e34-a27a-7cc07c3ba683"
 	keygen.Product = "2c4f54ab-c7a0-4f74-bfbd-9f4973c21121"
-	keygen.LicenseKey = config.Env.GemfastLicenseKey
+	keygen.LicenseKey = config.Cfg.LicenseKey
 	fingerprint, err := machineid.ProtectedID(keygen.Product)
 	if err != nil {
 		return err
@@ -46,6 +47,6 @@ func ValidateLicenseKey() error {
 	}
 
 	log.Info().Msg("gemfast license is valid")
-	config.Env.GemfastTrialMode = "false"
+	config.Cfg.TrialMode = false
 	return nil
 }

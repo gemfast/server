@@ -22,7 +22,7 @@ const RoleKey = "role"
 func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "zone",
-		Key:         []byte(config.Env.LocalAuthSecretKey),
+		Key:         []byte(config.Cfg.Auth.LocalAuthSecretKey),
 		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,

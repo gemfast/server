@@ -7,7 +7,7 @@ import (
 )
 
 func TestGemList(t *testing.T) {
-	config.Env.GemDir = "../../test/fixtures/gem_list"
+	config.Cfg.GemDir = "../../test/fixtures/gem_list"
 	expected := []string{"../../test/fixtures/gem_list/a.gem", "../../test/fixtures/gem_list/another_@gem]2345.gem", "../../test/fixtures/gem_list/b.gem"}
 	actual := gemList()
 	if len(actual) != len(expected) {

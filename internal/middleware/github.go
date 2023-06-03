@@ -31,13 +31,13 @@ func init() {
 }
 
 func GitHubLoginHandler(c *gin.Context) {
-	c.String(http.StatusOK, fmt.Sprintf("Login URL: https://github.com/login/oauth/authorize?scope=read:user,read:org&client_id=%s\n", config.Env.GitHubClientId))
+	c.String(http.StatusOK, fmt.Sprintf("Login URL: https://github.com/login/oauth/authorize?scope=read:user,read:org&client_id=%s\n", config.Cfg.Auth.GitHubClientId))
 	return
 }
 
 func GitHubCallbackHandler(c *gin.Context) {
 	code := c.Query("code")
-	login := OAuthLogin{ClientID: config.Env.GitHubClientId, ClientSecret: config.Env.GitHubClientSecret, Code: code}
+	login := OAuthLogin{ClientID: config.Cfg.Auth.GitHubClientId, ClientSecret: config.Cfg.Auth.GitHubClientSecret, Code: code}
 	jsonData, _ := json.Marshal(login)
 	bodyReader := bytes.NewBuffer(jsonData)
 	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", bodyReader)
@@ -93,7 +93,7 @@ func authenticateGitHubUser(at string) error {
 	if err != nil {
 		newUser := models.User{
 			Username: username,
-			Role:     config.Env.GitHubUsersDefaultRole,
+			Role:     config.Cfg.Auth.DefaultUserRole,
 			Type:     "github",
 		}
 		err = models.CreateUser(newUser)
@@ -122,7 +122,7 @@ func userMemberOfRequiredOrg(at string) error {
 	for _, name := range result.Array() {
 		userOrgs = append(userOrgs, strings.ToLower(name.String()))
 	}
-	ghUserOrgs := strings.ToLower(config.Env.GitHubUserOrgs)
+	ghUserOrgs := strings.ToLower(config.Cfg.Auth.GitHubUserOrgs)
 	requiredOrgs := strings.Split(ghUserOrgs, ",")
 	if len(intersect.Hash(requiredOrgs, userOrgs)) != 0 {
 		return nil
