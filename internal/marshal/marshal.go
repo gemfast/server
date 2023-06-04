@@ -314,7 +314,7 @@ func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
 	buff.WriteByte(9)
 	buff.WriteByte(ARRAY_SIGN)
 	encInt(buff, 1)
-	encStringNoCache(buff, "3.3.3", &olinkidx, slinktbl, &slinkidx)
+	encStringNoCache(buff, "3.3.33", &olinkidx, slinktbl, &slinkidx)
 
 	// Original Platform
 	buff.WriteByte(SYMBOL_SIGN)
