@@ -6,3 +6,4 @@ prerelease_specs*
 gemfast.db
 bin/gemfast
 omnibus/pkg
+tmp

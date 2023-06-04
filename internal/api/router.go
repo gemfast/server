@@ -18,9 +18,9 @@ var f embed.FS
 func Run() error {
 	router := initRouter()
 	port := ":" + config.Env.Port
-	log.Info().Str("port", port).Msg("gemfast server ready")
+	log.Info().Str("detail", port).Msg("gemfast server listening on port")
 	if config.Env.MirrorEnabled != "false" {
-		log.Info().Str("upstream", config.Env.MirrorUpstream).Msg("mirroring upstream gem server")
+		log.Info().Str("detail", config.Env.MirrorUpstream).Msg("mirroring upstream gem server")
 	}
 	return router.Run(port)
 }
@@ -33,7 +33,7 @@ func initRouter() (r *gin.Engine) {
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
 	authMode := config.Env.AuthMode
-	log.Info().Str("auth", authMode).Msg("configuring auth strategy")
+	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
 	case "github":
 		configureGitHubAuth(r)
@@ -136,6 +136,9 @@ func configurePrivateRead(private *gin.RouterGroup) {
 	private.GET("/gems/:gem", localGemHandler)
 	private.GET("/api/v1/dependencies", localDependenciesHandler)
 	private.GET("/api/v1/dependencies.json", localDependenciesJSONHandler)
+	private.GET("/versions", localVersionsHandler)
+	private.GET("/info/:gem", localInfoHandler)
+	private.GET("/names", localNamesHandler)
 }
 
 // /private

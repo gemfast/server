@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+
 	// "strings"
 
 	// "os"
@@ -217,19 +218,19 @@ func TestReadInt(t *testing.T) {
 func TestDumpBundlerDeps(t *testing.T) {
 	rubyResult := "04085b077b093a096e616d654922136d69786c69622d696e7374616c6c063a0645543a0b6e756d62657249220c332e31322e3139063b06543a0d706c6174666f726d49220972756279063b06543a11646570656e64656e636965735b085b074922146d69786c69622d7368656c6c6f7574063b06544922093e3d2030063b06545b074922166d69786c69622d76657273696f6e696e67063b06544922093e3d2030063b06545b0749220974686f72063b06544922093e3d2030063b06547b093b004922136d69786c69622d696e7374616c6c063b06543b0749220c332e31322e3139063b06543b0849220972756279063b06543b095b085b074922146d69786c69622d7368656c6c6f7574063b06544922093e3d2030063b06545b074922166d69786c69622d76657273696f6e696e67063b06544922093e3d2030063b06545b0749220974686f72063b06544922093e3d2030063b0654"
 	rubyBytes, _ := hex.DecodeString(rubyResult)
-	var deps []models.Dependency
-	d1 := models.Dependency{
+	var deps []*models.Gem
+	d1 := &models.Gem{
 		Name:         "mixlib-install",
 		Number:       "3.12.19",
 		Platform:     "ruby",
-		Dependencies: [][]string{[]string{"mixlib-shellout", ">= 0"}, []string{"mixlib-versioning", ">= 0"}, []string{"thor", ">= 0"}},
+		Dependencies: []models.GemDependency{{Name: "mixlib-shellout", Type: ":runtime", VersionConstraints: ">= 0"}, {Name: "mixlib-versioning", Type: ":runtime", VersionConstraints: ">= 0"}, {Name: "thor", Type: ":runtime", VersionConstraints: ">= 0"}},
 	}
 	deps = append(deps, d1)
-	d2 := models.Dependency{
+	d2 := &models.Gem{
 		Name:         "mixlib-install",
 		Number:       "3.12.19",
 		Platform:     "ruby",
-		Dependencies: [][]string{[]string{"mixlib-shellout", ">= 0"}, []string{"mixlib-versioning", ">= 0"}, []string{"thor", ">= 0"}},
+		Dependencies: []models.GemDependency{{Name: "mixlib-shellout", Type: ":runtime", VersionConstraints: ">= 0"}, {Name: "mixlib-versioning", Type: ":runtime", VersionConstraints: ">= 0"}, {Name: "thor", Type: ":runtime", VersionConstraints: ">= 0"}},
 	}
 	deps = append(deps, d2)
 	bd, _ := DumpBundlerDeps(deps)

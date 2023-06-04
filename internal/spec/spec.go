@@ -3,11 +3,13 @@ package spec
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -24,22 +26,32 @@ type Spec struct {
 	PreRelease       bool
 	LoadedFrom       string
 	GemMetadata      GemMetadata
+	Checksum         string
+	Ruby             string //TODO: parse required_ruby_version from metadata
+	RubyGems         string //TODO: parse required_rubygems_version from metadata
 }
 
-func untar(full_name string, gemfile string) (string, error) {
+func untar(full_name string, gemfile string) ([]byte, string, error) {
 	tmpdir, err := os.MkdirTemp("/tmp", full_name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
-		return "", err
+		return nil, "", err
 	}
 	log.Trace().Msg(fmt.Sprintf("created tmpdir %s", tmpdir))
 	file, err := os.Open(gemfile)
 
 	if err != nil {
-		log.Error().Err(err).Str("file", gemfile).Msg("failed to open gemfile")
-		return "", err
+		log.Error().Err(err).Str("detail", gemfile).Msg("failed to open gemfile")
+		return nil, "", err
 	}
 	defer file.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
+		log.Error().Err(err).Str("detail", gemfile).Msg("failed to hash gemfile")
+		return nil, "", err
+	}
+	file.Seek(0, 0) // reset file pointer to beginning of file
 
 	var fileReader io.ReadCloser = file
 	tarBallReader := tar.NewReader(fileReader)
@@ -51,53 +63,53 @@ func untar(full_name string, gemfile string) (string, error) {
 			if err == io.EOF {
 				break
 			}
-			log.Error().Err(err).Str("gem", full_name).Msg("bad header")
-			return "", err
+			log.Error().Err(err).Str("detail", full_name).Msg("bad header")
+			return nil, "", err
 		}
 
 		// get the individual filename and extract to the current directory
-		filename := fmt.Sprintf("%s/%s", tmpdir, header.Name)
+		dest := fmt.Sprintf("%s/%s", tmpdir, header.Name)
 
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// handle directory
-			log.Trace().Str("dir", filename).Msg("extracting directory")
-			err = os.MkdirAll(filename, os.FileMode(header.Mode))
+			log.Trace().Str("detail", dest).Msg("extracting directory")
+			err = os.MkdirAll(dest, os.FileMode(header.Mode))
 			if err != nil {
-				log.Error().Err(err).Str("dir", filename).Msg("failed to make directory")
-				return "", err
+				log.Error().Err(err).Str("detail", dest).Msg("failed to make directory")
+				return nil, "", err
 			}
 
 		case tar.TypeReg:
 			// handle normal file
-			log.Trace().Msg(fmt.Sprintf("extracting file %s", filename))
-			writer, err := os.Create(filename)
+			log.Trace().Msg(fmt.Sprintf("extracting file to %s", dest))
+			writer, err := os.Create(dest)
 			if err != nil {
-				log.Error().Err(err).Str("file", filename).Msg("failed to create file")
-				return "", err
+				log.Error().Err(err).Str("detail", dest).Msg("failed to create files")
+				return nil, "", err
 			}
 			defer writer.Close()
 
 			io.Copy(writer, tarBallReader)
-			err = os.Chmod(filename, os.FileMode(header.Mode))
+			err = os.Chmod(dest, os.FileMode(header.Mode))
 
 			if err != nil {
-				log.Error().Err(err).Str("file", filename).Msg("failed to chmod file")
-				return "", err
+				log.Error().Err(err).Str("detail", dest).Msg("failed to chmod file")
+				return nil, "", err
 			}
 		default:
-			log.Error().Err(err).Str("file", filename).Bytes("type", []byte{header.Typeflag}).Msg("unrecognized file type")
-			return "", err
+			log.Error().Err(err).Str("detail", dest).Bytes("type", []byte{header.Typeflag}).Msg("unrecognized file type")
+			return nil, "", err
 		}
 	}
-	return tmpdir, nil
+	return h.Sum(nil), tmpdir, nil
 }
 
 func GunzipMetadata(path string) (string, error) {
 	fname := fmt.Sprintf("%s/metadata.gz", path)
 	file, err := os.Open(fname)
 	if err != nil {
-		log.Error().Err(err).Str("file", fname).Msg("failed to open file")
+		log.Error().Err(err).Str("detail", fname).Msg("failed to open file")
 		return "", err
 	}
 	defer file.Close()
@@ -105,13 +117,13 @@ func GunzipMetadata(path string) (string, error) {
 	var fileReader io.ReadCloser = file
 	gzreader, err := gzip.NewReader(fileReader)
 	if err != nil {
-		log.Error().Err(err).Str("file", fname).Msg("failed to create gzip reader")
+		log.Error().Err(err).Str("detail", fname).Msg("failed to create gzip reader")
 		return "", err
 	}
 
 	output, err := ioutil.ReadAll(gzreader)
 	if err != nil {
-		log.Error().Err(err).Str("file", fname).Msg("failed to read gzip content")
+		log.Error().Err(err).Str("detail", fname).Msg("failed to read gzip content")
 		return "", err
 	}
 
@@ -119,6 +131,7 @@ func GunzipMetadata(path string) (string, error) {
 	return yaml, nil
 }
 
+// TODO: break this method up into smaller methods
 func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 	var metadata GemMetadata
 	err := yaml.Unmarshal(yamlBytes, &metadata)
@@ -146,10 +159,10 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 	case nil:
 		{
 			// nothing
-			log.Trace().Str("gem", metadata.Name).Msg("nil email")
+			log.Trace().Str("detail", metadata.Name).Msg("nil email")
 		}
 	default:
-		log.Error().Err(err).Str("gem", metadata.Name).Str("type", fmt.Sprintf("%T", t)).Msg("unknown email type in gem metadata")
+		log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown email type in gem metadata")
 		return GemMetadata{}, err
 	}
 
@@ -180,11 +193,67 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 					}
 				}
 			default:
-				log.Error().Err(err).Str("gem", metadata.Name).Str("type", fmt.Sprintf("%T", t)).Msg("unknown requirements type in gem metadata")
+				log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown requirements type in gem metadata")
 				return GemMetadata{}, err
 			}
 		}
 		metadata.Dependencies[i] = dep
+	}
+	for _, req := range metadata.RequiredRubyVersion.Requirements {
+		switch t := req.(type) {
+		case []interface{}:
+			{
+				for _, entry := range t {
+					if fmt.Sprintf("%T", entry) == "string" {
+						c = fmt.Sprintf("%s", entry)
+					} else {
+						vmap := entry.(map[string]interface{})
+						v = fmt.Sprintf("%s", vmap["version"])
+					}
+					if c != "" && v != "" {
+						vc := VersionContraint{
+							Constraint: c,
+							Version:    v,
+						}
+						metadata.RequiredRubyVersion.VersionConstraints = append(metadata.RequiredRubyVersion.VersionConstraints, vc)
+						c = ""
+						v = ""
+					}
+				}
+			}
+		default:
+			log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown ruby requirement type in gem metadata")
+			return GemMetadata{}, err
+
+		}
+	}
+	for _, req := range metadata.RequiredRubyGemsVersion.Requirements {
+		switch t := req.(type) {
+		case []interface{}:
+			{
+				for _, entry := range t {
+					if fmt.Sprintf("%T", entry) == "string" {
+						c = fmt.Sprintf("%s", entry)
+					} else {
+						vmap := entry.(map[string]interface{})
+						v = fmt.Sprintf("%s", vmap["version"])
+
+					}
+					if c != "" && v != "" {
+						vc := VersionContraint{
+							Constraint: c,
+							Version:    v,
+						}
+						metadata.RequiredRubyGemsVersion.VersionConstraints = append(metadata.RequiredRubyGemsVersion.VersionConstraints, vc)
+						c = ""
+						v = ""
+					}
+				}
+			}
+		default:
+			log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown rubygems requirement type in gem metadata")
+			return GemMetadata{}, err
+		}
 	}
 	return metadata, nil
 }
@@ -193,22 +262,23 @@ func FromFile(gemfile string) (*Spec, error) {
 	path_chunks := strings.Split(gemfile, "/")
 	full := path_chunks[len(path_chunks)-1]
 	ogName := strings.TrimSuffix(full, ".gem")
-	log.Trace().Str("gemfile", gemfile).Msg("untarring gemfile")
-	tmpdir, err := untar(full, gemfile)
+	log.Trace().Str("detail", gemfile).Msg("untarring gemfile")
+	sum, tmpdir, err := untar(full, gemfile)
+	log.Trace().Str("detail", fmt.Sprintf("%x", sum)).Msg("checksum of gem")
 	defer os.RemoveAll(tmpdir)
 	if err != nil {
-		log.Error().Err(err).Str("gem", full).Msg("failed to untar gem")
+		log.Error().Err(err).Str("detail", full).Msg("failed to untar gem")
 		return &Spec{}, err
 	}
-	log.Trace().Str("tmpdir", tmpdir).Msg("gunzip tmpdir")
+	log.Trace().Str("detail", tmpdir).Msg("gunzip tmpdir")
 	res, err := GunzipMetadata(tmpdir)
 	if err != nil {
-		log.Error().Err(err).Str("gem", full).Msg("failed to gunzip gem metadata")
+		log.Error().Err(err).Str("detail", full).Msg("failed to gunzip gem metadata")
 		return &Spec{}, err
 	}
 	metadata, err := ParseGemMetadata([]byte(res))
 	if err != nil {
-		log.Error().Err(err).Str("gem", full).Msg("failed to parse gem metadata")
+		log.Error().Err(err).Str("detail", full).Msg("failed to parse gem metadata")
 		return &Spec{}, err
 	}
 	s := Spec{
@@ -220,8 +290,33 @@ func FromFile(gemfile string) (*Spec, error) {
 		PreRelease:       false,
 		LoadedFrom:       full,
 		GemMetadata:      metadata,
+		Checksum:         fmt.Sprintf("%x", sum),
 	}
+	setRequiredRubyVersion(&s)
+	setRequiredRubyGemsVersion(&s)
 	return &s, nil
+}
+
+func setRequiredRubyVersion(s *Spec) {
+	if len(s.GemMetadata.RequiredRubyVersion.VersionConstraints) > 0 {
+		var toAdd []string
+		for _, vc := range s.GemMetadata.RequiredRubyVersion.VersionConstraints {
+			toAdd = append(toAdd, vc.Constraint+" "+vc.Version)
+		}
+		sort.Strings(toAdd)
+		s.Ruby = strings.Join(toAdd, "&")
+	}
+}
+
+func setRequiredRubyGemsVersion(s *Spec) {
+	if len(s.GemMetadata.RequiredRubyGemsVersion.VersionConstraints) > 0 {
+		var toAdd []string
+		for _, vc := range s.GemMetadata.RequiredRubyGemsVersion.VersionConstraints {
+			toAdd = append(toAdd, vc.Constraint+" "+vc.Version)
+		}
+		sort.Strings(toAdd)
+		s.RubyGems = strings.Join(toAdd, "&")
+	}
 }
 
 func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
@@ -229,8 +324,9 @@ func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
 	var released []*Spec
 	var latest []*Spec
 	hash := make(map[string]*Spec)
+	r := regexp.MustCompile("[a-zA-Z]")
 	for _, s := range specs {
-		match, _ := regexp.MatchString("[a-zA-Z]", s.Version)
+		match := r.MatchString(s.Version)
 		if match {
 			prerelease = append(prerelease, s)
 		} else {

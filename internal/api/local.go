@@ -18,6 +18,29 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type BundlerDeps struct {
+	Name         string
+	Number       string
+	Platform     string
+	Dependencies [][]string
+}
+
+func newBundlerDeps(g *models.Gem) (*BundlerDeps, error) {
+	b := &BundlerDeps{
+		Name:     g.Name,
+		Number:   g.Number,
+		Platform: g.Platform,
+	}
+	var deps [][]string
+	for _, d := range g.Dependencies {
+		if d.Type == ":runtime" {
+			deps = append(deps, []string{d.Name, d.VersionConstraints})
+		}
+	}
+	b.Dependencies = deps
+	return b, nil
+}
+
 func localGemspecRzHandler(c *gin.Context) {
 	fileName := c.Param("gemspec.rz")
 	fp := filepath.Join(config.Env.Dir, "quick/Marshal.4.8", fileName)
@@ -38,25 +61,28 @@ func localIndexHandler(c *gin.Context) {
 
 func localDependenciesHandler(c *gin.Context) {
 	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
+	log.Trace().Str("detail", gemQuery).Msg("received gems")
 	if gemQuery == "" {
 		c.Status(http.StatusOK)
 		return
 	}
-	deps, err := fetchGemDependencies(c, gemQuery)
-	if err != nil && config.Env.MirrorEnabled != "false" {
+	gemVersions, err := fetchGemVersions(c, gemQuery)
+	if err != nil && config.Env.MirrorEnabled == "false" {
 		c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
 		return
 	} else if err != nil && config.Env.MirrorEnabled != "false" {
 		path, err := url.JoinPath(config.Env.MirrorUpstream, c.FullPath())
+		if err != nil {
+			log.Error().Err(err).Msg("failed to join upstream path")
+			c.String(http.StatusInternalServerError, fmt.Sprintf("failed to join upstream path: %v", err))
+			return
+		}
 		path += "?gems="
 		path += gemQuery
-		if err != nil {
-			panic(err)
-		}
+
 		c.Redirect(http.StatusFound, path)
 	}
-	bundlerDeps, err := marshal.DumpBundlerDeps(deps)
+	bundlerDeps, err := marshal.DumpBundlerDeps(gemVersions)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal gem dependencies")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to marshal gem dependencies: %v", err))
@@ -68,14 +94,26 @@ func localDependenciesHandler(c *gin.Context) {
 
 func localDependenciesJSONHandler(c *gin.Context) {
 	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
+	log.Trace().Str("detail", gemQuery).Msg("received gems")
 	if gemQuery == "" {
 		c.Status(http.StatusOK)
 		return
 	}
-	deps, err := fetchGemDependencies(c, gemQuery)
+	gemVersions, err := fetchGemVersions(c, gemQuery)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to fetch gem versions")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to fetch gem versions: %v", err))
 		return
+	}
+	var deps []*BundlerDeps
+	for _, gv := range gemVersions {
+		bundlerDep, err := newBundlerDeps(gv)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create new bundler deps")
+			c.String(http.StatusInternalServerError, fmt.Sprintf("failed to create new bundler deps: %v", err))
+			return
+		}
+		deps = append(deps, bundlerDep)
 	}
 	c.JSON(http.StatusOK, deps)
 }
@@ -95,7 +133,7 @@ func localUploadGemHandler(c *gin.Context) {
 
 	err = os.WriteFile(tmpfile.Name(), bodyBytes, 0644)
 	if err != nil {
-		log.Error().Err(err).Str("tmpfile", tmpfile.Name()).Msg("failed to save uploaded file")
+		log.Error().Err(err).Str("detail", tmpfile.Name()).Msg("failed to save uploaded file")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
 	}
@@ -137,15 +175,40 @@ func localYankHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to delete gem file system: %v", err))
 		return
 	}
-	num, err := models.DeleteDependencies(g, v, p)
+	num, err := models.DeleteGemVersion(&models.Gem{Name: g, Number: v, Platform: p})
 	if err != nil {
-		log.Error().Err(err).Msg("failed to yank gem dependencies")
-		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem dependencies: %v", err))
+		log.Error().Err(err).Msg("failed to yank gem")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem: %v", err))
 		return
 	}
 	if num == 0 {
-		c.String(http.StatusNotFound, "no gem dependencies matching %s %s %s was found", g, v, p)
+		c.String(http.StatusNotFound, "no gem matching %s-%s-%s found", g, v, p)
 		return
 	}
 	c.String(http.StatusOK, "successfully yanked")
+}
+
+func localVersionsHandler(c *gin.Context) {
+	versions := models.GetAllGemversions()
+	c.String(http.StatusOK, strings.Join(versions, "\n"))
+}
+
+func localNamesHandler(c *gin.Context) {
+	names := models.GetAllGemNames()
+	c.String(http.StatusOK, (strings.Join(names, "\n") + "\n"))
+}
+
+func localInfoHandler(c *gin.Context) {
+	gem := c.Param("gem")
+	if gem == "" {
+		c.String(http.StatusBadRequest, "must provide gem name")
+		return
+	}
+	info, err := models.GetGemInfo(gem)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get gem info")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get gem info: %v", err))
+		return
+	}
+	c.String(http.StatusOK, info+"\n")
 }

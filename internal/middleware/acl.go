@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/casbin/casbin/v2"
 	u "github.com/gemfast/server/internal/utils"
 	"github.com/rs/zerolog/log"
-	"os"
 )
 
 var ACL casbin.Enforcer
@@ -38,7 +39,7 @@ func InitACL() {
 		log.Error().Err(err).Msg("failed to initialize the acl")
 		os.Exit(1)
 	} else {
-		log.Info().Str("path", policyPath).Msg("successfully initialized ACL enforcer")
+		log.Info().Str("detail", policyPath).Msg("successfully initialized ACL enforcer")
 	}
 	ACL = *acl
 }

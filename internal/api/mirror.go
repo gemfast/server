@@ -45,7 +45,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 		defer out.Close()
 		path, err := url.JoinPath(config.Env.MirrorUpstream, "quick/Marshal.4.8", fileName)
 		if err != nil {
-			log.Error().Str("file", fileName).Msg("failed to fetch quick marshal")
+			log.Error().Str("detail", fileName).Msg("failed to fetch quick marshal")
 			panic(err)
 		}
 		resp, err := http.Get(path)
@@ -55,7 +55,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			log.Info().Str("upstream", path).Msg("upstream returned a non 200 status code")
+			log.Info().Str("detail", path).Msg("upstream returned a non 200 status code")
 			c.String(resp.StatusCode, "Failure returned from upstream")
 			out.Close()
 			os.RemoveAll(fp)
@@ -108,7 +108,7 @@ func mirroredGemHandler(c *gin.Context) {
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			log.Info().Str("upstream", path).Msg("upstream returned a non 200 status code")
+			log.Info().Str("detail", path).Msg("upstream returned a non 200 status code")
 			c.String(resp.StatusCode, "Failure returned from upstream")
 			return
 		}
