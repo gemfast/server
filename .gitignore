@@ -4,6 +4,6 @@ prerelease_specs*
 *.gem
 !test/fixtures/gem_list/*.gem
 gemfast.db
-bin/gemfast
+bin/gemfast-server
 omnibus/pkg
 tmp
