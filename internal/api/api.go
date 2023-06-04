@@ -114,21 +114,25 @@ func saveAndReindex(tmpfile *os.File) error {
 	return nil
 }
 
-// func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency, error) {
-// 	gems := strings.Split(gemQuery, ",")
-// 	var deps []models.Dependency
-// 	for _, gem := range gems {
-// 		existingDeps, err := models.GetDependencies(gem)
-// 		if err != nil {
-// 			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
-// 			return nil, err
-// 		}
-// 		for _, d := range *existingDeps {
-// 			deps = append(deps, d)
-// 		}
-// 	}
-// 	return deps, nil
-// }
+func fetchGemVersions(c *gin.Context, gemQuery string) ([]*models.Gem, error) {
+	gems := strings.Split(gemQuery, ",")
+	var gemVersions []*models.Gem
+	for _, gem := range gems {
+		gv, err := models.GetGemVersions(gem)
+		if err != nil {
+			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
+			return nil, err
+		}
+		for _, g := range gv {
+			gemVersions = append(gemVersions, &models.Gem{
+				Name:         g.Name,
+				Number:       g.Number,
+				Dependencies: g.Dependencies,
+			})
+		}
+	}
+	return gemVersions, nil
+}
 
 func geminaboxUploadGem(c *gin.Context) {
 	file, err := c.FormFile("file")
