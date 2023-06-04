@@ -21,7 +21,7 @@ ENV
 
 sudo dpkg -i gemfast*.deb
 sudo systemctl start gemfast
-sleep 2
+sleep 10
 sudo systemctl status gemfast
 sleep 2
 sudo systemctl status caddy
