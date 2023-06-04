@@ -54,14 +54,13 @@ type envConfig struct {
 }
 
 func configureZeroLog() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	ll, err := zerolog.ParseLevel(Env.LogLevel)
 	if err != nil {
 		log.Error().Err(err).Msg("unable to parse GEMFAST_LOG_LEVEL to a valid zerolog level")
 		ll = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(ll)
-	log.Info().Str("level", ll.String()).Msg("set global log level")
+	log.Info().Str("detail", ll.String()).Msg("set global log level")
 }
 
 func loadEnvVariables() (config envConfig) {
@@ -73,11 +72,11 @@ func loadEnvVariables() (config envConfig) {
 	}
 	homedirConf := fmt.Sprintf("%s/.gemfast/.env", usr.HomeDir)
 	if _, err := os.Stat("/etc/gemfast/.env"); err == nil {
-		log.Info().Str("configLocation", "/etc/gemfast/.env").Msg("found gemfast config file")
-		dotEnvMap, err = godotenv.Read("/etc/gemfast/.env")
+		log.Info().Str("detail", "/etc/gemfast/.env").Msg("found gemfast config file")
+		dotEnvMap, _ = godotenv.Read("/etc/gemfast/.env")
 	} else if _, err := os.Stat(homedirConf); err == nil {
-		log.Info().Str("configLocation", homedirConf).Msg("found gemfast config file")
-		dotEnvMap, err = godotenv.Read(homedirConf)
+		log.Info().Str("detail", homedirConf).Msg("found gemfast config file")
+		dotEnvMap, _ = godotenv.Read(homedirConf)
 	} else {
 		log.Warn().Msg(fmt.Sprintf("unable to find a .env file in /etc/gemfast or %s", homedirConf))
 		log.Warn().Msg("using default configuration values")

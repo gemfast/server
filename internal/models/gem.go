@@ -147,7 +147,7 @@ func SaveGemVersions(specs []*spec.Spec) error {
 		}
 		err := SaveGem(g)
 		if err != nil {
-			log.Error().Err(err).Str("gem", g.Name).Msg("failed to save dependencies for gem")
+			log.Error().Err(err).Str("detail", g.Name).Msg("failed to save dependencies for gem")
 			return err
 		}
 	}

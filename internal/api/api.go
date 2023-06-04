@@ -103,12 +103,12 @@ func saveAndReindex(tmpfile *os.File) error {
 	fp := fmt.Sprintf("%s/%s-%s.gem", config.Env.GemDir, s.Name, s.Version)
 	err = os.Rename(tmpfile.Name(), fp)
 	if err != nil {
-		log.Error().Err(err).Str("gem", fp).Msg("failed to rename tmpfile")
+		log.Error().Err(err).Str("detail", fp).Msg("failed to rename tmpfile")
 		return err
 	}
 	err = indexer.Get().AddGemToIndex(fp)
 	if err != nil {
-		log.Error().Err(err).Str("gem", s.Name).Msg("failed to add gem to index")
+		log.Error().Err(err).Str("detail", s.Name).Msg("failed to add gem to index")
 		return err
 	}
 	return nil
@@ -120,7 +120,7 @@ func fetchGemVersions(c *gin.Context, gemQuery string) ([]*models.Gem, error) {
 	for _, gem := range gems {
 		gv, err := models.GetGemVersions(gem)
 		if err != nil {
-			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
+			log.Trace().Err(err).Str("detail", gem).Msg("failed to fetch dependencies for gem")
 			return nil, err
 		}
 		for _, g := range gv {
@@ -150,7 +150,7 @@ func geminaboxUploadGem(c *gin.Context) {
 	defer os.Remove(tmpfile.Name())
 
 	if err = c.SaveUploadedFile(file, tmpfile.Name()); err != nil {
-		log.Error().Err(err).Str("tmpfile", tmpfile.Name()).Msg("failed to save uploaded file")
+		log.Error().Err(err).Str("detail", tmpfile.Name()).Msg("failed to save uploaded file")
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}

@@ -187,13 +187,13 @@ func CreateLocalUsers() error {
 			if err != nil {
 				return fmt.Errorf("could not marshal user to json: %v", err)
 			}
-			log.Trace().Str("username", username).Msg("added or modified user")
+			log.Trace().Str("detail", username).Msg("added or modified user")
 			b.Put([]byte(username), userBytes)
 		}
 		b = tx.Bucket([]byte(db.USER_BUCKET))
 		for _, username := range usernames {
 			if !m[username] {
-				log.Trace().Str("username", username).Msg("removed user")
+				log.Trace().Str("detail", username).Msg("removed user")
 				b.Delete([]byte(username))
 			}
 		}
@@ -231,7 +231,7 @@ func generatePassword() (string, error) {
 		return "", err
 	}
 	log.Warn().Msg("generating admin password because environment variable GEMFAST_ADMIN_PASSWORD not set")
-	log.Info().Str("password", pw).Msg("generated admin password")
+	log.Info().Str("detail", pw).Msg("generated admin password")
 	return pw, nil
 }
 

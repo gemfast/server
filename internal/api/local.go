@@ -61,7 +61,7 @@ func localIndexHandler(c *gin.Context) {
 
 func localDependenciesHandler(c *gin.Context) {
 	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
+	log.Trace().Str("detail", gemQuery).Msg("received gems")
 	if gemQuery == "" {
 		c.Status(http.StatusOK)
 		return
@@ -94,7 +94,7 @@ func localDependenciesHandler(c *gin.Context) {
 
 func localDependenciesJSONHandler(c *gin.Context) {
 	gemQuery := c.Query("gems")
-	log.Trace().Str("gems", gemQuery).Msg("received gems")
+	log.Trace().Str("detail", gemQuery).Msg("received gems")
 	if gemQuery == "" {
 		c.Status(http.StatusOK)
 		return
@@ -133,7 +133,7 @@ func localUploadGemHandler(c *gin.Context) {
 
 	err = os.WriteFile(tmpfile.Name(), bodyBytes, 0644)
 	if err != nil {
-		log.Error().Err(err).Str("tmpfile", tmpfile.Name()).Msg("failed to save uploaded file")
+		log.Error().Err(err).Str("detail", tmpfile.Name()).Msg("failed to save uploaded file")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
 	}

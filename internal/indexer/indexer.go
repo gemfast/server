@@ -91,18 +91,18 @@ func InitIndexer() error {
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.latestSpecsIdx))
 	indexer.files = append(indexer.files, indexer.prereleaseSpecsIdx)
 	indexer.files = append(indexer.files, fmt.Sprintf("%s.gz", indexer.prereleaseSpecsIdx))
-	log.Info().Str("dir", indexer.dir).Msg("indexer initialized")
+	log.Info().Str("detail", indexer.dir).Msg("indexer initialized")
 	shouldIndex := false
 	if _, err := os.Stat(indexer.destSpecsIdx); errors.Is(err, os.ErrNotExist) {
-		log.Info().Str("index", indexer.destSpecsIdx).Msg("index file not found - generating the index")
+		log.Info().Str("detail", indexer.destSpecsIdx).Msg("index file not found - generating the index")
 		shouldIndex = true
 	}
 	if _, err := os.Stat(indexer.destLatestSpecsIdx); errors.Is(err, os.ErrNotExist) {
-		log.Info().Str("index", indexer.destLatestSpecsIdx).Msg("index file not found - generating the index")
+		log.Info().Str("detail", indexer.destLatestSpecsIdx).Msg("index file not found - generating the index")
 		shouldIndex = true
 	}
 	if _, err := os.Stat(indexer.destPrereleaseSpecsIdx); errors.Is(err, os.ErrNotExist) {
-		log.Info().Str("index", indexer.destPrereleaseSpecsIdx).Msg("index file not found - generating the index")
+		log.Info().Str("detail", indexer.destPrereleaseSpecsIdx).Msg("index file not found - generating the index")
 		shouldIndex = true
 	}
 	if shouldIndex {
@@ -165,17 +165,17 @@ func mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 	for _, g := range gems {
 		fi, err := os.Stat(g)
 		if err != nil {
-			log.Error().Err(err).Str("gem", g).Msg("Failed to stat gem")
+			log.Error().Err(err).Str("detail", g).Msg("Failed to stat gem")
 			return nil, err
 		}
 		if fi.Size() == 0 {
-			log.Info().Str("gem", g).Msg("skipping zero-length gem")
+			log.Info().Str("detail", g).Msg("skipping zero-length gem")
 			continue
 		} else {
-			log.Trace().Str("gem", g).Msg("extracting spec from gem")
+			log.Trace().Str("detail", g).Msg("extracting spec from gem")
 			s, err = spec.FromFile(g)
 			if err != nil {
-				log.Error().Err(err).Str("gem", g).Msg("failed to extract spec from gem")
+				log.Error().Err(err).Str("detail", g).Msg("failed to extract spec from gem")
 				return nil, err
 			}
 			specs = append(specs, s)
@@ -191,7 +191,7 @@ func (indexer *Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 		if update {
 			marshalName = fmt.Sprintf("%s/%s/%s", indexer.destDir, indexer.quickMarshalDirBase, specFName)
 			if _, err := os.Stat(marshalName); err == nil {
-				log.Trace().Str("gemspec", marshalName).Msg("skipping marshal gemspec dump")
+				log.Trace().Str("detail", marshalName).Msg("skipping marshal gemspec dump")
 				continue
 			}
 		} else {
@@ -219,7 +219,7 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 		0666,
 	)
 	if err != nil {
-		log.Error().Err(err).Str("index", idxFile).Msg("failed to create modern index file")
+		log.Error().Err(err).Str("detail", idxFile).Msg("failed to create modern index file")
 		panic(err)
 	}
 	defer file.Close()
@@ -227,7 +227,7 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) {
 	dump := marshal.DumpSpecs(specs)
 	_, err = file.Write(dump)
 	if err != nil {
-		log.Error().Err(err).Str("index", idxFile).Msg("failed to write modern index")
+		log.Error().Err(err).Str("detail", idxFile).Msg("failed to write modern index")
 		panic(err)
 	}
 }
@@ -302,7 +302,7 @@ func (indexer *Indexer) installIndicies() {
 
 func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest string, ch chan<- int) {
 	if len(updated) == 0 {
-		log.Info().Str("name", src).Msg("no new gems for index")
+		log.Info().Str("detail", src).Msg("no new gems for index")
 		ch <- 0
 		return
 	}
@@ -314,14 +314,14 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 	var fileReader io.ReadCloser = file
 	out, err := ioutil.ReadAll(fileReader)
 	if err != nil {
-		log.Error().Err(err).Str("name", src).Msg("failed to read index")
+		log.Error().Err(err).Str("detail", src).Msg("failed to read index")
 		ch <- 0
 		return
 	}
 	buff := bytes.NewBuffer(out)
 
 	specsIdx = marshal.LoadSpecs(buff)
-	log.Debug().Str("name", src).Int("len", len(specsIdx)).Msg("loaded index")
+	log.Debug().Str("detail", src).Int("len", len(specsIdx)).Msg("loaded index")
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
 		if platform == "" {
@@ -371,7 +371,7 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 		0666,
 	)
 	if err != nil {
-		log.Error().Err(err).Str("index", dest).Msg("failed to create destination spec index file")
+		log.Error().Err(err).Str("detail", dest).Msg("failed to create destination spec index file")
 		panic(err)
 	}
 	defer file.Close()
@@ -379,10 +379,10 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 	dump := marshal.DumpSpecs(uniqSpecsIdx)
 	bytesWritten, err := file.Write(dump)
 	if err != nil {
-		log.Error().Err(err).Str("index", dest).Msg("failed to write destination spec index file")
+		log.Error().Err(err).Str("detail", dest).Msg("failed to write destination spec index file")
 		panic(err)
 	}
-	log.Info().Str("name", src).Int("len", len(uniqSpecsIdx)).Msg("updated index")
+	log.Info().Str("detail", src).Int("len", len(uniqSpecsIdx)).Msg("updated index")
 	ch <- bytesWritten
 }
 
@@ -429,7 +429,7 @@ func (indexer *Indexer) Reindex() error {
 	var updatedGems []string
 	fi, err := os.Stat(indexer.destSpecsIdx)
 	if err != nil {
-		log.Error().Err(err).Str("file", indexer.destSpecsIdx).Msg("destination specs index file does not exist")
+		log.Error().Err(err).Str("detail", indexer.destSpecsIdx).Msg("destination specs index file does not exist")
 		return err
 	}
 	specsMtime := fi.ModTime()
@@ -457,7 +457,7 @@ func (indexer *Indexer) Reindex() error {
 		log.Trace().Msg("no new gems")
 		return nil
 	}
-	log.Trace().Str("gems", strings.Join(updatedGems, ",")).Msg("updated gems")
+	log.Trace().Str("detail", strings.Join(updatedGems, ",")).Msg("updated gems")
 
 	return indexer.UpdateIndex(updatedGems)
 }
@@ -473,18 +473,18 @@ func (indexer *Indexer) compressAndMoveIndices() error {
 		if _, err := os.Stat(srcName); err == nil {
 			err = os.RemoveAll(destName)
 			if err != nil {
-				log.Error().Err(err).Str("file", destName).Msg("failed to remove existing file")
+				log.Error().Err(err).Str("detail", destName).Msg("failed to remove existing file")
 				return err
 			}
 			err = os.Rename(srcName, destName)
 			if err != nil {
-				log.Error().Err(err).Str("file", destName).Msg("failed to move file")
+				log.Error().Err(err).Str("detail", destName).Msg("failed to move file")
 				return err
 			}
 			newestMtime, _ := time.Parse(time.RFC3339, EPOCH)
 			err = os.Chtimes(destName, newestMtime, newestMtime)
 			if err != nil {
-				log.Error().Err(err).Str("file", destName).Msg("failed to update file mtime")
+				log.Error().Err(err).Str("detail", destName).Msg("failed to update file mtime")
 				return err
 			}
 		}
