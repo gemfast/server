@@ -5,6 +5,8 @@ set -ueo pipefail
 ruby --version
 bundle --version
 
+gem update --system
+
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << ENV > /etc/gemfast/.env
