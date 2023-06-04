@@ -17,7 +17,7 @@ type Config struct {
 	Dir       string `hcl:"dir,optional"`
 	GemDir    string `hcl:"gem_dir,optional"`
 	DBDir     string `hcl:"db_dir,optional"`
-	URL       string `hcl:"url"`
+	URL       string `hcl:"url,optional"`
 
 	TrialMode  bool            `hcl:"trial_mode,optional"`
 	LicenseKey string          `hcl:"license_key,optional"`
@@ -112,6 +112,9 @@ func setDefaultServerConfig(c *Config) {
 	if c.CaddyPort == 0 {
 
 		c.CaddyPort = 443
+	}
+	if c.URL == "" {
+		c.URL = fmt.Sprintf("https://localhost:%d", c.CaddyPort)
 	}
 	if c.LogLevel == "" {
 		c.LogLevel = "info"
