@@ -8,7 +8,7 @@ Requires=caddy.service
 Type=simple
 User=gemfast
 Group=gemfast
-ExecStart=/opt/gemfast/bin/gemfast-server
+ExecStart=/opt/gemfast/bin/gemfast-server start
 Restart=always
 RestartSec=10
 

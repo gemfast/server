@@ -5,19 +5,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/gemfast/server/internal/api"
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/cve"
-	"github.com/gemfast/server/internal/db"
-	"github.com/gemfast/server/internal/filter"
-	"github.com/gemfast/server/internal/indexer"
-	"github.com/gemfast/server/internal/license"
 	"github.com/rs/zerolog/log"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "gemfast",
-	Short: "gemfast is a private rubygems server",
+	Use:   "gemfast-server",
+	Short: "Gemfast is a rubygems server written in Go",
 }
 
 func init() {
@@ -32,19 +26,7 @@ func check(err error) {
 }
 
 func Execute() {
-	err := license.ValidateLicenseKey()
-	check(err)
-	log.Info().Msg("starting services")
-	cve.InitRubyAdvisoryDB()
-	err = db.Connect()
-	check(err)
-	defer db.BoltDB.Close()
-	err = indexer.InitIndexer()
-	check(err)
-	err = indexer.Get().GenerateIndex()
-	check(err)
-	err = filter.InitFilter()
-	check(err)
-	err = api.Run()
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+	err := rootCmd.Execute()
 	check(err)
 }
