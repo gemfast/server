@@ -103,32 +103,36 @@ func saveAndReindex(tmpfile *os.File) error {
 	fp := fmt.Sprintf("%s/%s-%s.gem", config.Cfg.GemDir, s.Name, s.Version)
 	err = os.Rename(tmpfile.Name(), fp)
 	if err != nil {
-		log.Error().Err(err).Str("gem", fp).Msg("failed to rename tmpfile")
+		log.Error().Err(err).Str("detail", fp).Msg("failed to rename tmpfile")
 		return err
 	}
 	err = indexer.Get().AddGemToIndex(fp)
 	if err != nil {
-		log.Error().Err(err).Str("gem", s.Name).Msg("failed to add gem to index")
+		log.Error().Err(err).Str("detail", s.Name).Msg("failed to add gem to index")
 		return err
 	}
 	return nil
 }
 
-// func fetchGemDependencies(c *gin.Context, gemQuery string) ([]models.Dependency, error) {
-// 	gems := strings.Split(gemQuery, ",")
-// 	var deps []models.Dependency
-// 	for _, gem := range gems {
-// 		existingDeps, err := models.GetDependencies(gem)
-// 		if err != nil {
-// 			log.Trace().Err(err).Str("gem", gem).Msg("failed to fetch dependencies for gem")
-// 			return nil, err
-// 		}
-// 		for _, d := range *existingDeps {
-// 			deps = append(deps, d)
-// 		}
-// 	}
-// 	return deps, nil
-// }
+func fetchGemVersions(c *gin.Context, gemQuery string) ([]*models.Gem, error) {
+	gems := strings.Split(gemQuery, ",")
+	var gemVersions []*models.Gem
+	for _, gem := range gems {
+		gv, err := models.GetGemVersions(gem)
+		if err != nil {
+			log.Trace().Err(err).Str("detail", gem).Msg("failed to fetch dependencies for gem")
+			return nil, err
+		}
+		for _, g := range gv {
+			gemVersions = append(gemVersions, &models.Gem{
+				Name:         g.Name,
+				Number:       g.Number,
+				Dependencies: g.Dependencies,
+			})
+		}
+	}
+	return gemVersions, nil
+}
 
 func geminaboxUploadGem(c *gin.Context) {
 	file, err := c.FormFile("file")
@@ -146,7 +150,7 @@ func geminaboxUploadGem(c *gin.Context) {
 	defer os.Remove(tmpfile.Name())
 
 	if err = c.SaveUploadedFile(file, tmpfile.Name()); err != nil {
-		log.Error().Err(err).Str("tmpfile", tmpfile.Name()).Msg("failed to save uploaded file")
+		log.Error().Err(err).Str("detail", tmpfile.Name()).Msg("failed to save uploaded file")
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}

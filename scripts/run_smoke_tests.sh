@@ -5,6 +5,8 @@ set -ueo pipefail
 ruby --version
 bundle --version
 
+gem update --system
+
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << ENV > /etc/gemfast/.env
@@ -21,7 +23,7 @@ ENV
 
 sudo dpkg -i gemfast*.deb
 sudo systemctl start gemfast
-sleep 2
+sleep 10
 sudo systemctl status gemfast
 sleep 2
 sudo systemctl status caddy

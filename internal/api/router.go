@@ -19,7 +19,7 @@ var efs embed.FS
 func Run() error {
 	router := initRouter()
 	port := fmt.Sprintf(":%d", config.Cfg.Port)
-	log.Info().Str("port", port).Msg("gemfast server ready")
+	log.Info().Str("port", port).Msg("gemfast server listening on port")
 	if config.Cfg.Mirrors[0].Enabled {
 		log.Info().Str("upstream", config.Cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
 	}
@@ -34,7 +34,7 @@ func initRouter() (r *gin.Engine) {
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
 	authMode := config.Cfg.Auth.Type
-	log.Info().Str("auth", authMode).Msg("configuring auth strategy")
+	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
 	case "github":
 		configureGitHubAuth(r)

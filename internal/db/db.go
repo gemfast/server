@@ -32,7 +32,7 @@ func Connect() error {
 	BoltDB = db
 	createBucket(GEM_BUCKET)
 	createBucket(USER_BUCKET)
-	log.Info().Str("db", dbFile).Msg("successfully connected to database")
+	log.Info().Str("detail", dbFile).Msg("successfully connected to database")
 	return nil
 }
 
