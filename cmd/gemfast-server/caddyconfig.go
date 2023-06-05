@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"text/template"
 
 	"github.com/gemfast/server/internal/config"
@@ -23,8 +24,11 @@ var caddyCfgCmd = &cobra.Command{
 	},
 }
 
+var Output string
+
 func init() {
 	rootCmd.AddCommand(caddyCfgCmd)
+	caddyCfgCmd.Flags().StringVarP(&Output, "output", "o", "", "Location to write the Caddyfile to")
 }
 
 func caddyConfig() {
@@ -38,5 +42,10 @@ func caddyConfig() {
 	var tpl bytes.Buffer
 	err = t.Execute(&tpl, m)
 	check(err)
+	if Output != "" {
+		err := os.WriteFile(Output, tpl.Bytes(), 0644)
+		check(err)
+		return
+	}
 	fmt.Println(tpl.String())
 }
