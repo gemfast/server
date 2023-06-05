@@ -16,7 +16,6 @@ build do
   mkdir "#{install_dir}/embedded/bin"
   mkdir "#{install_dir}/etc/#{name}"
   mkdir "#{install_dir}/systemd/#{name}"
-  copy "#{project_dir}/../gemfast/omnibus/files/#{name}/Caddyfile.tmpl", "#{install_dir}/etc/#{name}"
   copy "#{project_dir}/../gemfast/omnibus/files/#{name}/caddy.service", "#{install_dir}/systemd/#{name}"
   copy "#{project_dir}/caddy", "#{install_dir}/embedded/bin"
 end

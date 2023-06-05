@@ -1,12 +1,14 @@
 package cve
 
 import (
-	"gopkg.in/yaml.v3"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/gemfast/server/internal/config"
 
@@ -39,7 +41,8 @@ func init() {
 }
 
 func InitRubyAdvisoryDB() error {
-	cacheAdvisoryDB(config.Env.RubyAdvisoryDBDir)
+	fmt.Println(config.Cfg.CVE)
+	cacheAdvisoryDB(config.Cfg.CVE.RubyAdvisoryDBDir)
 	log.Info().Msg("successfully cached ruby advisory DB")
 	return nil
 }
@@ -192,7 +195,7 @@ func severity(cve GemAdvisory) string {
 
 func acceptableSeverity(cve GemAdvisory) bool {
 	severity := severity(cve)
-	highestSeverity := strings.ToLower(config.Env.MaxCVESeverity)
+	highestSeverity := strings.ToLower(config.Cfg.CVE.MaxSeverity)
 	if severity == "none" || highestSeverity == "critical" {
 		return true
 	}

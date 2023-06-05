@@ -14,7 +14,6 @@ install_dir "#{default_root}/#{name}"
 
 dependency "gemfast"
 dependency "caddy"
-dependency "gomplate"
 
 package :deb do
   compression_level 1

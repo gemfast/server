@@ -65,7 +65,7 @@ func Get() *Indexer {
 }
 
 func InitIndexer() error {
-	gemfastDir := config.Env.Dir
+	gemfastDir := config.Cfg.Dir
 	marshalName := "Marshal.4.8"
 	indexer = &Indexer{destDir: gemfastDir}
 	tmpdir, err := mkTempDir("gem_generate_index")
@@ -113,11 +113,11 @@ func InitIndexer() error {
 
 func (indexer *Indexer) GenerateIndex() error {
 	mkDirs(indexer.quickMarshalDir)
-	mkDirs(config.Env.GemDir)
-	mkDirs(config.Env.DBDir)
-	_, specsMissing := os.Stat(fmt.Sprintf("%s/specs.4.8.gz", config.Env.Dir))
-	_, prereleaseSpecsMissing := os.Stat(fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Env.Dir))
-	_, latestSpecsMissing := os.Stat(fmt.Sprintf("%s/latest_specs.4.8.gz", config.Env.Dir))
+	mkDirs(config.Cfg.GemDir)
+	mkDirs(config.Cfg.DBDir)
+	_, specsMissing := os.Stat(fmt.Sprintf("%s/specs.4.8.gz", config.Cfg.Dir))
+	_, prereleaseSpecsMissing := os.Stat(fmt.Sprintf("%s/prerelease_specs.4.8.gz", config.Cfg.Dir))
+	_, latestSpecsMissing := os.Stat(fmt.Sprintf("%s/latest_specs.4.8.gz", config.Cfg.Dir))
 	if specsMissing != nil || prereleaseSpecsMissing != nil || latestSpecsMissing != nil {
 		indexer.buildIndicies()
 		indexer.installIndicies()
@@ -146,7 +146,7 @@ func mkDirs(dir string) {
 
 func gemList() []string {
 	var gems []string
-	gemDir := config.Env.GemDir
+	gemDir := config.Cfg.GemDir
 	filepath.WalkDir(gemDir, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e

@@ -3,8 +3,6 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
@@ -103,10 +101,10 @@ func CreateAdminUserIfNotExists() error {
 		panic(err)
 	}
 	if user.Username != "" && len(user.Password) > 0 {
-		if config.Env.AdminPassword == "" {
+		if config.Cfg.Auth.AdminPassword == "" {
 			return nil
 		}
-		pw := config.Env.AdminPassword
+		pw := config.Cfg.Auth.AdminPassword
 		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(pw)); err != nil {
 			log.Info().Msg("updating admin user password to $GEMFAST_ADMIN_PASSWORD")
 		} else {
@@ -134,7 +132,7 @@ func CreateAdminUserIfNotExists() error {
 }
 
 func CreateLocalUsers() error {
-	if config.Env.AddLocalUsers == "" {
+	if len(config.Cfg.Auth.LocalUsers) == 0 {
 		log.Trace().Msg("no local users to add")
 		return nil
 	}
@@ -154,25 +152,16 @@ func CreateLocalUsers() error {
 	})
 
 	m := make(map[string]bool)
-	usersFromEnv := config.Env.AddLocalUsers
-	pairs := strings.Split(usersFromEnv, ",")
 	db.BoltDB.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(db.USER_BUCKET))
-		for _, pair := range pairs {
-			u := strings.Split(pair, ":")
-			username := u[0]
-			pw := u[1]
-			var role string
-			if len(u) != 3 {
-				role = config.Env.LocalUsersDefaultRole
-			} else {
-				role = u[2]
+		for _, u := range config.Cfg.Auth.LocalUsers {
+			username := u.Username
+			pw := u.Password
+			role := u.Role
+			if role == "" {
+				role = config.Cfg.Auth.DefaultUserRole
 			}
-			cost, err := strconv.Atoi(config.Env.BcryptDefaultCost)
-			if err != nil {
-				panic(err)
-			}
-			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), cost)
+			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), config.Cfg.Auth.BcryptCost)
 			if err != nil {
 				panic(err)
 			}
@@ -205,19 +194,15 @@ func CreateLocalUsers() error {
 func getAdminPassword() []byte {
 	var pw string
 	var err error
-	if config.Env.AdminPassword == "" {
+	if config.Cfg.Auth.AdminPassword == "" {
 		pw, err = generatePassword()
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		pw = config.Env.AdminPassword
+		pw = config.Cfg.Auth.AdminPassword
 	}
-	cost, err := strconv.Atoi(config.Env.BcryptDefaultCost)
-	if err != nil {
-		panic(err)
-	}
-	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), cost)
+	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), config.Cfg.Auth.BcryptCost)
 	if err != nil {
 		panic(err)
 	}

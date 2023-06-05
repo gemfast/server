@@ -2,6 +2,7 @@ package api
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"strings"
 
@@ -13,14 +14,14 @@ import (
 )
 
 //go:embed templates/*
-var f embed.FS
+var efs embed.FS
 
 func Run() error {
 	router := initRouter()
-	port := ":" + config.Env.Port
-	log.Info().Str("detail", port).Msg("gemfast server listening on port")
-	if config.Env.MirrorEnabled != "false" {
-		log.Info().Str("detail", config.Env.MirrorUpstream).Msg("mirroring upstream gem server")
+	port := fmt.Sprintf(":%d", config.Cfg.Port)
+	log.Info().Str("port", port).Msg("gemfast server listening on port")
+	if config.Cfg.Mirrors[0].Enabled {
+		log.Info().Str("upstream", config.Cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
 	}
 	return router.Run(port)
 }
@@ -28,11 +29,11 @@ func Run() error {
 func initRouter() (r *gin.Engine) {
 	gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
-	tmpl := template.Must(template.New("").ParseFS(f, "templates/github/*.tmpl"))
+	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
 	r.SetHTMLTemplate(tmpl)
 	r.Use(gin.Recovery())
 	r.HEAD("/", head)
-	authMode := config.Env.AuthMode
+	authMode := config.Cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
 	case "github":
@@ -82,7 +83,7 @@ func configureLocalAuth(r *gin.Engine) {
 }
 
 func configureNoneAuth(r *gin.Engine) {
-	if config.Env.MirrorEnabled != "false" {
+	if config.Cfg.Mirrors[0].Enabled {
 		mirror := r.Group("/")
 		configureMirror(mirror)
 	}
@@ -111,16 +112,16 @@ func configurePrivate(r *gin.Engine) {
 	privateTokenAuth := r.Group("/private")
 	privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	{
-		if config.Env.AllowAnonymousRead != "true" {
+		if config.Cfg.Auth.AllowAnonymousRead {
 			configurePrivateRead(privateTokenAuth)
 		}
 		configurePrivateWrite(privateTokenAuth)
 	}
-	if config.Env.MirrorEnabled != "false" {
+	if config.Cfg.Mirrors[0].Enabled {
 		mirror := r.Group("/")
 		configureMirror(mirror)
 	}
-	if config.Env.AllowAnonymousRead == "true" {
+	if config.Cfg.Auth.AllowAnonymousRead {
 		private := r.Group("/private")
 		configurePrivateRead(private)
 	}

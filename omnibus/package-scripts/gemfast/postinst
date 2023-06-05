@@ -18,10 +18,13 @@ mkdir -p /etc/gemfast
 mkdir -p /var/gemfast/db
 chown -R gemfast:gemfast /opt/gemfast
 
-if [ ! -f "/etc/gemfast/.env" ]; then
-  cp /opt/gemfast/etc/gemfast/.env /etc/gemfast
+if [ ! -f "/etc/gemfast/gemfast.hcl" ]; then
+  cat << CONFIG > /etc/gemfast/gemfast.hcl
+# This is the configuration file for Gemfast Server.
+# For documentation of all options, please visit https://gemfast.io/docs
+CONFIG
 fi
-touch /etc/gemfast/filter.conf
+
 chown -R gemfast:gemfast /var/gemfast
 chown -R gemfast:gemfast /etc/gemfast
 
