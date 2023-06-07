@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/gemfast/server/internal/api"
 	"github.com/gemfast/server/internal/cve"
 	"github.com/gemfast/server/internal/db"
@@ -38,6 +40,20 @@ func start() {
 	check(err)
 	err = filter.InitFilter()
 	check(err)
+	ticker := time.NewTicker(12 * time.Hour)
+	quit := make(chan struct{})
+	go func() {
+		log.Info().Msg("starting ruby advisory DB updater")
+		for {
+			select {
+			case <-ticker.C:
+				cve.InitRubyAdvisoryDB()
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 	err = api.Run()
 	check(err)
 }

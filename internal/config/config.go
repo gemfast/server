@@ -171,7 +171,7 @@ func setDefaultCVEConfig(c *Config) {
 		c.CVE = &CVEConfig{
 			Enabled:           false,
 			MaxSeverity:       "high",
-			RubyAdvisoryDBDir: "/opt/gemfast/share/ruby-advisory-db/gems",
+			RubyAdvisoryDBDir: "/opt/gemfast/share/ruby-advisory-db",
 		}
 	}
 }

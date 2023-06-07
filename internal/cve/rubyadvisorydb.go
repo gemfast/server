@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/gemfast/server/internal/config"
+	git "github.com/go-git/go-git/v5"
 
 	"github.com/akyoto/cache"
 	ggv "github.com/aquasecurity/go-gem-version"
@@ -36,23 +37,58 @@ type GemAdvisory struct {
 
 var AdvisoryDB *cache.Cache
 
-func init() {
+func newAdvisoryDBCache() {
 	AdvisoryDB = cache.New(24 * time.Hour)
 }
 
 func InitRubyAdvisoryDB() error {
-	fmt.Println(config.Cfg.CVE)
-	cacheAdvisoryDB(config.Cfg.CVE.RubyAdvisoryDBDir)
-	log.Info().Msg("successfully cached ruby advisory DB")
+	raDB := config.Cfg.CVE.RubyAdvisoryDBDir
+	if _, err := os.Stat(raDB); os.IsNotExist(err) {
+		_, err := git.PlainClone(raDB, false, &git.CloneOptions{
+			URL:   "https://github.com/rubysec/ruby-advisory-db",
+			Depth: 1,
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("failed to clone github.com/rubysec/ruby-advisory-db")
+			return fmt.Errorf("failed to clone github.com/rubysec/ruby-advisory-db: %w", err)
+		}
+	} else {
+		r, err := git.PlainOpen(raDB)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to open github.com/rubysec/ruby-advisory-db git directory")
+			return nil
+		}
+		w, err := r.Worktree()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get github.com/rubysec/ruby-advisory-db worktree")
+			return nil
+		}
+		log.Info().Msg("updating github.com/rubysec/ruby-advisory-db")
+		err = w.Pull(&git.PullOptions{RemoteName: "origin"})
+		if err != nil && err.Error() == "already up-to-date" {
+			log.Info().Msg("ruby-advisory-db is already up to date")
+			return nil
+		} else if err != nil {
+			log.Error().Err(err).Msg("failed to update github.com/rubysec/ruby-advisory-db")
+			return nil
+		}
+	}
+	newAdvisoryDBCache()
+	err := cacheAdvisoryDB(config.Cfg.CVE.RubyAdvisoryDBDir + "/gems")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to cache github.com/rubysec/ruby-advisory-db")
+		return fmt.Errorf("failed to cache github.com/rubysec/ruby-advisory-db: %w", err)
+	}
+	log.Info().Msg("successfully cached github.com/rubysec/ruby-advisory-db")
 	return nil
 }
 
-func cacheAdvisoryDB(path string) {
+func cacheAdvisoryDB(path string) error {
 	var cacheKey string
-	filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		var advisories []GemAdvisory
 		if err != nil {
-			panic(err)
+			return err
 		}
 		if info.IsDir() {
 			cacheKey = info.Name()
@@ -71,6 +107,11 @@ func cacheAdvisoryDB(path string) {
 
 		return nil
 	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to walk github.com/rubysec/ruby-advisory-db")
+		return fmt.Errorf("failed to walk github.com/rubysec/ruby-advisory-db: %w", err)
+	}
+	return nil
 }
 
 func gemAdvisoryFromFile(path string, ga *GemAdvisory) *GemAdvisory {
