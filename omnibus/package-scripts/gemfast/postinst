@@ -16,7 +16,6 @@ rm -f /usr/bin/gemfast
 ln -sf /opt/gemfast/bin/gemfast-server /usr/bin || error_exit "Cannot link gemfast-server to /usr/bin"
 mkdir -p /etc/gemfast
 mkdir -p /var/gemfast/db
-chown -R gemfast:gemfast /opt/gemfast
 
 if [ ! -f "/etc/gemfast/gemfast.hcl" ]; then
   cat << CONFIG > /etc/gemfast/gemfast.hcl
@@ -25,8 +24,10 @@ if [ ! -f "/etc/gemfast/gemfast.hcl" ]; then
 CONFIG
 fi
 
-chown -R gemfast:gemfast /var/gemfast
-chown -R gemfast:gemfast /etc/gemfast
+for d in "/var/gemfast" "/etc/gemfast" "/opt/gemfast"
+do
+  chown -R gemfast:gemfast $d
+done
 
 for sv in "caddy" "gemfast"
 do
