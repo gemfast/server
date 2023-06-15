@@ -8,6 +8,7 @@ bundle --version
 gem update --system
 
 sudo mkdir -p /etc/gemfast
+mkdir ./ruby-advisory-db
 sudo chown -R $USER: /etc/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
 caddy_port = 80
@@ -17,6 +18,8 @@ auth "none" {}
 cve {
     enabled = true
     max_severity = "medium"
+    ruby_advisory_db_dir = "./ruby-advisory-db"
+
 }
 CONFIG
 
