@@ -9,9 +9,6 @@ import (
 var Filters []string
 
 func InitFilter() error {
-	if !config.Cfg.Filter.Enabled {
-		return nil
-	}
 	filters := config.Cfg.Filter.Regex
 	Filters = filters
 	return nil

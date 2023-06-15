@@ -31,7 +31,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 		gem := models.GemFromGemParameter(gv[0])
 		cves := cve.GetCVEs(gem.Name, gem.Number)
 		if len(cves) != 0 {
-			c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gem %s due to CVE: %s", fileName, cves[0].URL))
+			c.String(http.StatusTeapot, fmt.Sprintf("Refusing to download gem %s due to CVE: %s", fileName, cves[0].URL))
 			return
 		}
 	}
@@ -84,7 +84,7 @@ func mirroredGemHandler(c *gin.Context) {
 		gem := models.GemFromGemParameter(gv[0])
 		cves := cve.GetCVEs(gem.Name, gem.Number)
 		if len(cves) != 0 {
-			c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gem %s due to CVE", fileName))
+			c.String(http.StatusTeapot, fmt.Sprintf("Refusing to download gem %s due to CVE", fileName))
 			return
 		}
 	}
@@ -133,15 +133,18 @@ func mirroredGemHandler(c *gin.Context) {
 func mirroredIndexHandler(c *gin.Context) {
 	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, "Failed to join url to create upstream path")
+		return
 	}
 	c.Redirect(http.StatusFound, path)
 }
 
 func mirroredInfoHandler(c *gin.Context) {
-	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
+	gem := c.Param("gem")
+	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, "info", gem)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, "Failed to join url to create upstream path")
+		return
 	}
 	c.Redirect(http.StatusFound, path)
 }
@@ -149,7 +152,8 @@ func mirroredInfoHandler(c *gin.Context) {
 func mirroredVersionsHandler(c *gin.Context) {
 	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, "Failed to join url to create upstream path")
+		return
 	}
 	c.Redirect(http.StatusFound, path)
 }
@@ -161,11 +165,12 @@ func mirroredDependenciesHandler(c *gin.Context) {
 		return
 	}
 	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to join url to create upstream path")
+		return
+	}
 	path += "?gems="
 	path += gemQuery
-	if err != nil {
-		panic(err)
-	}
 	c.Redirect(http.StatusFound, path)
 }
 
@@ -176,10 +181,11 @@ func mirroredDependenciesJSONHandler(c *gin.Context) {
 		return
 	}
 	path, err := url.JoinPath(config.Cfg.Mirrors[0].Upstream, c.FullPath())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to join url to create upstream path")
+		return
+	}
 	path += "?gems="
 	path += gemQuery
-	if err != nil {
-		panic(err)
-	}
 	c.Redirect(http.StatusFound, path)
 }

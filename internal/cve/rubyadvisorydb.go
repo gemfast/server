@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -35,18 +36,44 @@ type GemAdvisory struct {
 	} `yaml:"related"`
 }
 
-var AdvisoryDB *cache.Cache
+var lock = &sync.Mutex{}
 
-func newAdvisoryDBCache() {
-	AdvisoryDB = cache.New(24 * time.Hour)
+var advisoryDB *cache.Cache
+
+func getCache() *cache.Cache {
+	if advisoryDB == nil {
+		lock.Lock()
+		defer lock.Unlock()
+		if advisoryDB == nil {
+			log.Trace().Msg("creating singleton ruby advisory db")
+			advisoryDB = cache.New(24 * time.Hour)
+		}
+	}
+	return advisoryDB
 }
 
 func InitRubyAdvisoryDB() error {
+	err := updateAdvisoryRepo()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to update ruby-advisory-db")
+	}
+	getCache().Close()
+	err = cacheAdvisoryDB(config.Cfg.CVE.RubyAdvisoryDBDir + "/gems")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to cache github.com/rubysec/ruby-advisory-db")
+		return fmt.Errorf("failed to cache github.com/rubysec/ruby-advisory-db: %w", err)
+	}
+	log.Info().Msg("successfully cached github.com/rubysec/ruby-advisory-db")
+
+	return nil
+}
+
+func updateAdvisoryRepo() error {
 	raDB := config.Cfg.CVE.RubyAdvisoryDBDir
 	if _, err := os.Stat(raDB); os.IsNotExist(err) {
 		_, err := git.PlainClone(raDB, false, &git.CloneOptions{
-			URL:   "https://github.com/rubysec/ruby-advisory-db",
-			Depth: 1,
+			URL: "https://github.com/rubysec/ruby-advisory-db",
+			// Depth: 1,
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("failed to clone github.com/rubysec/ruby-advisory-db")
@@ -55,36 +82,29 @@ func InitRubyAdvisoryDB() error {
 	} else {
 		r, err := git.PlainOpen(raDB)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to open github.com/rubysec/ruby-advisory-db git directory")
-			return nil
+			return fmt.Errorf("failed to open github.com/rubysec/ruby-advisory-db git directory: %w", err)
 		}
 		w, err := r.Worktree()
 		if err != nil {
-			log.Error().Err(err).Msg("failed to get github.com/rubysec/ruby-advisory-db worktree")
-			return nil
+			return fmt.Errorf("failed to get github.com/rubysec/ruby-advisory-db worktree: %w", err)
 		}
 		log.Info().Msg("updating github.com/rubysec/ruby-advisory-db")
 		err = w.Pull(&git.PullOptions{RemoteName: "origin"})
 		if err != nil && err.Error() == "already up-to-date" {
 			log.Info().Msg("ruby-advisory-db is already up to date")
-			return nil
 		} else if err != nil {
 			log.Error().Err(err).Msg("failed to update github.com/rubysec/ruby-advisory-db")
-			return nil
 		}
+
 	}
-	newAdvisoryDBCache()
-	err := cacheAdvisoryDB(config.Cfg.CVE.RubyAdvisoryDBDir + "/gems")
-	if err != nil {
-		log.Error().Err(err).Msg("failed to cache github.com/rubysec/ruby-advisory-db")
-		return fmt.Errorf("failed to cache github.com/rubysec/ruby-advisory-db: %w", err)
-	}
-	log.Info().Msg("successfully cached github.com/rubysec/ruby-advisory-db")
 	return nil
 }
 
 func cacheAdvisoryDB(path string) error {
 	var cacheKey string
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat github.com/rubysec/ruby-advisory-db: %w", err)
+	}
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		var advisories []GemAdvisory
 		if err != nil {
@@ -96,14 +116,14 @@ func cacheAdvisoryDB(path string) error {
 		}
 		ga := &GemAdvisory{}
 		gemAdvisoryFromFile(path, ga)
-		a, found := AdvisoryDB.Get(cacheKey)
+		a, found := getCache().Get(cacheKey)
 		if found {
 			advisories = a.([]GemAdvisory)
 			advisories = append(advisories, *ga)
 		} else {
 			advisories = append(advisories, *ga)
 		}
-		AdvisoryDB.Set(cacheKey, advisories, 0)
+		getCache().Set(cacheKey, advisories, 0)
 
 		return nil
 	})
@@ -129,7 +149,7 @@ func gemAdvisoryFromFile(path string, ga *GemAdvisory) *GemAdvisory {
 
 func isPatched(gem string, version string) (bool, GemAdvisory, error) {
 	var cves []GemAdvisory
-	c, found := AdvisoryDB.Get(gem)
+	c, found := getCache().Get(gem)
 	if !found {
 		return true, GemAdvisory{}, nil
 	}
@@ -160,7 +180,7 @@ func isPatchedVersion(version ggv.Version, cve GemAdvisory) bool {
 
 func isUnaffected(gem string, version string) (bool, GemAdvisory, error) {
 	var cves []GemAdvisory
-	c, found := AdvisoryDB.Get(gem)
+	c, found := getCache().Get(gem)
 	if !found {
 		return true, GemAdvisory{}, nil
 	}
