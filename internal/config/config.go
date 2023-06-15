@@ -150,9 +150,27 @@ func setDefaultAuthConfig(c *Config) {
 			Type:               "local",
 			BcryptCost:         10,
 			AllowAnonymousRead: true,
-			DefaultUserRole:    "user",
+			DefaultUserRole:    "read",
 			LocalAuthSecretKey: pw,
 		}
+		return
+	}
+	if c.Auth.Type == "" {
+		c.Auth.Type = "local"
+	}
+	if c.Auth.BcryptCost == 0 {
+		c.Auth.BcryptCost = 10
+	}
+	if c.Auth.DefaultUserRole == "" {
+		c.Auth.DefaultUserRole = "read"
+	}
+	if c.Auth.LocalAuthSecretKey == "" {
+		pw, err := password.Generate(64, 10, 0, false, true)
+		if err != nil {
+			log.Error().Err(err).Msg("unable to generate a random secret key for local auth")
+			os.Exit(1)
+		}
+		c.Auth.LocalAuthSecretKey = pw
 	}
 }
 
@@ -163,6 +181,13 @@ func setDefaultFilterConfig(c *Config) {
 			Action:  "allow",
 			Regex:   []string{},
 		}
+		return
+	}
+	if c.Filter.Action == "" {
+		c.Filter.Action = "allow"
+	}
+	if c.Filter.Regex == nil {
+		c.Filter.Regex = []string{}
 	}
 }
 
@@ -173,6 +198,13 @@ func setDefaultCVEConfig(c *Config) {
 			MaxSeverity:       "high",
 			RubyAdvisoryDBDir: "/opt/gemfast/share/ruby-advisory-db",
 		}
+		return
+	}
+	if c.CVE.MaxSeverity == "" {
+		c.CVE.MaxSeverity = "high"
+	}
+	if c.CVE.RubyAdvisoryDBDir == "" {
+		c.CVE.RubyAdvisoryDBDir = "/opt/gemfast/share/ruby-advisory-db"
 	}
 }
 

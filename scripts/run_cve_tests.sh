@@ -21,6 +21,8 @@ cve {
 CONFIG
 
 sudo dpkg -i gemfast*.deb
+
+
 sudo systemctl start gemfast
 sleep 10
 sudo systemctl status gemfast
@@ -39,6 +41,11 @@ gem "activerecord", "4.2.0"
 CONFIG
 
 bundle config mirror.https://rubygems.org http://localhost
-bundle >/dev/null 2>&1 | grep "418"
+if [[ $(bundle 2>&1 | grep "418") ]]; then
+    echo "Gemfast is working"
+else
+    echo "Gemfast is not working"
+    exit 1
+fi
 
 popd

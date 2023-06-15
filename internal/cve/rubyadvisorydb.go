@@ -72,7 +72,7 @@ func updateAdvisoryRepo() error {
 	raDB := config.Cfg.CVE.RubyAdvisoryDBDir
 	if _, err := os.Stat(raDB); os.IsNotExist(err) {
 		_, err := git.PlainClone(raDB, false, &git.CloneOptions{
-			URL: "https://github.com/rubysec/ruby-advisory-db",
+			URL: "https://github.com/rubysec/ruby-advisory-db.git",
 			// Depth: 1,
 		})
 		if err != nil {
