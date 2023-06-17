@@ -1,0 +1,22 @@
+name: Changelog and Version
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, labeled, unlabeled, synchronize]
+
+jobs:
+  check-changelog-and-version:
+    name: "changelog and version"
+    runs-on: ubuntu-latest
+    if: |
+      !contains(github.event.pull_request.body, '[skip changelog]') &&
+      !contains(github.event.pull_request.body, '[changelog skip]') &&
+      !contains(github.event.pull_request.body, '[skip ci]') &&
+      !contains(github.event.pull_request.labels.*.name, 'skip changelog')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check that CHANGELOG and VERSION are modified
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth 1 && \
+          git diff remotes/origin/${{ github.base_ref }} --name-only | grep CHANGELOG.md
+          git diff remotes/origin/${{ github.base_ref }} --name-only | grep VERSION

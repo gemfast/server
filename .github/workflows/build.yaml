@@ -13,6 +13,7 @@ env:
 
 jobs:
   build:
+    name: "build"
     runs-on: ubuntu-latest
     env:
       BUNDLE_GEMFILE: ${{ github.workspace }}/omnibus/Gemfile
