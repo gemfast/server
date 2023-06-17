@@ -19,8 +19,6 @@ build do
   mkdir "#{install_dir}/systemd/#{name}"
   mkdir "#{install_dir}/share"
 
-  command "git clone https://github.com/rubysec/ruby-advisory-db.git #{install_dir}/share/ruby-advisory-db"
-
   %w(auth_model.conf gemfast_acl.csv).each do |f|
     copy "#{project_dir}/omnibus/files/#{name}/#{f}", "#{install_dir}/etc/#{name}"
   end

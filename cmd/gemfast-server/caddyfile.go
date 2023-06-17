@@ -10,28 +10,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const CaddyfileTemplate = `{{ .URL }}:{{ .CaddyPort }} 
+const CaddyfileTemplate = `{{ .URL }}:{{ .CaddyPort }}
 
 encode zstd gzip
 reverse_proxy :{{ .Port }}`
 
-var caddyCfgCmd = &cobra.Command{
-	Use:   "caddy-config",
-	Short: "Output the Caddy config",
-	Long:  "Reads the gemfast.hcl config file and outputs the Caddy config to stdout",
+var caddyfileCmd = &cobra.Command{
+	Use:   "caddyfile",
+	Short: "Write the Caddy configuration file to stdout",
+	Long:  "Reads the gemfast.hcl config file and outputs the Caddyfile to stdout or to an output file if specified.",
 	Run: func(cmd *cobra.Command, args []string) {
-		caddyConfig()
+		caddyfile()
 	},
 }
 
 var Output string
 
 func init() {
-	rootCmd.AddCommand(caddyCfgCmd)
-	caddyCfgCmd.Flags().StringVarP(&Output, "output", "o", "", "Location to write the Caddyfile to")
+	rootCmd.AddCommand(caddyfileCmd)
+	caddyfileCmd.Flags().StringVarP(&Output, "output", "o", "", "Location to write the Caddyfile to")
 }
 
-func caddyConfig() {
+func caddyfile() {
 	m := make(map[string]interface{})
 	m["URL"] = config.Cfg.URL
 	m["CaddyPort"] = config.Cfg.CaddyPort
