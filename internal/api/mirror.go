@@ -23,7 +23,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 	fileName := c.Param("gemspec.rz")
 	gemAllowed := filter.IsAllowed(fileName)
 	if !gemAllowed {
-		c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gemspec %s due to filter", fileName))
+		c.String(http.StatusMethodNotAllowed, fmt.Sprintf("Refusing to download gemspec %s due to filter", fileName))
 		return
 	}
 	if config.Cfg.CVE.Enabled {
@@ -31,7 +31,7 @@ func mirroredGemspecRzHandler(c *gin.Context) {
 		gem := models.GemFromGemParameter(gv[0])
 		cves := cve.GetCVEs(gem.Name, gem.Number)
 		if len(cves) != 0 {
-			c.String(http.StatusTeapot, fmt.Sprintf("Refusing to download gem %s due to CVE: %s", fileName, cves[0].URL))
+			c.String(http.StatusMethodNotAllowed, fmt.Sprintf("Refusing to download gem %s due to CVE: %s", fileName, cves[0].URL))
 			return
 		}
 	}
@@ -76,7 +76,7 @@ func mirroredGemHandler(c *gin.Context) {
 	fileName := c.Param("gem")
 	gemAllowed := filter.IsAllowed(fileName)
 	if !gemAllowed {
-		c.String(http.StatusForbidden, fmt.Sprintf("Refusing to download gems %s due to filter", fileName))
+		c.String(http.StatusMethodNotAllowed, fmt.Sprintf("Refusing to download gems %s due to filter", fileName))
 		return
 	}
 	if config.Cfg.CVE.Enabled {
@@ -84,7 +84,7 @@ func mirroredGemHandler(c *gin.Context) {
 		gem := models.GemFromGemParameter(gv[0])
 		cves := cve.GetCVEs(gem.Name, gem.Number)
 		if len(cves) != 0 {
-			c.String(http.StatusTeapot, fmt.Sprintf("Refusing to download gem %s due to CVE", fileName))
+			c.String(http.StatusMethodNotAllowed, fmt.Sprintf("Refusing to download gem %s due to CVE", fileName))
 			return
 		}
 	}
