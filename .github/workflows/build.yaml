@@ -8,11 +8,15 @@ on:
     branches: [ main ]
 
 env:
+  GO_VERSION: 1.19.8
   RUBY_VERSION: 3.1.2
   BUNDLER_VERSION: 2.3.7
 
 jobs:
+  if: |
+    !contains(github.event.pull_request.labels.*.name, 'skip:ci')
   build:
+    name: "build"
     runs-on: ubuntu-latest
     env:
       BUNDLE_GEMFILE: ${{ github.workspace }}/omnibus/Gemfile
@@ -21,7 +25,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.19.8
+          go-version: ${{ env.GO_VERSION }}
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
@@ -79,10 +83,37 @@ jobs:
         run: ls -R
       - name: CVE test
         run: ./scripts/run_cve_tests.sh
+
+  pre-release:
+    name: "pre-release"
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: Get version
+        id: get-version
+        run: |
+          v=$(cat VERSION)
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+      - name: Rename artifact
+        run: |
+          v="${{ steps.get-version.outputs.VERSION }}-pre"
+          mv gemfast-pkg gemfast-$v-amd64.deb
+          echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "${{ steps.get-version.outputs.VERSION }} Pre-Release"
+          files: |
+            *.deb
         
   cleanup:
     runs-on: ubuntu-latest
-    needs: [build, smoke-test, cve-test]
+    needs: [build, smoke-test, cve-test, pre-release]
     if: ${{ always() && !cancelled() && needs.build.result == 'success' }}
     steps:
       - uses: geekyeggo/delete-artifact@v2
