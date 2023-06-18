@@ -1,0 +1,18 @@
+name: Check Version
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, labeled, unlabeled, synchronize]
+
+jobs:
+  check-version:
+    name: "check version"
+    runs-on: ubuntu-latest
+    if: |
+      !contains(github.event.pull_request.labels.*.name, 'skip:version')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check that VERSION has been modified
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth 1 && \
+          git diff remotes/origin/${{ github.base_ref }} --name-only | grep VERSION
