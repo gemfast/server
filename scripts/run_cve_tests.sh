@@ -41,10 +41,10 @@ gem "activerecord", "4.2.0"
 CONFIG
 
 bundle config mirror.https://rubygems.org http://localhost
-if [[ $(bundle 2>&1 | grep "418") ]]; then
-    echo "Gemfast is working"
+if [[ $(bundle 2>&1 | grep "405") ]]; then
+    echo "cve is blocking activerecord 4.2.0"
 else
-    echo "Gemfast is not working"
+    echo "cve is not blocking activerecord 4.2.0"
     exit 1
 fi
 

@@ -187,7 +187,7 @@ func setDefaultFilterConfig(c *Config) {
 		c.Filter.Action = "allow"
 	}
 	if c.Filter.Regex == nil {
-		c.Filter.Regex = []string{}
+		c.Filter.Regex = []string{"*"}
 	}
 }
 

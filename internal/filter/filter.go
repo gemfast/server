@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/rs/zerolog/log"
 )
 
 var Filters []string
@@ -11,6 +12,7 @@ var Filters []string
 func InitFilter() error {
 	filters := config.Cfg.Filter.Regex
 	Filters = filters
+	log.Info().Msg("gem filter initialized")
 	return nil
 }
 

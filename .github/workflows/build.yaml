@@ -83,17 +83,34 @@ jobs:
         run: ls -R
       - name: CVE test
         run: ./scripts/run_cve_tests.sh
+  
+  filter-test:
+    name: "filter"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: Test artifact download
+        run: ls -R
+      - name: Filter test
+        run: ./scripts/run_filter_tests.sh
 
   pre-release:
     name: "pre-release"
     permissions: write-all
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: "ubuntu-latest"
-    needs: [build, smoke-test, cve-test]
+    needs: [build, smoke-test, cve-test, filter-test]
     steps:
       - uses: actions/checkout@v3
         with:
-          depth: 1
+          fetch-depth: 1
       - uses: actions/download-artifact@v3
         with:
           name: gemfast-pkg
@@ -118,7 +135,7 @@ jobs:
         
   cleanup:
     runs-on: ubuntu-latest
-    needs: [build, smoke-test, cve-test, pre-release]
+    needs: [build, smoke-test, cve-test, filter-test, pre-release]
     if: ${{ always() && !cancelled() && needs.build.result == 'success' }}
     steps:
       - uses: geekyeggo/delete-artifact@v2
