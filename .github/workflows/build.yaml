@@ -13,9 +13,9 @@ env:
   BUNDLER_VERSION: 2.3.7
 
 jobs:
-  if: |
-    !contains(github.event.pull_request.labels.*.name, 'skip:ci')
   build:
+    if: |
+      !contains(github.event.pull_request.labels.*.name, 'skip:ci')
     name: "build"
     runs-on: ubuntu-latest
     env:
@@ -86,9 +86,14 @@ jobs:
 
   pre-release:
     name: "pre-release"
+    permissions: write-all
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: "ubuntu-latest"
+    needs: [build, smoke-test, cve-test]
     steps:
+      - uses: actions/checkout@v3
+        with:
+          depth: 1
       - uses: actions/download-artifact@v3
         with:
           name: gemfast-pkg
@@ -100,7 +105,7 @@ jobs:
       - name: Rename artifact
         run: |
           v="${{ steps.get-version.outputs.VERSION }}-pre"
-          mv gemfast-pkg gemfast-$v-amd64.deb
+          mv *.deb gemfast-$v-amd64.deb
           echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
