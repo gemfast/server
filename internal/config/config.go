@@ -126,7 +126,7 @@ func setDefaultServerConfig(c *Config) {
 		c.GemDir = fmt.Sprintf("%s/gems", c.Dir)
 	}
 	if c.DBDir == "" {
-		c.DBDir = fmt.Sprintf("%s/gems", c.Dir)
+		c.DBDir = fmt.Sprintf("%s/db", c.Dir)
 	}
 }
 
