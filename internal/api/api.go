@@ -100,7 +100,12 @@ func saveAndReindex(tmpfile *os.File) error {
 		log.Error().Err(err).Msg("failed to read spec from tmpfile")
 		return err
 	}
-	fp := fmt.Sprintf("%s/%s-%s.gem", config.Cfg.GemDir, s.Name, s.Version)
+	var fp string
+	if s.OriginalPlatform == "ruby" {
+		fp = fmt.Sprintf("%s/%s-%s.gem", config.Cfg.GemDir, s.Name, s.Version)
+	} else {
+		fp = fmt.Sprintf("%s/%s-%s-%s.gem", config.Cfg.GemDir, s.Name, s.Version, s.OriginalPlatform)
+	}
 	err = os.Rename(tmpfile.Name(), fp)
 	if err != nil {
 		log.Error().Err(err).Str("detail", fp).Msg("failed to rename tmpfile")

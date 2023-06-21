@@ -165,7 +165,7 @@ func mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 	for _, g := range gems {
 		fi, err := os.Stat(g)
 		if err != nil {
-			log.Error().Err(err).Str("detail", g).Msg("Failed to stat gem")
+			log.Error().Err(err).Str("detail", g).Msg("failed to stat gem")
 			return nil, err
 		}
 		if fi.Size() == 0 {
