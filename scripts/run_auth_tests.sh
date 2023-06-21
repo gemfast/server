@@ -36,6 +36,8 @@ journalctl -u caddy
 
 jwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:2020/admin/login -d '{"username": "admin", "password":"foobar"}' | jq -r .token)
 token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" http://localhost:2020/admin/token | jq -r .token)
+bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:2020/admin/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
+bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:2020/admin/token | jq -r .token)
 
 mkdir ./test-vendor
 pushd test-vendor
@@ -74,6 +76,7 @@ popd # test-vendor
 mkdir ./test-private-gems
 cd test-private-gems
 
+# admin user
 cat << CONFIG > Gemfile
 source "http://localhost:80/private"
 gem "rails"
@@ -81,3 +84,38 @@ CONFIG
 
 bundle config http://localhost:80/private/ "admin:$token"
 bundle
+
+# read-only user
+sudo rm -f Gemfile Gemfile.lock
+cat << CONFIG > Gemfile
+source "https://rubygems.org"
+CONFIG
+bundle clean --force
+
+cat << CONFIG > Gemfile
+source "http://localhost:80/private"
+gem "rails"
+CONFIG
+
+bundle config http://localhost:80/private/ "bobvance:$bvtoken"
+bundle
+
+# unauthenticated
+sudo rm -f Gemfile Gemfile.lock
+cat << CONFIG > Gemfile
+source "https://rubygems.org"
+CONFIG
+bundle clean --force
+
+cat << CONFIG > Gemfile
+source "http://localhost:80/private"
+gem "rails"
+CONFIG
+
+bundle config http://localhost:80/private/ "noauth:faketoken"
+if [[ $(bundle 2>&1 | grep "Bad username or password") ]]; then
+    echo "gemfast is blocking unauthenticated access"
+else
+    echo "gemfast is not blocking unauthenticated access"
+    exit 1
+fi

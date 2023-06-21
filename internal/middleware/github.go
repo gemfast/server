@@ -134,7 +134,7 @@ func NewGitHubMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.Request.Header["Authorization"]
 		if len(auth) == 0 {
-			c.String(http.StatusBadRequest, fmt.Sprintf("missing authorization header"))
+			c.String(http.StatusBadRequest, "missing authorization header")
 			c.Abort()
 			return
 		}

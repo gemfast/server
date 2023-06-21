@@ -15,13 +15,13 @@ func NewTokenMiddleware() gin.HandlerFunc {
 		if !ok {
 			auth := c.Request.Header["Authorization"]
 			if len(auth) == 0 {
-				c.String(http.StatusBadRequest, "unable to parse username and token from request")
+				c.String(http.StatusUnauthorized, "unable to parse username and token from request")
 				c.Abort()
 				return
 			}
 			s := strings.Split(auth[0], ":")
 			if len(s) != 2 {
-				c.String(http.StatusBadRequest, "malformed Authorization header")
+				c.String(http.StatusUnauthorized, "malformed Authorization header")
 				c.Abort()
 				return
 			}
@@ -45,12 +45,12 @@ func NewTokenMiddleware() gin.HandlerFunc {
 			if ok {
 				c.Next()
 			} else {
-				c.String(http.StatusUnauthorized, fmt.Sprintf("user does not have access to the request %s %s", c.Request.Method, c.Request.URL.Path))
+				c.String(http.StatusForbidden, fmt.Sprintf("user does not have access to the request %s %s", c.Request.Method, c.Request.URL.Path))
 				c.Abort()
 				return
 			}
 		} else {
-			c.String(http.StatusUnauthorized, "invalid username or token")
+			c.String(http.StatusForbidden, "invalid username or token")
 			c.Abort()
 			return
 		}
