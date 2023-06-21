@@ -50,7 +50,7 @@ type AuthConfig struct {
 	AdminPassword      string      `hcl:"admin_password,optional"`
 	DefaultUserRole    string      `hcl:"default_user_role,optional"`
 	AllowAnonymousRead bool        `hcl:"allow_anonymous_read,optional"`
-	LocalUsers         []LocalUser `hcl:"users,optional"`
+	LocalUsers         []LocalUser `hcl:"user,block"`
 	LocalAuthSecretKey string      `hcl:"secret_key,optional"`
 	GitHubClientId     string      `hcl:"github_client_id,optional"`
 	GitHubClientSecret string      `hcl:"github_client_secret,optional"`
@@ -60,7 +60,7 @@ type AuthConfig struct {
 type LocalUser struct {
 	Username string `hcl:"username"`
 	Password string `hcl:"password"`
-	Role     string `hcl:"role"`
+	Role     string `hcl:"role,optional"`
 }
 
 var Cfg Config
@@ -78,15 +78,15 @@ func LoadConfig() {
 		for _, f := range cfgFileTries {
 			if _, err := os.Stat(f); err == nil {
 				cfgFile = f
-				log.Info().Str("file", f).Msg(fmt.Sprintf("found gemfast config file at %s", f))
+				log.Trace().Str("file", f).Msg(fmt.Sprintf("found gemfast config file at %s", f))
 				break
 			} else {
-				log.Info().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at %s", f))
+				log.Trace().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at %s", f))
 			}
 		}
 
 		if cfgFile == "" {
-			log.Info().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at any of %v", cfgFileTries))
+			log.Warn().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at any of %v", cfgFileTries))
 			log.Warn().Msg("using default configuration values")
 			Cfg = Config{}
 			setDefaultServerConfig(&Cfg)

@@ -98,7 +98,7 @@ func CreateUser(user User) error {
 func CreateAdminUserIfNotExists() error {
 	user, err := GetUser("admin")
 	if err != nil {
-		panic(err)
+		log.Trace().Msg("admin user not found")
 	}
 	if user.Username != "" && len(user.Password) > 0 {
 		if config.Cfg.Auth.AdminPassword == "" {
@@ -176,8 +176,11 @@ func CreateLocalUsers() error {
 			if err != nil {
 				return fmt.Errorf("could not marshal user to json: %v", err)
 			}
+			err = b.Put([]byte(username), userBytes)
+			if err != nil {
+				return fmt.Errorf("could not set: %v", err)
+			}
 			log.Trace().Str("detail", username).Msg("added or modified user")
-			b.Put([]byte(username), userBytes)
 		}
 		b = tx.Bucket([]byte(db.USER_BUCKET))
 		for _, username := range usernames {

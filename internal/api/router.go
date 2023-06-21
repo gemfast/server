@@ -27,7 +27,7 @@ func Run() error {
 }
 
 func initRouter() (r *gin.Engine) {
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
 	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
 	r.SetHTMLTemplate(tmpl)
@@ -74,7 +74,6 @@ func configureLocalAuth(r *gin.Engine) {
 	adminLocalAuth := r.Group("/admin")
 	adminLocalAuth.POST("/login", jwtMiddleware.LoginHandler)
 	adminLocalAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
-	adminLocalAuth.POST("/token", middleware.CreateTokenHandler)
 	adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
 	{
 		configureAdmin(adminLocalAuth)
@@ -112,7 +111,7 @@ func configurePrivate(r *gin.Engine) {
 	privateTokenAuth := r.Group("/private")
 	privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	{
-		if config.Cfg.Auth.AllowAnonymousRead {
+		if !config.Cfg.Auth.AllowAnonymousRead {
 			configurePrivateRead(privateTokenAuth)
 		}
 		configurePrivateWrite(privateTokenAuth)
@@ -151,6 +150,7 @@ func configurePrivateWrite(private *gin.RouterGroup) {
 
 // /admin
 func configureAdmin(admin *gin.RouterGroup) {
+	admin.POST("/token", middleware.CreateTokenHandler)
 	admin.GET("/gems", listGems)
 	admin.GET("/gems/:gem", getGem)
 	admin.GET("/users", listUsers)
