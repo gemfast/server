@@ -19,9 +19,9 @@ var efs embed.FS
 func Run() error {
 	router := initRouter()
 	port := fmt.Sprintf(":%d", config.Cfg.Port)
-	log.Info().Str("port", port).Msg("gemfast server listening on port")
+	log.Info().Str("detail", port).Msg("gemfast server listening on port")
 	if config.Cfg.Mirrors[0].Enabled {
-		log.Info().Str("upstream", config.Cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
+		log.Info().Str("detail", config.Cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
 	}
 	return router.Run(port)
 }
@@ -74,7 +74,6 @@ func configureLocalAuth(r *gin.Engine) {
 	adminLocalAuth := r.Group("/admin")
 	adminLocalAuth.POST("/login", jwtMiddleware.LoginHandler)
 	adminLocalAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
-	adminLocalAuth.POST("/token", middleware.CreateTokenHandler)
 	adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
 	{
 		configureAdmin(adminLocalAuth)
@@ -112,7 +111,7 @@ func configurePrivate(r *gin.Engine) {
 	privateTokenAuth := r.Group("/private")
 	privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	{
-		if config.Cfg.Auth.AllowAnonymousRead {
+		if !config.Cfg.Auth.AllowAnonymousRead {
 			configurePrivateRead(privateTokenAuth)
 		}
 		configurePrivateWrite(privateTokenAuth)
@@ -151,6 +150,7 @@ func configurePrivateWrite(private *gin.RouterGroup) {
 
 // /admin
 func configureAdmin(admin *gin.RouterGroup) {
+	admin.POST("/token", middleware.CreateTokenHandler)
 	admin.GET("/gems", listGems)
 	admin.GET("/gems/:gem", getGem)
 	admin.GET("/users", listUsers)

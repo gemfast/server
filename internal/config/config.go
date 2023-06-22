@@ -6,6 +6,7 @@ import (
 	"os/user"
 
 	"github.com/hashicorp/hcl/v2/hclsimple"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/sethvargo/go-password/password"
 )
@@ -50,7 +51,7 @@ type AuthConfig struct {
 	AdminPassword      string      `hcl:"admin_password,optional"`
 	DefaultUserRole    string      `hcl:"default_user_role,optional"`
 	AllowAnonymousRead bool        `hcl:"allow_anonymous_read,optional"`
-	LocalUsers         []LocalUser `hcl:"users,optional"`
+	LocalUsers         []LocalUser `hcl:"user,block"`
 	LocalAuthSecretKey string      `hcl:"secret_key,optional"`
 	GitHubClientId     string      `hcl:"github_client_id,optional"`
 	GitHubClientSecret string      `hcl:"github_client_secret,optional"`
@@ -60,7 +61,7 @@ type AuthConfig struct {
 type LocalUser struct {
 	Username string `hcl:"username"`
 	Password string `hcl:"password"`
-	Role     string `hcl:"role"`
+	Role     string `hcl:"role,optional"`
 }
 
 var Cfg Config
@@ -71,22 +72,22 @@ func LoadConfig() {
 		cfgFileTries := []string{"/etc/gemfast/gemfast.hcl"}
 		usr, err := user.Current()
 		if err != nil {
-			log.Debug().Err(err).Msg("unable to get the current linux user")
+			log.Warn().Err(err).Msg("unable to get the current linux user")
 		} else {
 			cfgFileTries = append(cfgFileTries, fmt.Sprintf("%s/.gemfast/gemfast.hcl", usr.HomeDir))
 		}
 		for _, f := range cfgFileTries {
 			if _, err := os.Stat(f); err == nil {
 				cfgFile = f
-				log.Info().Str("file", f).Msg(fmt.Sprintf("found gemfast config file at %s", f))
+				log.Info().Str("detail", f).Msg("found gemfast config file")
 				break
 			} else {
-				log.Info().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at %s", f))
+				log.Info().Err(err).Str("detail", f).Msg("unable to find a gemfast.hcl file")
 			}
 		}
 
 		if cfgFile == "" {
-			log.Info().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at any of %v", cfgFileTries))
+			log.Warn().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at any of %v", cfgFileTries))
 			log.Warn().Msg("using default configuration values")
 			Cfg = Config{}
 			setDefaultServerConfig(&Cfg)
@@ -119,6 +120,7 @@ func setDefaultServerConfig(c *Config) {
 	if c.LogLevel == "" {
 		c.LogLevel = "info"
 	}
+	configureLogLevel(c.LogLevel)
 	if c.Dir == "" {
 		c.Dir = "/var/gemfast"
 	}
@@ -128,6 +130,16 @@ func setDefaultServerConfig(c *Config) {
 	if c.DBDir == "" {
 		c.DBDir = fmt.Sprintf("%s/db", c.Dir)
 	}
+}
+
+func configureLogLevel(ll string) {
+	level, err := zerolog.ParseLevel(ll)
+	if err != nil {
+		log.Error().Err(err).Msg("invalid log_level, expecting one of trace, debug, info, warn, error, fatal, panic")
+		level = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(level)
+	log.Info().Str("detail", level.String()).Msg("set global log level")
 }
 
 func setDefaultMirrorConfig(c *Config) {

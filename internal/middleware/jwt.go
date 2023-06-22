@@ -62,11 +62,12 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 		Authorizator: func(data interface{}, c *gin.Context) bool {
 			claims := jwt.ExtractClaims(c)
 			role := claims[RoleKey].(string)
-			ok, _ := ACL.Enforce(role, c.Request.URL.Path, c.Request.Method)
-			if ok {
-				return true
+			ok, err := ACL.Enforce(role, c.Request.URL.Path, c.Request.Method)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to check acl")
+				return false
 			}
-			return false
+			return ok
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
@@ -80,7 +81,7 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 	})
 
 	if err != nil {
-		log.Error().Err(err).Msg("JWT Error")
+		log.Error().Err(err).Msg("JWT error")
 	}
 
 	err = authMiddleware.MiddlewareInit()
