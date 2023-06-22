@@ -27,7 +27,7 @@ func Run() error {
 }
 
 func initRouter() (r *gin.Engine) {
-	// gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	r = gin.Default()
 	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
 	r.SetHTMLTemplate(tmpl)
