@@ -11,20 +11,26 @@ import (
 )
 
 type Config struct {
-	Port      int    `hcl:"port,optional"`
-	CaddyPort int    `hcl:"caddy_port,optional"`
-	LogLevel  string `hcl:"log_level,optional"`
-	Dir       string `hcl:"dir,optional"`
-	GemDir    string `hcl:"gem_dir,optional"`
-	DBDir     string `hcl:"db_dir,optional"`
-	URL       string `hcl:"url,optional"`
+	Port     int    `hcl:"port,optional"`
+	LogLevel string `hcl:"log_level,optional"`
+	Dir      string `hcl:"dir,optional"`
+	GemDir   string `hcl:"gem_dir,optional"`
+	DBDir    string `hcl:"db_dir,optional"`
 
-	TrialMode  bool            `hcl:"trial_mode,optional"`
-	LicenseKey string          `hcl:"license_key,optional"`
-	Mirrors    []*MirrorConfig `hcl:"mirror,block"`
-	Filter     *FilterConfig   `hcl:"filter,block"`
-	CVE        *CVEConfig      `hcl:"cve,block"`
-	Auth       *AuthConfig     `hcl:"auth,block"`
+	TrialMode   bool            `hcl:"trial_mode,optional"`
+	LicenseKey  string          `hcl:"license_key,optional"`
+	CaddyConfig *CaddyConfig    `hcl:"caddy,block"`
+	Mirrors     []*MirrorConfig `hcl:"mirror,block"`
+	Filter      *FilterConfig   `hcl:"filter,block"`
+	CVE         *CVEConfig      `hcl:"cve,block"`
+	Auth        *AuthConfig     `hcl:"auth,block"`
+}
+
+type CaddyConfig struct {
+	AdminAPIEnabled bool   `hcl:"admin_api_enabled,optional"`
+	MetricsDisabled bool   `hcl:"metrics_disabled,optional"`
+	Host            string `hcl:"host,optional"`
+	Port            int    `hcl:"port,optional"`
 }
 
 type MirrorConfig struct {
@@ -99,22 +105,34 @@ func LoadConfig() {
 		os.Exit(1)
 	}
 	setDefaultServerConfig(&Cfg)
+	setDefaultCaddyConfig(&Cfg)
 	setDefaultMirrorConfig(&Cfg)
 	setDefaultAuthConfig(&Cfg)
 	setDefaultFilterConfig(&Cfg)
 	setDefaultCVEConfig(&Cfg)
 }
 
+func setDefaultCaddyConfig(c *Config) {
+	if c.CaddyConfig == nil {
+		c.CaddyConfig = &CaddyConfig{
+			AdminAPIEnabled: false,
+			MetricsDisabled: false,
+			Host:            "https://localhost:443",
+			Port:            443,
+		}
+		return
+	}
+	if c.CaddyConfig.Port == 0 {
+		c.CaddyConfig.Port = 443
+	}
+	if c.CaddyConfig.Host == "" {
+		c.CaddyConfig.Host = fmt.Sprintf("https://localhost:%d", c.CaddyConfig.Port)
+	}
+}
+
 func setDefaultServerConfig(c *Config) {
 	if c.Port == 0 {
 		c.Port = 2020
-	}
-	if c.CaddyPort == 0 {
-
-		c.CaddyPort = 443
-	}
-	if c.URL == "" {
-		c.URL = fmt.Sprintf("https://localhost:%d", c.CaddyPort)
 	}
 	if c.LogLevel == "" {
 		c.LogLevel = "info"
@@ -149,7 +167,7 @@ func setDefaultAuthConfig(c *Config) {
 		c.Auth = &AuthConfig{
 			Type:               "local",
 			BcryptCost:         10,
-			AllowAnonymousRead: true,
+			AllowAnonymousRead: false,
 			DefaultUserRole:    "read",
 			LocalAuthSecretKey: pw,
 		}
