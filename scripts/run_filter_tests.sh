@@ -74,9 +74,9 @@ CONFIG
 
 bundle config mirror.https://rubygems.org http://localhost
 if [[ $(bundle 2>&1 | grep "405") ]]; then
-    echo "Gemfast is working"
+    echo "gemfast is filtering activesupport 7.0.5"
 else
-    echo "Gemfast is not working"
+    echo "gemfast is not filtering activesupport 7.0.5"
     exit 1
 fi
 
