@@ -10,15 +10,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const CaddyfileTemplate = `{{ .Host }}:{{ .Port }}
-encode zstd gzip
-reverse_proxy :{{ .GemfastPort }}
-{{- if .AdminDisabled }}
-admin off
+const CaddyfileTemplate = `{{- if .AdminDisabled }}{
+	admin off
+}
 {{- end }}
-{{- if .MetricsEnabled }}
-metrics
-{{- end }}
+{{ .Host }}:{{ .Port }} {
+	encode zstd gzip
+	{{- if .MetricsEnabled }}
+	metrics /metrics
+	{{- end }}
+	reverse_proxy :{{ .GemfastPort }}
+}
 `
 
 var caddyfileCmd = &cobra.Command{
