@@ -46,69 +46,69 @@ jobs:
           path: omnibus/pkg/
           if-no-files-found: error
 
-  # smoke-test:
-  #   name: "smoke"
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         repository: rails/rails
-  #         path: clones/rails
-  #     - uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: ${{ env.RUBY_VERSION }}
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: gemfast-pkg
-  #     - name: Smoke test
-  #       run: ./scripts/run_smoke_tests.sh
+  smoke-test:
+    name: "smoke"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          repository: rails/rails
+          path: clones/rails
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: Smoke test
+        run: ./scripts/run_smoke_tests.sh
   
-  # cve-test:
-  #   name: "cve"
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: ${{ env.RUBY_VERSION }}
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: gemfast-pkg
-  #     - name: CVE test
-  #       run: ./scripts/run_cve_tests.sh
+  cve-test:
+    name: "cve"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: CVE test
+        run: ./scripts/run_cve_tests.sh
   
-  # filter-test:
-  #   name: "filter"
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: ${{ env.RUBY_VERSION }}
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: gemfast-pkg
-  #     - name: Filter test
-  #       run: ./scripts/run_filter_tests.sh
+  filter-test:
+    name: "filter"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: Filter test
+        run: ./scripts/run_filter_tests.sh
   
-  # private-gems-test:
-  #   name: "private-gems"
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: ${{ env.RUBY_VERSION }}
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: gemfast-pkg
-  #     - name: Private gems test
-  #       run: ./scripts/run_private_gem_tests.sh
+  private-gems-test:
+    name: "private-gems"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: Private gems test
+        run: ./scripts/run_private_gem_tests.sh
   
   auth-test:
     name: "auth"
@@ -125,46 +125,52 @@ jobs:
       - name: Private gems test
         run: ./scripts/run_auth_tests.sh
 
-  # pre-release:
-  #   name: "pre-release"
-  #   permissions: write-all
-  #   if: ${{ github.ref == 'refs/heads/main' }}
-  #   runs-on: "ubuntu-latest"
-  #   needs: [build, smoke-test, cve-test, filter-test, private-gems-test, auth-test]
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 1
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: gemfast-pkg
-  #     - name: Get version
-  #       id: get-version
-  #       run: |
-  #         v=$(cat VERSION)
-  #         echo "version=${v}" >> "$GITHUB_OUTPUT"
-  #     - name: Rename artifact
-  #       run: |
-  #         v="${{ steps.get-version.outputs.VERSION }}-pre"
-  #         mv *.deb gemfast-$v-amd64.deb
-  #         echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
-  #     - uses: "marvinpinto/action-automatic-releases@latest"
-  #       with:
-  #         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-  #         automatic_release_tag: "latest"
-  #         prerelease: true
-  #         title: "${{ steps.get-version.outputs.VERSION }} Pre-Release"
-  #         files: |
-  #           *.deb
+  pre-release:
+    name: "pre-release"
+    permissions: write-all
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: "ubuntu-latest"
+    needs:
+      - build
+      - smoke-test
+      - cve-test
+      - filter-test
+      - private-gems-test
+      - auth-test
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
+      - name: Get version
+        id: get-version
+        run: |
+          v=$(cat VERSION)
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+      - name: Rename artifact
+        run: |
+          v="${{ steps.get-version.outputs.VERSION }}-pre"
+          mv *.deb gemfast-$v-amd64.deb
+          echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "${{ steps.get-version.outputs.VERSION }} Pre-Release"
+          files: |
+            *.deb
         
   cleanup:
     runs-on: ubuntu-latest
     needs:
       - build
-      # - smoke-test
-      # - cve-test
-      # - filter-test
-      # - private-gems-test
+      - smoke-test
+      - cve-test
+      - filter-test
+      - private-gems-test
       - auth-test
     if: ${{ always() && !cancelled() && needs.build.result == 'success' }}
     steps:

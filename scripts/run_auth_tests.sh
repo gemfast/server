@@ -36,11 +36,8 @@ journalctl -u caddy
 
 jwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/login -d '{"username": "admin", "password":"foobar"}' | jq -r .token)
 token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" http://localhost:80/admin/token | jq -r .token)
-curl -X POST -H "Content-Type: application/json" http://localhost:80/admin/login -d '{"username": "bobvance", "password":"mypassword"}'
 bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
-curl -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:80/admin/token
 bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:80/admin/token | jq -r .token)
-
 
 mkdir ./test-vendor
 pushd test-vendor
@@ -110,16 +107,17 @@ else
 fi
 
 # read-only user
-# sudo rm -f Gemfile Gemfile.lock
-# cat << CONFIG > Gemfile
-# source "https://rubygems.org"
-# CONFIG
-# bundle clean --force
+sudo rm -f Gemfile Gemfile.lock
+cat << CONFIG > Gemfile
+source "https://rubygems.org"
+CONFIG
+bundle clean --force
 
-# cat << CONFIG > Gemfile
-# source "http://localhost:80/private"
-# gem "rails"
-# CONFIG
+sudo rm -f Gemfile Gemfile.lock
+cat << CONFIG > Gemfile
+source "http://localhost:80/private"
+gem "rails"
+CONFIG
 
-# bundle config http://localhost:80/private/ "bobvance:$bvtoken"
-# bundle
+bundle config http://localhost:80/private/ "bobvance:$bvtoken"
+bundle
