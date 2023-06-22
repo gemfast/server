@@ -10,10 +10,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const CaddyfileTemplate = `{{ .URL }}:{{ .CaddyPort }}
-
-encode zstd gzip
-reverse_proxy :{{ .Port }}`
+const CaddyfileTemplate = `{{- if .AdminDisabled }}{
+	admin off
+}
+{{- end }}
+{{ .Host }}:{{ .Port }} {
+	encode zstd gzip
+	{{- if .MetricsEnabled }}
+	metrics /metrics
+	{{- end }}
+	reverse_proxy :{{ .GemfastPort }}
+}
+`
 
 var caddyfileCmd = &cobra.Command{
 	Use:   "caddyfile",
@@ -33,9 +41,15 @@ func init() {
 
 func caddyfile() {
 	m := make(map[string]interface{})
-	m["URL"] = config.Cfg.URL
-	m["CaddyPort"] = config.Cfg.CaddyPort
-	m["Port"] = config.Cfg.Port
+	m["Host"] = config.Cfg.CaddyConfig.Host
+	m["Port"] = config.Cfg.CaddyConfig.Port
+	m["GemfastPort"] = config.Cfg.Port
+	if !config.Cfg.CaddyConfig.AdminAPIEnabled {
+		m["AdminDisabled"] = true
+	}
+	if !config.Cfg.CaddyConfig.MetricsDisabled {
+		m["MetricsEnabled"] = true
+	}
 	t, err := template.New("Caddyfile").Parse(CaddyfileTemplate)
 	check(err)
 

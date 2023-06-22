@@ -172,6 +172,7 @@ jobs:
       - filter-test
       - private-gems-test
       - auth-test
+      - pre-release
     if: ${{ always() && !cancelled() && needs.build.result == 'success' }}
     steps:
       - uses: geekyeggo/delete-artifact@v2

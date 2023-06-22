@@ -10,8 +10,10 @@ gem update --system
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-caddy_port = 80
-url = "http://localhost"
+caddy {
+  port = 80
+  host = "http://localhost"
+}
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 filter {
@@ -47,8 +49,10 @@ popd
 
 sudo rm -rf /etc/gemfast/gemfast.hcl
 sudo tee /etc/gemfast/gemfast.hcl > /dev/null <<'CONFIG'
-caddy_port = 80
-url = "http://localhost"
+caddy {
+  port = 80
+  host = "http://localhost"
+}
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 filter {
