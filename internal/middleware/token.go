@@ -30,7 +30,7 @@ func NewTokenMiddleware() gin.HandlerFunc {
 		}
 		user, err := models.GetUser(username)
 		if err != nil {
-			c.String(http.StatusNotFound, fmt.Sprintf("no user found with username %s", username))
+			c.String(http.StatusForbidden, fmt.Sprintf("no user found with username %s", username))
 			c.Abort()
 			return
 		}
