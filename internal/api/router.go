@@ -19,9 +19,9 @@ var efs embed.FS
 func Run() error {
 	router := initRouter()
 	port := fmt.Sprintf(":%d", config.Cfg.Port)
-	log.Info().Str("port", port).Msg("gemfast server listening on port")
+	log.Info().Str("detail", port).Msg("gemfast server listening on port")
 	if config.Cfg.Mirrors[0].Enabled {
-		log.Info().Str("upstream", config.Cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
+		log.Info().Str("detail", config.Cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
 	}
 	return router.Run(port)
 }

@@ -6,6 +6,7 @@ import (
 	"os/user"
 
 	"github.com/hashicorp/hcl/v2/hclsimple"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/sethvargo/go-password/password"
 )
@@ -71,17 +72,17 @@ func LoadConfig() {
 		cfgFileTries := []string{"/etc/gemfast/gemfast.hcl"}
 		usr, err := user.Current()
 		if err != nil {
-			log.Debug().Err(err).Msg("unable to get the current linux user")
+			log.Warn().Err(err).Msg("unable to get the current linux user")
 		} else {
 			cfgFileTries = append(cfgFileTries, fmt.Sprintf("%s/.gemfast/gemfast.hcl", usr.HomeDir))
 		}
 		for _, f := range cfgFileTries {
 			if _, err := os.Stat(f); err == nil {
 				cfgFile = f
-				log.Trace().Str("file", f).Msg(fmt.Sprintf("found gemfast config file at %s", f))
+				log.Info().Str("detail", f).Msg("found gemfast config file")
 				break
 			} else {
-				log.Trace().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at %s", f))
+				log.Info().Err(err).Str("detail", f).Msg("unable to find a gemfast.hcl file")
 			}
 		}
 
@@ -119,6 +120,7 @@ func setDefaultServerConfig(c *Config) {
 	if c.LogLevel == "" {
 		c.LogLevel = "info"
 	}
+	configureLogLevel(c.LogLevel)
 	if c.Dir == "" {
 		c.Dir = "/var/gemfast"
 	}
@@ -128,6 +130,16 @@ func setDefaultServerConfig(c *Config) {
 	if c.DBDir == "" {
 		c.DBDir = fmt.Sprintf("%s/db", c.Dir)
 	}
+}
+
+func configureLogLevel(ll string) {
+	level, err := zerolog.ParseLevel(ll)
+	if err != nil {
+		log.Error().Err(err).Msg("invalid log_level, expecting one of trace, debug, info, warn, error, fatal, panic")
+		level = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(level)
+	log.Info().Str("detail", level.String()).Msg("set global log level")
 }
 
 func setDefaultMirrorConfig(c *Config) {
