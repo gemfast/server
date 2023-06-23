@@ -101,7 +101,7 @@ func CreateAdminUserIfNotExists() error {
 	if err != nil {
 		log.Trace().Msg("admin user not found")
 	}
-	if user.Username != "" && len(user.Password) > 0 {
+	if user != nil && user.Username != "" && len(user.Password) > 0 {
 		if config.Cfg.Auth.AdminPassword == "" {
 			return nil
 		}

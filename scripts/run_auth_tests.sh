@@ -29,7 +29,6 @@ CONFIG
 sudo dpkg -i gemfast*.deb
 sudo systemctl start gemfast
 sleep 10
-journalctl -u gemfast
 sudo systemctl status gemfast
 sleep 2
 sudo systemctl status caddy
