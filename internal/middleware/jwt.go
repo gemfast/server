@@ -27,7 +27,7 @@ func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
 		PayloadFunc: func(data interface{}) jmw.MapClaims {
-			if v, ok := data.(models.User); ok {
+			if v, ok := data.(*models.User); ok {
 				return jmw.MapClaims{
 					IdentityKey: v.Username,
 					RoleKey:     v.Role,
