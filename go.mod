@@ -10,6 +10,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-git/go-git/v5 v5.7.0
+	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/juliangruber/go-intersect v1.1.0
 	github.com/keygen-sh/keygen-go/v2 v2.3.1
@@ -40,8 +41,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.0 // indirect
 	github.com/goccy/go-json v0.9.10 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
