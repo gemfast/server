@@ -14,11 +14,12 @@ import (
 )
 
 type User struct {
-	Username string `json:"username"`
-	Password []byte `json:"password,omitempty"`
-	Token    string `json:"token,omitempty"`
-	Role     string `json:"role"`
-	Type     string `json:"type"`
+	Username    string `json:"username"`
+	Password    []byte `json:"password,omitempty"`
+	Token       string `json:"token,omitempty"`
+	Role        string `json:"role"`
+	Type        string `json:"type"`
+	GitHubToken string `json:"github_token,omitempty"`
 }
 
 func ValidUserRoles() []string {

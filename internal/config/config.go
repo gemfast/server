@@ -61,7 +61,7 @@ type AuthConfig struct {
 	LocalAuthSecretKey string      `hcl:"secret_key,optional"`
 	GitHubClientId     string      `hcl:"github_client_id,optional"`
 	GitHubClientSecret string      `hcl:"github_client_secret,optional"`
-	GitHubUserOrgs     string      `hcl:"github_user_orgs,optional"`
+	GitHubUserOrgs     []string    `hcl:"github_user_orgs,optional"`
 }
 
 type LocalUser struct {

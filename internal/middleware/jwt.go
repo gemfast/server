@@ -6,7 +6,7 @@ import (
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/models"
 
-	jwt "github.com/appleboy/gin-jwt/v2"
+	jmw "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -19,26 +19,26 @@ type login struct {
 const IdentityKey = "id"
 const RoleKey = "role"
 
-func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
-	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
+func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
+	authMiddleware, err := jmw.New(&jmw.GinJWTMiddleware{
 		Realm:       "zone",
 		Key:         []byte(config.Cfg.Auth.LocalAuthSecretKey),
 		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
-		PayloadFunc: func(data interface{}) jwt.MapClaims {
+		PayloadFunc: func(data interface{}) jmw.MapClaims {
 			if v, ok := data.(models.User); ok {
-				return jwt.MapClaims{
+				return jmw.MapClaims{
 					IdentityKey: v.Username,
 					RoleKey:     v.Role,
 				}
 			} else {
 				log.Error().Msg("failed to map jwt claims")
 			}
-			return jwt.MapClaims{}
+			return jmw.MapClaims{}
 		},
 		IdentityHandler: func(c *gin.Context) interface{} {
-			claims := jwt.ExtractClaims(c)
+			claims := jmw.ExtractClaims(c)
 			return &models.User{
 				Username: claims[IdentityKey].(string),
 				Role:     claims[RoleKey].(string),
@@ -47,7 +47,7 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 		Authenticator: func(c *gin.Context) (interface{}, error) {
 			var loginVals login
 			if err := c.ShouldBind(&loginVals); err != nil {
-				return nil, jwt.ErrMissingLoginValues
+				return nil, jmw.ErrMissingLoginValues
 			}
 			user := models.User{
 				Username: loginVals.Username,
@@ -55,12 +55,12 @@ func NewJwtMiddleware() (*jwt.GinJWTMiddleware, error) {
 			}
 			authenticated, err := models.AuthenticateLocalUser(user)
 			if err != nil {
-				return nil, jwt.ErrFailedAuthentication
+				return nil, jmw.ErrFailedAuthentication
 			}
 			return authenticated, nil
 		},
 		Authorizator: func(data interface{}, c *gin.Context) bool {
-			claims := jwt.ExtractClaims(c)
+			claims := jmw.ExtractClaims(c)
 			role := claims[RoleKey].(string)
 			ok, err := ACL.Enforce(role, c.Request.URL.Path, c.Request.Method)
 			if err != nil {
