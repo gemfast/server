@@ -27,26 +27,26 @@ func ValidUserRoles() []string {
 }
 
 func userFromBytes(data []byte) (*User, error) {
-	var p *User
-	err := json.Unmarshal(data, &p)
+	var u *User
+	err := json.Unmarshal(data, &u)
 	if err != nil {
 		return nil, err
 	}
-	return p, nil
+	return u, nil
 }
 
-func AuthenticateLocalUser(incoming User) (User, error) {
+func AuthenticateLocalUser(incoming *User) (*User, error) {
 	current, err := GetUser(incoming.Username)
 	if err != nil {
-		return User{}, err
+		return nil, err
 	}
 	if err := bcrypt.CompareHashAndPassword(current.Password, incoming.Password); err != nil {
-		return User{}, err
+		return nil, err
 	}
 	return current, nil
 }
 
-func GetUser(username string) (User, error) {
+func GetUser(username string) (*User, error) {
 	var existing []byte
 	db.BoltDB.View(func(tx *bolt.Tx) error {
 		userBytes := tx.Bucket([]byte(db.USER_BUCKET)).Get([]byte(username))
@@ -54,18 +54,18 @@ func GetUser(username string) (User, error) {
 		return nil
 	})
 	if len(existing) == 0 {
-		return User{}, fmt.Errorf("user %s not found", username)
+		return nil, fmt.Errorf("user %s not found", username)
 	}
 	user, err := userFromBytes(existing)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to unmarshal user from bytes")
-		return User{}, err
+		return nil, err
 	}
-	return *user, nil
+	return user, nil
 }
 
-func GetUsers() ([]User, error) {
-	var users []User
+func GetUsers() ([]*User, error) {
+	var users []*User
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(db.USER_BUCKET))
 		b.ForEach(func(k, v []byte) error {
@@ -73,7 +73,7 @@ func GetUsers() ([]User, error) {
 			if err != nil {
 				return err
 			}
-			users = append(users, *user)
+			users = append(users, user)
 			return nil
 		})
 		return nil
@@ -84,7 +84,7 @@ func GetUsers() ([]User, error) {
 	return users, nil
 }
 
-func CreateUser(user User) error {
+func CreateUser(user *User) error {
 	userBytes, err := json.Marshal(user)
 	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
 		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
@@ -112,7 +112,7 @@ func CreateAdminUserIfNotExists() error {
 			return nil
 		}
 	}
-	user = User{
+	user = &User{
 		Username: "admin",
 		Password: getAdminPassword(),
 		Role:     "admin",
@@ -253,8 +253,8 @@ func CreateUserToken(username string) (string, error) {
 	return token, nil
 }
 
-func UpdateUser(user User) error {
-	ok := func(user User) bool {
+func UpdateUser(user *User) error {
+	ok := func(user *User) bool {
 		for _, role := range ValidUserRoles() {
 			if role == user.Role {
 				return true

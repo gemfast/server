@@ -12,7 +12,7 @@ import (
 	jmw "github.com/appleboy/gin-jwt/v2"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/models"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 
 	"github.com/akyoto/cache"
@@ -35,10 +35,10 @@ func init() {
 	Cache = cache.New(5 * time.Minute)
 }
 
-func NewGHHubMiddleware() (*jmw.GinJWTMiddleware, error) {
+func NewGitHubMiddleware() (*jmw.GinJWTMiddleware, error) {
 	authMiddleware, err := jmw.New(&jmw.GinJWTMiddleware{
 		Realm:       "zone",
-		Key:         []byte(config.Cfg.Auth.LocalAuthSecretKey),
+		Key:         []byte(config.Cfg.Auth.JWTSecretKey),
 		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
@@ -50,7 +50,9 @@ func NewGHHubMiddleware() (*jmw.GinJWTMiddleware, error) {
 				GitHubToken: claims[GitHubTokenKey].(string),
 			}
 		},
-		TimeFunc: time.Now,
+		TokenLookup:   "header: Authorization",
+		TokenHeadName: "Bearer",
+		TimeFunc:      time.Now,
 	})
 
 	if err != nil {
@@ -62,7 +64,6 @@ func NewGHHubMiddleware() (*jmw.GinJWTMiddleware, error) {
 }
 
 func payload(user *models.User) jwt.MapClaims {
-	fmt.Println(user)
 	return jwt.MapClaims{
 		IdentityKey:    user.Username,
 		RoleKey:        user.Role,
@@ -71,7 +72,7 @@ func payload(user *models.User) jwt.MapClaims {
 }
 
 func generateJWTToken(user *models.User) (string, time.Time, error) {
-	mw, err := NewGHHubMiddleware()
+	mw, err := NewGitHubMiddleware()
 	if err != nil {
 		panic(err)
 	}
@@ -179,7 +180,7 @@ func authenticateGitHubUser(at string) (*models.User, error) {
 	}
 	user, err := models.GetUser(username)
 	if err != nil {
-		newUser := models.User{
+		newUser := &models.User{
 			Username:    username,
 			Role:        config.Cfg.Auth.DefaultUserRole,
 			Type:        "github",
@@ -189,7 +190,7 @@ func authenticateGitHubUser(at string) (*models.User, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &newUser, nil
+		return newUser, nil
 	} else if user.GitHubToken != at {
 		user.GitHubToken = at
 		err = models.UpdateUser(user)
@@ -198,7 +199,7 @@ func authenticateGitHubUser(at string) (*models.User, error) {
 		}
 	}
 	Cache.Set(at, at, 5*time.Minute)
-	return &user, nil
+	return user, nil
 }
 
 func userMemberOfRequiredOrg(at string) error {
@@ -235,21 +236,41 @@ func userMemberOfRequiredOrg(at string) error {
 	return fmt.Errorf("user is not a member of any required github org")
 }
 
-func GitHubMiddleware() gin.HandlerFunc {
+func GitHubMiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		auth := c.Request.Header["Authorization"]
-		if len(auth) == 0 {
+		auth := c.GetHeader("Authorization")
+		if auth == "" {
 			c.String(http.StatusBadRequest, "missing authorization header")
 			c.Abort()
 			return
 		}
-		authFields := strings.Fields(auth[0])
+		authFields := strings.Split(auth, " ")
 		if len(authFields) != 2 || strings.ToLower(authFields[0]) != "bearer" {
 			c.String(http.StatusBadRequest, "unable to parse bearer token from request")
 			c.Abort()
 			return
 		}
-		ghAccessToken := authFields[1]
+		jwtToken, err := jwt.Parse(authFields[1], func(t *jwt.Token) (interface{}, error) {
+			fmt.Println(t.Method.Alg())
+			if jwt.GetSigningMethod("HS256") != t.Method {
+				return nil, jmw.ErrInvalidSigningAlgorithm
+			}
+			return []byte(config.Cfg.Auth.JWTSecretKey), nil
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("failed to parse jwt token from request")
+			c.String(http.StatusForbidden, "unable to parse jwt token from request")
+			c.Abort()
+			return
+		}
+		claims := jmw.ExtractClaimsFromToken(jwtToken)
+		if len(claims) == 0 {
+			c.String(http.StatusForbidden, "unable to extract claims from request")
+			c.Abort()
+			return
+		}
+		role := claims[RoleKey].(string)
+		ghAccessToken := claims[GitHubTokenKey].(string)
 		if _, found := Cache.Get(ghAccessToken); !found {
 			_, err := authenticateGitHubUser(ghAccessToken)
 			if err != nil {
@@ -257,6 +278,18 @@ func GitHubMiddleware() gin.HandlerFunc {
 				c.Abort()
 				return
 			}
+		}
+		ok, err := ACL.Enforce(role, c.Request.URL.Path, c.Request.Method)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to check acl")
+			c.String(http.StatusForbidden, "failed to check acl")
+			c.Abort()
+			return
+		}
+		if !ok {
+			c.String(http.StatusForbidden, "denied access to resource by ACL")
+			c.Abort()
+			return
 		}
 	}
 }

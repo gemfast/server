@@ -22,7 +22,7 @@ const RoleKey = "role"
 func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 	authMiddleware, err := jmw.New(&jmw.GinJWTMiddleware{
 		Realm:       "zone",
-		Key:         []byte(config.Cfg.Auth.LocalAuthSecretKey),
+		Key:         []byte(config.Cfg.Auth.JWTSecretKey),
 		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
@@ -49,7 +49,7 @@ func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 			if err := c.ShouldBind(&loginVals); err != nil {
 				return nil, jmw.ErrMissingLoginValues
 			}
-			user := models.User{
+			user := &models.User{
 				Username: loginVals.Username,
 				Password: []byte(loginVals.Password),
 			}

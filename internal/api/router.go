@@ -51,7 +51,7 @@ func configureGitHubAuth(r *gin.Engine) {
 	adminGitHubAuth.POST("/login", middleware.GitHubLoginHandler)
 	slash := r.Group("/")
 	slash.GET("/github/callback", middleware.GitHubCallbackHandler)
-	adminGitHubAuth.Use(middleware.GitHubMiddleware())
+	adminGitHubAuth.Use(middleware.GitHubMiddlewareFunc())
 	{
 		configureAdmin(adminGitHubAuth)
 	}
