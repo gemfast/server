@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/user"
 
@@ -58,10 +59,10 @@ type AuthConfig struct {
 	DefaultUserRole    string      `hcl:"default_user_role,optional"`
 	AllowAnonymousRead bool        `hcl:"allow_anonymous_read,optional"`
 	LocalUsers         []LocalUser `hcl:"user,block"`
-	LocalAuthSecretKey string      `hcl:"secret_key,optional"`
+	JWTSecretKey       string      `hcl:"secret_key,optional"`
 	GitHubClientId     string      `hcl:"github_client_id,optional"`
 	GitHubClientSecret string      `hcl:"github_client_secret,optional"`
-	GitHubUserOrgs     string      `hcl:"github_user_orgs,optional"`
+	GitHubUserOrgs     []string    `hcl:"github_user_orgs,optional"`
 }
 
 type LocalUser struct {
@@ -169,19 +170,45 @@ func setDefaultMirrorConfig(c *Config) {
 	}
 }
 
-func setDefaultAuthConfig(c *Config) {
-	if c.Auth == nil {
-		pw, err := password.Generate(64, 10, 0, false, true)
+func getJWTSecretKey() string {
+	keyPath := "/opt/gemfast/etc/gemfast/.jwt_secret_key"
+	if _, err := os.Stat(keyPath); err == nil {
+		log.Info().Str("detail", keyPath).Msg("using JWT secret key from file")
+		key, err := ioutil.ReadFile(keyPath)
 		if err != nil {
-			log.Error().Err(err).Msg("unable to generate a random secret key for local auth")
+			log.Error().Err(err).Msg("unable to read JWT secret key from file")
 			os.Exit(1)
 		}
+		return string(key)
+	}
+	log.Info().Msg("generating a new JWT secret key")
+	pw, err := password.Generate(64, 10, 0, false, true)
+	if err != nil {
+		log.Error().Err(err).Msg("unable to generate a new jwt secret key")
+		os.Exit(1)
+	}
+	file, err := os.Create(keyPath)
+	if err != nil {
+		log.Error().Err(err).Msg("unable to create JWT secret key file")
+		os.Exit(1)
+	}
+	defer file.Close()
+	_, err = file.WriteString(pw)
+	if err != nil {
+		log.Error().Err(err).Msg("unable to write JWT secret key to file")
+		log.Error().Msg("JWT secret key will not persist after server is stopped")
+	}
+	return pw
+}
+
+func setDefaultAuthConfig(c *Config) {
+	if c.Auth == nil {
 		c.Auth = &AuthConfig{
 			Type:               "local",
 			BcryptCost:         10,
 			AllowAnonymousRead: false,
 			DefaultUserRole:    "read",
-			LocalAuthSecretKey: pw,
+			JWTSecretKey:       getJWTSecretKey(),
 		}
 		return
 	}
@@ -194,13 +221,8 @@ func setDefaultAuthConfig(c *Config) {
 	if c.Auth.DefaultUserRole == "" {
 		c.Auth.DefaultUserRole = "read"
 	}
-	if c.Auth.LocalAuthSecretKey == "" {
-		pw, err := password.Generate(64, 10, 0, false, true)
-		if err != nil {
-			log.Error().Err(err).Msg("unable to generate a random secret key for local auth")
-			os.Exit(1)
-		}
-		c.Auth.LocalAuthSecretKey = pw
+	if c.Auth.JWTSecretKey == "" {
+		c.Auth.JWTSecretKey = getJWTSecretKey()
 	}
 }
 

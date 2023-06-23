@@ -10,6 +10,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-git/go-git/v5 v5.7.0
+	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/juliangruber/go-intersect v1.1.0
 	github.com/keygen-sh/keygen-go/v2 v2.3.1

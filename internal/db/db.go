@@ -12,6 +12,7 @@ import (
 
 const (
 	GEM_BUCKET  = "gems"
+	KEY_BUCKET  = "keys"
 	USER_BUCKET = "users"
 )
 
@@ -31,6 +32,7 @@ func Connect() error {
 	}
 	BoltDB = db
 	createBucket(GEM_BUCKET)
+	createBucket(KEY_BUCKET)
 	createBucket(USER_BUCKET)
 	log.Info().Str("detail", dbFile).Msg("successfully connected to database")
 	return nil

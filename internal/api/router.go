@@ -47,13 +47,13 @@ func initRouter() (r *gin.Engine) {
 }
 
 func configureGitHubAuth(r *gin.Engine) {
-	adminLocalAuth := r.Group("/admin")
-	adminLocalAuth.POST("/login", middleware.GitHubLoginHandler)
+	adminGitHubAuth := r.Group("/admin")
+	adminGitHubAuth.POST("/login", middleware.GitHubLoginHandler)
 	slash := r.Group("/")
 	slash.GET("/github/callback", middleware.GitHubCallbackHandler)
-	adminLocalAuth.Use(middleware.NewGitHubMiddleware())
+	adminGitHubAuth.Use(middleware.GitHubMiddlewareFunc())
 	{
-		configureAdmin(adminLocalAuth)
+		configureAdmin(adminGitHubAuth)
 	}
 	configurePrivate(r)
 }

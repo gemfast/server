@@ -62,13 +62,13 @@ func GemFromGemParameter(param string) *Gem {
 	}
 }
 
-func GemVersionsFromBytes(data []byte) (*[]Gem, error) {
-	var p *[]Gem
-	err := json.Unmarshal(data, &p)
+func GemVersionsFromBytes(data []byte) ([]*Gem, error) {
+	var gv []*Gem
+	err := json.Unmarshal(data, &gv)
 	if err != nil {
 		return nil, err
 	}
-	return p, nil
+	return gv, nil
 }
 
 func SaveGem(g *Gem) error {
@@ -79,7 +79,7 @@ func SaveGem(g *Gem) error {
 		return nil
 	})
 	if existing == nil {
-		infoChecksum := CalculateInfoChecksum([]Gem{*g})
+		infoChecksum := CalculateInfoChecksum([]*Gem{g})
 		g.InfoChecksum = infoChecksum
 		gemBytes, err := json.Marshal([]*Gem{g})
 		if err != nil {
@@ -98,17 +98,17 @@ func SaveGem(g *Gem) error {
 	} else {
 		gemVersions, _ := GemVersionsFromBytes(existing)
 		hashed := make(map[string]bool)
-		for _, gv := range *gemVersions {
+		for _, gv := range gemVersions {
 			hash := gv.Number + gv.Platform
 			hashed[hash] = true
 		}
 		newHash := g.Number + g.Platform
 		if !hashed[newHash] {
-			gemArr := append([]Gem{}, *gemVersions...)
-			gemArr = append(gemArr, *g)
+			gemArr := append([]*Gem{}, gemVersions...)
+			gemArr = append(gemArr, g)
 			infoChecksum := CalculateInfoChecksum(gemArr)
 			g.InfoChecksum = infoChecksum
-			*gemVersions = append(*gemVersions, *g)
+			gemVersions = append(gemVersions, g)
 			gemBytes, _ := json.Marshal(gemVersions)
 			err := db.BoltDB.Update(func(tx *bolt.Tx) error {
 				err := tx.Bucket([]byte(db.GEM_BUCKET)).Put([]byte(g.Name), gemBytes)
@@ -182,12 +182,12 @@ func DeleteGemVersion(toDelete *Gem) (int, error) {
 }
 
 // Read
-func GetGemVersions(name string) ([]Gem, error) {
-	var gems []Gem
+func GetGemVersions(name string) ([]*Gem, error) {
+	var gems []*Gem
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		g := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(name))
 		gem, _ := GemVersionsFromBytes(g)
-		gems = *gem
+		gems = gem
 		return nil
 	})
 	if err != nil {
@@ -197,8 +197,8 @@ func GetGemVersions(name string) ([]Gem, error) {
 
 }
 
-func GetGems() ([]*[]Gem, error) {
-	var allGems []*[]Gem
+func GetGems() ([][]*Gem, error) {
+	var allGems [][]*Gem
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(db.GEM_BUCKET))
 		c := b.Cursor()
@@ -227,8 +227,8 @@ func GetAllGemversions() []string {
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			gemVersions, _ := GemVersionsFromBytes(v)
-			l := len(*gemVersions)
-			for i, gv := range *gemVersions {
+			l := len(gemVersions)
+			for i, gv := range gemVersions {
 				if i == l-1 {
 					m[gv.Name] = append(m[gv.Name], gv.Number+" "+gv.InfoChecksum)
 				} else {
@@ -254,7 +254,7 @@ func GetAllGemversions() []string {
 }
 
 func GetGemInfo(name string) (string, error) {
-	var gemVersions *[]Gem
+	var gemVersions []*Gem
 	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		g := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(name))
 		gv, err := GemVersionsFromBytes(g)
@@ -264,7 +264,7 @@ func GetGemInfo(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return CompactIndexInfo(*gemVersions), nil
+	return CompactIndexInfo(gemVersions), nil
 }
 
 func GetAllGemNames() []string {
@@ -281,7 +281,7 @@ func GetAllGemNames() []string {
 	return names
 }
 
-func CompactIndexInfo(gems []Gem) string {
+func CompactIndexInfo(gems []*Gem) string {
 	var l string
 	versions := []string{"---"}
 	for _, g := range gems {
@@ -310,7 +310,7 @@ func CompactIndexInfo(gems []Gem) string {
 	return strings.Join(versions, "\n") + "\n"
 }
 
-func CalculateInfoChecksum(gems []Gem) string {
+func CalculateInfoChecksum(gems []*Gem) string {
 	info := CompactIndexInfo(gems)
 	md5 := md5.Sum([]byte(info))
 	return hex.EncodeToString(md5[:])

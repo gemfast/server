@@ -41,6 +41,8 @@ token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: applic
 bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
 bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:80/admin/token | jq -r .token)
 
+
+
 mkdir ./test-vendor
 pushd test-vendor
 

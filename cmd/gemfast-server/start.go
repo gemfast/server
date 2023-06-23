@@ -34,6 +34,7 @@ func start() {
 	err = db.Connect()
 	check(err)
 	defer db.BoltDB.Close()
+	check(err)
 	err = indexer.InitIndexer()
 	check(err)
 	err = indexer.Get().GenerateIndex()
