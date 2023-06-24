@@ -126,6 +126,7 @@ jobs:
 
   tagged-release:
     name: "release"
+    permissions: write-all
     runs-on: "ubuntu-latest"
     needs:
       - build
