@@ -90,3 +90,19 @@ func (suite *ApiTestSuite) TestInitRouterLocalAuth() {
 	}
 	suite.NotContains(paths, "/github/callback")
 }
+
+func (suite *ApiTestSuite) TestInitRouterGitHubAuth() {
+	config.LoadConfig()
+	config.Cfg.Auth.Type = "github"
+	config.Cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
+	config.Cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
+	r := initRouter()
+	var paths []string
+	for _, route := range r.Routes() {
+		paths = append(paths, route.Path)
+	}
+	expectedPaths := []string{"/private/api/v1/dependencies", "/private/api/v1/dependencies.json", "/private/specs.4.8.gz", "/private/latest_specs.4.8.gz", "/private/prerelease_specs.4.8.gz", "/private/quick/Marshal.4.8/:gemspec.rz", "/private/gems/:gem", "/private/versions", "/private/info/:gem", "/private/names", "/prerelease_specs.4.8.gz", "/admin/gems", "/admin/gems/:gem", "/admin/users", "/admin/users/:username", "/api/v1/dependencies", "/api/v1/dependencies.json", "/auth", "/up", "/specs.4.8.gz", "/latest_specs.4.8.gz", "/quick/Marshal.4.8/:gemspec.rz", "/gems/:gem", "/info/*gem", "/versions", "/private/api/v1/gems", "/private/upload", "/admin/token", "/private/api/v1/gems/yank", "/admin/users/:username", "/admin/users/:username/role/:role", "/github/callback"}
+	for _, p := range expectedPaths {
+		suite.Contains(paths, p)
+	}
+}

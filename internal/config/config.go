@@ -62,6 +62,7 @@ type AuthConfig struct {
 	AllowAnonymousRead bool        `hcl:"allow_anonymous_read,optional"`
 	LocalUsers         []LocalUser `hcl:"user,block"`
 	JWTSecretKey       string      `hcl:"secret_key,optional"`
+	JWTSecretKeyPath   string      `hcl:"secret_key_path,optional"`
 	GitHubClientId     string      `hcl:"github_client_id,optional"`
 	GitHubClientSecret string      `hcl:"github_client_secret,optional"`
 	GitHubUserOrgs     []string    `hcl:"github_user_orgs,optional"`
@@ -172,8 +173,7 @@ func setDefaultMirrorConfig(c *Config) {
 	}
 }
 
-func getJWTSecretKey() string {
-	keyPath := "/opt/gemfast/etc/gemfast/.jwt_secret_key"
+func readJWTSecretKeyFromPath(keyPath string) string {
 	if _, err := os.Stat(keyPath); err == nil {
 		log.Info().Str("detail", keyPath).Msg("using JWT secret key from file")
 		key, err := ioutil.ReadFile(keyPath)
@@ -199,18 +199,21 @@ func getJWTSecretKey() string {
 	if err != nil {
 		log.Error().Err(err).Msg("unable to write JWT secret key to file")
 		log.Error().Msg("JWT secret key will not persist after server is stopped")
+		os.Remove(keyPath)
 	}
 	return pw
 }
 
 func setDefaultAuthConfig(c *Config) {
+	defaultJWTSecretKeyPath := "/opt/gemfast/etc/gemfast/.jwt_secret_key"
 	if c.Auth == nil {
 		c.Auth = &AuthConfig{
 			Type:               "local",
 			BcryptCost:         10,
 			AllowAnonymousRead: false,
 			DefaultUserRole:    "read",
-			JWTSecretKey:       getJWTSecretKey(),
+			JWTSecretKeyPath:   defaultJWTSecretKeyPath,
+			JWTSecretKey:       readJWTSecretKeyFromPath(defaultJWTSecretKeyPath),
 		}
 		return
 	}
@@ -223,8 +226,11 @@ func setDefaultAuthConfig(c *Config) {
 	if c.Auth.DefaultUserRole == "" {
 		c.Auth.DefaultUserRole = "read"
 	}
+	if c.Auth.JWTSecretKeyPath == "" {
+		c.Auth.JWTSecretKeyPath = defaultJWTSecretKeyPath
+	}
 	if c.Auth.JWTSecretKey == "" {
-		c.Auth.JWTSecretKey = getJWTSecretKey()
+		readJWTSecretKeyFromPath(defaultJWTSecretKeyPath)
 	}
 }
 
