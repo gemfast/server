@@ -112,12 +112,17 @@ func CreateAdminUserIfNotExists() error {
 			return nil
 		}
 	}
+	pw, err := getAdminPassword()
+	if err != nil {
+		return err
+	}
 	user = &User{
 		Username: "admin",
-		Password: getAdminPassword(),
+		Password: pw,
 		Role:     "admin",
 		Type:     "local",
 	}
+	log.Trace().Msg("here")
 	userBytes, err := json.Marshal(user)
 	if err != nil {
 		return fmt.Errorf("could not marshal user to json: %v", err)
@@ -195,22 +200,22 @@ func CreateLocalUsers() error {
 	return nil
 }
 
-func getAdminPassword() []byte {
+func getAdminPassword() ([]byte, error) {
 	var pw string
 	var err error
 	if config.Cfg.Auth.AdminPassword == "" {
 		pw, err = generatePassword()
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	} else {
 		pw = config.Cfg.Auth.AdminPassword
 	}
 	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), config.Cfg.Auth.BcryptCost)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return pwbytes
+	return pwbytes, nil
 }
 
 func generatePassword() (string, error) {

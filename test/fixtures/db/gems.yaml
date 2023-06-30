@@ -1,7 +1,12 @@
 - bucket: gems
   pairs:
-    - key: roflcopter
+    - key: chef
       value:
-        - Name: roflcopter
-          Number: 1.0.0.1
+        - Name: chef
+          Number: 18.1.0
+          Platform: ruby
+    - key: rails
+      value:
+        - Name: rails
+          Number: 6.0.3.rc1
           Platform: ruby

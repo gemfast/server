@@ -189,7 +189,12 @@ func localYankHandler(c *gin.Context) {
 }
 
 func localVersionsHandler(c *gin.Context) {
-	versions := models.GetAllGemversions()
+	versions, err := models.GetAllGemversions()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get all gem versions")
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get all gem versions: %v", err))
+		return
+	}
 	c.String(http.StatusOK, strings.Join(versions, "\n"))
 }
 

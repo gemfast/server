@@ -1,6 +1,7 @@
 package models
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -10,21 +11,22 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type GemTestSuite struct {
+type ModelsTestSuite struct {
 	suite.Suite
 	Loader *fixtures.Loader
 	DBFile string
 }
 
-func (suite *GemTestSuite) SetupTest() {
+func (suite *ModelsTestSuite) SetupTest() {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		suite.FailNow("unable to get the current filename")
 	}
 	dirname := filepath.Dir(filename)
 	dbFile := dirname + "/../../test/fixtures/db/test.db"
-	fix := dirname + "/../../test/fixtures/db/gems.yaml"
-	fixtureFiles := []string{fix}
+	gemfix := dirname + "/../../test/fixtures/db/gems.yaml"
+	userfix := dirname + "/../../test/fixtures/db/users.yaml"
+	fixtureFiles := []string{gemfix, userfix}
 	l, err := fixtures.New(dbFile, fixtureFiles)
 	if err != nil {
 		suite.FailNow(err.Error())
@@ -38,15 +40,15 @@ func (suite *GemTestSuite) SetupTest() {
 	db.BoltDB = l.DB()
 }
 
-func (suite *GemTestSuite) TearDownTest() {
+func (suite *ModelsTestSuite) TearDownTest() {
 	suite.Loader.Close()
-	// err := os.Remove(suite.DBFile)
-	// if err != nil {
-	// 	suite.FailNow(err.Error())
-	// }
+	err := os.Remove(suite.DBFile)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
 }
 
-func (suite *GemTestSuite) TestSaveGem() {
+func (suite *ModelsTestSuite) TestSaveGem() {
 	gem := &Gem{
 		Name:     "activesupport",
 		Number:   "7.0.4.3",
@@ -65,8 +67,43 @@ func (suite *GemTestSuite) TestSaveGem() {
 	suite.NotEqual(ic, gem.InfoChecksum)
 }
 
-func TestGemTestSuite(t *testing.T) {
-	suite.Run(t, new(GemTestSuite))
+func (suite *ModelsTestSuite) TestGetGems() {
+	gems, err := GetGems()
+	suite.Nil(err)
+	suite.Equal(2, len(gems))
+	suite.Equal("chef", gems[0][0].Name)
+	suite.Equal("rails", gems[1][0].Name)
+}
+
+func (suite *ModelsTestSuite) TestGetGem() {
+	gem, err := GetGemVersions("rails")
+	suite.Nil(err)
+	suite.Equal(1, len(gem))
+	suite.Equal("rails", gem[0].Name)
+}
+
+func (suite *ModelsTestSuite) TestDeleteGemVersion() {
+	count, err := DeleteGemVersion(&Gem{Name: "rails", Number: "6.0.3.rc1"})
+	suite.Nil(err)
+	suite.Equal(1, count)
+}
+
+func (suite *ModelsTestSuite) TestGemAllGemVersions() {
+	gemVersions, err := GetAllGemversions()
+	suite.Nil(err)
+	suite.NotEqual(0, len(gemVersions))
+}
+
+func (suite *ModelsTestSuite) TestGemAllGemNames() {
+	names := GetAllGemNames()
+	suite.Equal(3, len(names))
+	suite.Contains(names, "---")
+	suite.Contains(names, "chef")
+	suite.Contains(names, "rails")
+}
+
+func TestModelsTestSuite(t *testing.T) {
+	suite.Run(t, new(ModelsTestSuite))
 }
 
 func TestGemFromGemParameter(t *testing.T) {
