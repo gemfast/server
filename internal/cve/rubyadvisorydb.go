@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/license"
 	git "github.com/go-git/go-git/v5"
 
 	"github.com/akyoto/cache"
@@ -52,7 +53,11 @@ func getCache() *cache.Cache {
 	return advisoryDB
 }
 
-func InitRubyAdvisoryDB() error {
+func InitRubyAdvisoryDB(l *license.License) error {
+	if !config.Cfg.CVE.Enabled || !l.Validated {
+		log.Trace().Msg("ruby advisory db disabled")
+		return nil
+	}
 	err := updateAdvisoryRepo()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to update ruby-advisory-db")

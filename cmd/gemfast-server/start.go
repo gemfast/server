@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/gemfast/server/internal/api"
-	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/cve"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/filter"
@@ -28,10 +27,10 @@ func init() {
 }
 
 func start() {
-	err := license.ValidateLicenseKey()
+	l, err := license.NewLicense()
 	check(err)
 	log.Info().Msg("starting services")
-	err = db.Connect()
+	err = db.Connect(l)
 	check(err)
 	defer db.BoltDB.Close()
 	check(err)
@@ -39,28 +38,26 @@ func start() {
 	check(err)
 	err = indexer.Get().GenerateIndex()
 	check(err)
-	if config.Cfg.Filter.Enabled {
-		err = filter.InitFilter()
-		check(err)
-	}
-	if config.Cfg.CVE.Enabled {
-		cve.InitRubyAdvisoryDB()
-		ticker := time.NewTicker(24 * time.Hour)
-		quit := make(chan struct{})
-		go func() {
-			log.Info().Msg("starting ruby advisory DB updater")
-			for {
-				select {
-				case <-ticker.C:
-					cve.InitRubyAdvisoryDB()
-				case <-quit:
-					ticker.Stop()
-					return
-				}
+	err = filter.InitFilter(l)
+	check(err)
+	cve.InitRubyAdvisoryDB(l)
+	ticker := time.NewTicker(24 * time.Hour)
+	quit := make(chan struct{})
+	go func() {
+		log.Info().Msg("starting ruby advisory DB updater")
+		for {
+			select {
+			case <-ticker.C:
+				cve.InitRubyAdvisoryDB(l)
+			case <-quit:
+				ticker.Stop()
+				return
 			}
-		}()
+		}
+	}()
+	if !l.Validated {
+		log.Warn().Msg("no valid license found, starting in trial mode")
 	}
-
-	err = api.Run()
+	err = api.Run(l)
 	check(err)
 }

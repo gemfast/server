@@ -9,27 +9,53 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func ValidateLicenseKey() error {
-	if config.Cfg.LicenseKey == "" {
-		log.Info().Msg("no license key supplied in GEMFAST_LICENSE_KEY variable")
-		log.Info().Msg("consider purchasing a license from https://gemfast.io")
-		log.Info().Msg("services will be started in trial mode")
-		config.TrialMode()
-		return nil
-	}
-	keygen.Account = "5590bc22-b3de-4e34-a27a-7cc07c3ba683"
-	keygen.Product = "2c4f54ab-c7a0-4f74-bfbd-9f4973c21121"
-	keygen.LicenseKey = config.Cfg.LicenseKey
+type License struct {
+	Account     string
+	Product     string
+	LicenseKey  string
+	Fingerprint string
+	Validated   bool
+	Machine     *keygen.Machine
+}
+
+func NewLicense() (*License, error) {
+	var l *License
 	fingerprint, err := machineid.ProtectedID(keygen.Product)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	l = &License{
+		Account:     "5590bc22-b3de-4e34-a27a-7cc07c3ba683",
+		Product:     "2c4f54ab-c7a0-4f74-bfbd-9f4973c21121",
+		LicenseKey:  config.Cfg.LicenseKey,
+		Fingerprint: fingerprint,
 	}
 
+	err = l.validateLicenseKey()
+	if err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+func (l *License) configureKeygen() {
+	keygen.Account = "5590bc22-b3de-4e34-a27a-7cc07c3ba683"
+	keygen.Product = "2c4f54ab-c7a0-4f74-bfbd-9f4973c21121"
+	keygen.LicenseKey = l.LicenseKey
+}
+
+func (l *License) validateLicenseKey() error {
+	if l.LicenseKey == "" {
+		log.Info().Msg("no license_key supplied in gemfast.hcl")
+		log.Info().Msg("consider purchasing a license from https://gemfast.io")
+		return nil
+	}
+	l.configureKeygen()
 	// Validate the license for the current fingerprint
-	license, err := keygen.Validate(fingerprint)
+	license, err := keygen.Validate(l.Fingerprint)
 	switch {
 	case err == keygen.ErrLicenseNotActivated:
-		_, err := license.Activate(fingerprint)
+		_, err := license.Activate(l.Fingerprint)
 		switch {
 		case err == keygen.ErrMachineLimitExceeded:
 			log.Error().Err(err).Msg("gemfast machine limit has been exceeded")
@@ -47,6 +73,11 @@ func ValidateLicenseKey() error {
 	}
 
 	log.Info().Msg("gemfast license is valid")
-	config.Cfg.TrialMode = false
+	l.Validated = true
+	m, err := license.Machine(l.Fingerprint)
+	if err != nil {
+		log.Error().Err(err).Msg("unable to get machine from fingerprint")
+	}
+	l.Machine = m
 	return nil
 }
