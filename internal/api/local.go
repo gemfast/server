@@ -212,3 +212,31 @@ func localInfoHandler(c *gin.Context) {
 	}
 	c.String(http.StatusOK, info+"\n")
 }
+
+func geminaboxUploadGem(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to read form file")
+		c.String(http.StatusBadRequest, "failed to read form file parameter")
+		return
+	}
+	tmpfile, err := ioutil.TempFile("/tmp", "*.gem")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create tmp file")
+		c.String(http.StatusInternalServerError, "failed to index gem")
+		return
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if err = c.SaveUploadedFile(file, tmpfile.Name()); err != nil {
+		log.Error().Err(err).Str("detail", tmpfile.Name()).Msg("failed to save uploaded file")
+		c.String(http.StatusInternalServerError, "failed to index gem")
+		return
+	}
+	if err = saveAndReindex(tmpfile); err != nil {
+		log.Error().Err(err).Msg("failed to reindex gem")
+		c.String(http.StatusInternalServerError, "failed to index gem")
+		return
+	}
+	c.String(http.StatusOK, "uploaded successfully")
+}

@@ -32,7 +32,8 @@ func initRouter() (r *gin.Engine) {
 	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
 	r.SetHTMLTemplate(tmpl)
 	r.Use(gin.Recovery())
-	r.HEAD("/", head)
+	r.GET("/up", health)
+	r.GET("/auth", authMode)
 	authMode := config.Cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {

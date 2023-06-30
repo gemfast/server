@@ -206,8 +206,8 @@ func GetGems() ([][]*Gem, error) {
 			g, _ := GemVersionsFromBytes(v)
 			allGems = append(allGems, g)
 		}
-		if allGems == nil {
-			return fmt.Errorf("no gems found")
+		if len(allGems) == 0 {
+			log.Debug().Msg("no gems found")
 		}
 		return nil
 	})

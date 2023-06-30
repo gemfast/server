@@ -1,0 +1,7 @@
+- bucket: gems
+  pairs:
+    - key: roflcopter
+      value:
+        - Name: roflcopter
+          Number: 1.0.0.1
+          Platform: ruby
