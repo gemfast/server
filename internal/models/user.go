@@ -107,7 +107,7 @@ func CreateAdminUserIfNotExists() error {
 		}
 		pw := config.Cfg.Auth.AdminPassword
 		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(pw)); err != nil {
-			log.Info().Msg("updating admin user password to $GEMFAST_ADMIN_PASSWORD")
+			log.Info().Msg("updating admin user password")
 		} else {
 			return nil
 		}
@@ -224,7 +224,7 @@ func generatePassword() (string, error) {
 		log.Error().Err(err).Msg("failed to generate an admin password")
 		return "", err
 	}
-	log.Warn().Msg("generating admin password because environment variable GEMFAST_ADMIN_PASSWORD not set")
+	log.Warn().Msg("generating admin password because admin_password not set")
 	log.Info().Str("detail", pw).Msg("generated admin password")
 	return pw, nil
 }

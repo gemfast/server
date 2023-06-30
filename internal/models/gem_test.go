@@ -1,6 +1,7 @@
 package models
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,11 +24,11 @@ func (suite *ModelsTestSuite) SetupTest() {
 		suite.FailNow("unable to get the current filename")
 	}
 	dirname := filepath.Dir(filename)
-	dbFile := dirname + "/../../test/fixtures/db/test.db"
+	dbFile, _ := ioutil.TempFile("", "ApiTestSuite")
 	gemfix := dirname + "/../../test/fixtures/db/gems.yaml"
 	userfix := dirname + "/../../test/fixtures/db/users.yaml"
 	fixtureFiles := []string{gemfix, userfix}
-	l, err := fixtures.New(dbFile, fixtureFiles)
+	l, err := fixtures.New(dbFile.Name(), fixtureFiles)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -36,7 +37,7 @@ func (suite *ModelsTestSuite) SetupTest() {
 		suite.FailNow(err.Error())
 	}
 	suite.Loader = l
-	suite.DBFile = dbFile
+	suite.DBFile = dbFile.Name()
 	db.BoltDB = l.DB()
 }
 
@@ -46,6 +47,10 @@ func (suite *ModelsTestSuite) TearDownTest() {
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
+}
+
+func TestModelsTestSuite(t *testing.T) {
+	suite.Run(t, new(ModelsTestSuite))
 }
 
 func (suite *ModelsTestSuite) TestSaveGem() {
@@ -100,10 +105,6 @@ func (suite *ModelsTestSuite) TestGemAllGemNames() {
 	suite.Contains(names, "---")
 	suite.Contains(names, "chef")
 	suite.Contains(names, "rails")
-}
-
-func TestModelsTestSuite(t *testing.T) {
-	suite.Run(t, new(ModelsTestSuite))
 }
 
 func TestGemFromGemParameter(t *testing.T) {
