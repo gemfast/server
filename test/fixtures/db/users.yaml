@@ -1,0 +1,16 @@
+- bucket: users
+  pairs:
+    - key: bobvance
+      value:
+        Username: bobvance
+        Password: JDJhJDEwJGFPMHVXVlZ2c3ZsT3A0Sk1FZDV1UU8wdFpLYVhmQ05rOGlkT20uSjZsM3NaU3ZUUmFuV3Np
+        Role: admin
+        Type: local
+        Token: 12345678abcdef
+    - key: phyllisvance
+      value:
+        Username: phyllisvance
+        Role: write
+        Type: github
+        GitHubToken: _ghabcdef
+        Token: 12345678abcdef

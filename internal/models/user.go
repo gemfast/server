@@ -107,17 +107,22 @@ func CreateAdminUserIfNotExists() error {
 		}
 		pw := config.Cfg.Auth.AdminPassword
 		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(pw)); err != nil {
-			log.Info().Msg("updating admin user password to $GEMFAST_ADMIN_PASSWORD")
+			log.Info().Msg("updating admin user password")
 		} else {
 			return nil
 		}
 	}
+	pw, err := getAdminPassword()
+	if err != nil {
+		return err
+	}
 	user = &User{
 		Username: "admin",
-		Password: getAdminPassword(),
+		Password: pw,
 		Role:     "admin",
 		Type:     "local",
 	}
+	log.Trace().Msg("here")
 	userBytes, err := json.Marshal(user)
 	if err != nil {
 		return fmt.Errorf("could not marshal user to json: %v", err)
@@ -195,22 +200,22 @@ func CreateLocalUsers() error {
 	return nil
 }
 
-func getAdminPassword() []byte {
+func getAdminPassword() ([]byte, error) {
 	var pw string
 	var err error
 	if config.Cfg.Auth.AdminPassword == "" {
 		pw, err = generatePassword()
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	} else {
 		pw = config.Cfg.Auth.AdminPassword
 	}
 	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), config.Cfg.Auth.BcryptCost)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return pwbytes
+	return pwbytes, nil
 }
 
 func generatePassword() (string, error) {
@@ -219,7 +224,7 @@ func generatePassword() (string, error) {
 		log.Error().Err(err).Msg("failed to generate an admin password")
 		return "", err
 	}
-	log.Warn().Msg("generating admin password because environment variable GEMFAST_ADMIN_PASSWORD not set")
+	log.Warn().Msg("generating admin password because admin_password not set")
 	log.Info().Str("detail", pw).Msg("generated admin password")
 	return pw, nil
 }

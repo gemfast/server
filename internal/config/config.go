@@ -13,11 +13,13 @@ import (
 )
 
 type Config struct {
-	Port     int    `hcl:"port,optional"`
-	LogLevel string `hcl:"log_level,optional"`
-	Dir      string `hcl:"dir,optional"`
-	GemDir   string `hcl:"gem_dir,optional"`
-	DBDir    string `hcl:"db_dir,optional"`
+	Port          int    `hcl:"port,optional"`
+	LogLevel      string `hcl:"log_level,optional"`
+	Dir           string `hcl:"dir,optional"`
+	GemDir        string `hcl:"gem_dir,optional"`
+	DBDir         string `hcl:"db_dir,optional"`
+	ACLPath       string `hcl:"acl_path,optional"`
+	AuthModelPath string `hcl:"auth_model_path,optional"`
 
 	TrialMode   bool            `hcl:"trial_mode,optional"`
 	LicenseKey  string          `hcl:"license_key,optional"`
@@ -60,6 +62,7 @@ type AuthConfig struct {
 	AllowAnonymousRead bool        `hcl:"allow_anonymous_read,optional"`
 	LocalUsers         []LocalUser `hcl:"user,block"`
 	JWTSecretKey       string      `hcl:"secret_key,optional"`
+	JWTSecretKeyPath   string      `hcl:"secret_key_path,optional"`
 	GitHubClientId     string      `hcl:"github_client_id,optional"`
 	GitHubClientSecret string      `hcl:"github_client_secret,optional"`
 	GitHubUserOrgs     []string    `hcl:"github_user_orgs,optional"`
@@ -88,8 +91,6 @@ func LoadConfig() {
 				cfgFile = f
 				log.Info().Str("detail", f).Msg("found gemfast config file")
 				break
-			} else {
-				log.Info().Err(err).Str("detail", f).Msg("unable to find a gemfast.hcl file")
 			}
 		}
 
@@ -97,7 +98,7 @@ func LoadConfig() {
 			log.Warn().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at any of %v", cfgFileTries))
 			log.Warn().Msg("using default configuration values")
 			Cfg = Config{}
-			setDefaultServerConfig(&Cfg)
+			setDefaultConfig(&Cfg)
 			return
 		}
 	}
@@ -106,6 +107,10 @@ func LoadConfig() {
 		log.Error().Err(err).Msg(fmt.Sprintf("failed to load configuration file %s", cfgFile))
 		os.Exit(1)
 	}
+	setDefaultConfig(&Cfg)
+}
+
+func setDefaultConfig(c *Config) {
 	setDefaultServerConfig(&Cfg)
 	setDefaultCaddyConfig(&Cfg)
 	setDefaultMirrorConfig(&Cfg)
@@ -149,6 +154,7 @@ func setDefaultServerConfig(c *Config) {
 	if c.DBDir == "" {
 		c.DBDir = fmt.Sprintf("%s/db", c.Dir)
 	}
+
 }
 
 func configureLogLevel(ll string) {
@@ -170,8 +176,7 @@ func setDefaultMirrorConfig(c *Config) {
 	}
 }
 
-func getJWTSecretKey() string {
-	keyPath := "/opt/gemfast/etc/gemfast/.jwt_secret_key"
+func readJWTSecretKeyFromPath(keyPath string) string {
 	if _, err := os.Stat(keyPath); err == nil {
 		log.Info().Str("detail", keyPath).Msg("using JWT secret key from file")
 		key, err := ioutil.ReadFile(keyPath)
@@ -197,18 +202,21 @@ func getJWTSecretKey() string {
 	if err != nil {
 		log.Error().Err(err).Msg("unable to write JWT secret key to file")
 		log.Error().Msg("JWT secret key will not persist after server is stopped")
+		os.Remove(keyPath)
 	}
 	return pw
 }
 
 func setDefaultAuthConfig(c *Config) {
+	defaultJWTSecretKeyPath := "/opt/gemfast/etc/gemfast/.jwt_secret_key"
 	if c.Auth == nil {
 		c.Auth = &AuthConfig{
 			Type:               "local",
 			BcryptCost:         10,
 			AllowAnonymousRead: false,
 			DefaultUserRole:    "read",
-			JWTSecretKey:       getJWTSecretKey(),
+			JWTSecretKeyPath:   defaultJWTSecretKeyPath,
+			JWTSecretKey:       readJWTSecretKeyFromPath(defaultJWTSecretKeyPath),
 		}
 		return
 	}
@@ -221,8 +229,11 @@ func setDefaultAuthConfig(c *Config) {
 	if c.Auth.DefaultUserRole == "" {
 		c.Auth.DefaultUserRole = "read"
 	}
+	if c.Auth.JWTSecretKeyPath == "" {
+		c.Auth.JWTSecretKeyPath = defaultJWTSecretKeyPath
+	}
 	if c.Auth.JWTSecretKey == "" {
-		c.Auth.JWTSecretKey = getJWTSecretKey()
+		readJWTSecretKeyFromPath(defaultJWTSecretKeyPath)
 	}
 }
 
@@ -257,22 +268,5 @@ func setDefaultCVEConfig(c *Config) {
 	}
 	if c.CVE.RubyAdvisoryDBDir == "" {
 		c.CVE.RubyAdvisoryDBDir = "/opt/gemfast/share/ruby-advisory-db"
-	}
-}
-
-func TrialMode() {
-	if Cfg.TrialMode {
-		Cfg.Auth = &AuthConfig{
-			Type: "none",
-		}
-		Cfg.Mirrors = []*MirrorConfig{{
-			Enabled: false,
-		}}
-		Cfg.Filter = &FilterConfig{
-			Enabled: false,
-		}
-		Cfg.CVE = &CVEConfig{
-			Enabled: false,
-		}
 	}
 }

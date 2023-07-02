@@ -206,8 +206,8 @@ func GetGems() ([][]*Gem, error) {
 			g, _ := GemVersionsFromBytes(v)
 			allGems = append(allGems, g)
 		}
-		if allGems == nil {
-			return fmt.Errorf("no gems found")
+		if len(allGems) == 0 {
+			log.Debug().Msg("no gems found")
 		}
 		return nil
 	})
@@ -217,16 +217,19 @@ func GetGems() ([][]*Gem, error) {
 	return allGems, nil
 }
 
-func GetAllGemversions() []string {
+func GetAllGemversions() ([]string, error) {
 	t := time.Now()
 	rfc := t.Format(time.RFC3339)
 	arr := []string{fmt.Sprintf("created_at: %s", rfc), "---"}
 	m := make(map[string][]string)
-	db.BoltDB.View(func(tx *bolt.Tx) error {
+	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(db.GEM_BUCKET))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			gemVersions, _ := GemVersionsFromBytes(v)
+			gemVersions, err := GemVersionsFromBytes(v)
+			if err != nil {
+				return err
+			}
 			l := len(gemVersions)
 			for i, gv := range gemVersions {
 				if i == l-1 {
@@ -239,6 +242,9 @@ func GetAllGemversions() []string {
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -250,7 +256,7 @@ func GetAllGemversions() []string {
 		sort.Strings(m[k])
 		arr = append(arr, k+" "+strings.Join(m[k], ","))
 	}
-	return arr
+	return arr, nil
 }
 
 func GetGemInfo(name string) (string, error) {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/license"
 	"github.com/gemfast/server/internal/middleware"
 	"github.com/gemfast/server/internal/models"
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,16 @@ import (
 //go:embed templates/*
 var efs embed.FS
 
-func Run() error {
+func checkLicense(l *license.License) {
+	if !l.Validated {
+		config.Cfg.Auth = &config.AuthConfig{
+			Type: "none",
+		}
+	}
+}
+
+func Run(l *license.License) error {
+	checkLicense(l)
 	router := initRouter()
 	port := fmt.Sprintf(":%d", config.Cfg.Port)
 	log.Info().Str("detail", port).Msg("gemfast server listening on port")
@@ -32,7 +42,8 @@ func initRouter() (r *gin.Engine) {
 	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
 	r.SetHTMLTemplate(tmpl)
 	r.Use(gin.Recovery())
-	r.HEAD("/", head)
+	r.GET("/up", health)
+	r.GET("/auth", authMode)
 	authMode := config.Cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
