@@ -20,7 +20,7 @@ mkdir -p /var/gemfast/db
 if [ ! -f "/etc/gemfast/gemfast.hcl" ]; then
   cat << CONFIG > /etc/gemfast/gemfast.hcl
 # This is the configuration file for Gemfast Server.
-# For documentation of all options, please visit https://gemfast.io/docs
+# For documentation of all options, please visit https://gemfast.io/docs/configuration/
 CONFIG
 fi
 
@@ -35,6 +35,6 @@ do
   systemctl enable $sv
 done
 
-echo "Thank you for installing Gemfast Server! For help getting started visit https://gemfast.io/docs"
+echo "Thank you for installing Gemfast Server! For help getting started visit https://gemfast.io/docs/installation/"
 
 exit 0
