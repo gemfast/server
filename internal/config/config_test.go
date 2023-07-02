@@ -19,7 +19,10 @@ func (suite *ConfigTestSuite) TestReadJWTSecretKeyFromPath() {
 		suite.FailNow("unable to get the current filename")
 	}
 	dirname := filepath.Dir(filename)
-	fixturesDir := dirname + "/../../test/fixtures"
+	fixturesDir, err := filepath.Abs(dirname + "/../../test/fixtures")
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
 	jwt := readJWTSecretKeyFromPath(fixturesDir + "/jwt/.jwt_secret_key")
 	defer os.Remove(fixturesDir + "/jwt/.jwt_secret_key")
 	suite.NotEmpty(jwt)
