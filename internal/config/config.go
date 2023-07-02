@@ -91,8 +91,6 @@ func LoadConfig() {
 				cfgFile = f
 				log.Info().Str("detail", f).Msg("found gemfast config file")
 				break
-			} else {
-				log.Info().Err(err).Str("detail", f).Msg("unable to find a gemfast.hcl file")
 			}
 		}
 
@@ -100,7 +98,7 @@ func LoadConfig() {
 			log.Warn().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at any of %v", cfgFileTries))
 			log.Warn().Msg("using default configuration values")
 			Cfg = Config{}
-			setDefaultServerConfig(&Cfg)
+			setDefaultConfig(&Cfg)
 			return
 		}
 	}
@@ -109,6 +107,10 @@ func LoadConfig() {
 		log.Error().Err(err).Msg(fmt.Sprintf("failed to load configuration file %s", cfgFile))
 		os.Exit(1)
 	}
+	setDefaultConfig(&Cfg)
+}
+
+func setDefaultConfig(c *Config) {
 	setDefaultServerConfig(&Cfg)
 	setDefaultCaddyConfig(&Cfg)
 	setDefaultMirrorConfig(&Cfg)
@@ -152,6 +154,7 @@ func setDefaultServerConfig(c *Config) {
 	if c.DBDir == "" {
 		c.DBDir = fmt.Sprintf("%s/db", c.Dir)
 	}
+
 }
 
 func configureLogLevel(ll string) {
