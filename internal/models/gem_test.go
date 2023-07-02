@@ -24,9 +24,13 @@ func (suite *ModelsTestSuite) SetupTest() {
 		suite.FailNow("unable to get the current filename")
 	}
 	dirname := filepath.Dir(filename)
-	dbFile, _ := ioutil.TempFile("", "ApiTestSuite")
-	gemfix := dirname + "/../../test/fixtures/db/gems.yaml"
-	userfix := dirname + "/../../test/fixtures/db/users.yaml"
+	dbFile, _ := ioutil.TempFile("", "ModelsTestSuite")
+	fixturesDir, err := filepath.Abs(dirname + "/../../test/fixtures")
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	gemfix := fixturesDir + "/db/gems.yaml"
+	userfix := fixturesDir + "/db/users.yaml"
 	fixtureFiles := []string{gemfix, userfix}
 	l, err := fixtures.New(dbFile.Name(), fixtureFiles)
 	if err != nil {

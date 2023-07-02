@@ -267,20 +267,3 @@ func setDefaultCVEConfig(c *Config) {
 		c.CVE.RubyAdvisoryDBDir = "/opt/gemfast/share/ruby-advisory-db"
 	}
 }
-
-// func TrialMode() {
-// 	if Cfg.TrialMode {
-// 		Cfg.Auth = &AuthConfig{
-// 			Type: "none",
-// 		}
-// 		Cfg.Mirrors = []*MirrorConfig{{
-// 			Enabled: false,
-// 		}}
-// 		Cfg.Filter = &FilterConfig{
-// 			Enabled: false,
-// 		}
-// 		Cfg.CVE = &CVEConfig{
-// 			Enabled: false,
-// 		}
-// 	}
-// }
