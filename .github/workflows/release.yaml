@@ -31,7 +31,10 @@ jobs:
           bundler: ${{ env.BUNDLER_VERSION}}
           bundler-cache: true
       - name: Unit test
-        run: make test
+        run: |
+          sudo mkdir -p /opt/gemfast/etc/gemfast/
+          sudo chown -R $USER: /opt/gemfast
+          make test
       - name: Build omnibus package
         run: |
           sudo mkdir -p /var/cache/omnibus
