@@ -1,7 +1,7 @@
 name "gemfast"
 default_version "local_source"
 
-license "BSD-3-Clause"
+license "Commercial"
 skip_transitive_dependency_licensing true
 
 version("local_source") do

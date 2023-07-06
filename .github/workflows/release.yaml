@@ -35,12 +35,18 @@ jobs:
           sudo mkdir -p /opt/gemfast/etc/gemfast/
           sudo chown -R $USER: /opt/gemfast
           make test
+      - name: Get version
+        id: get-version
+        run: |
+          v=$(cat VERSION)
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
       - name: Build omnibus package
         run: |
           sudo mkdir -p /var/cache/omnibus
           sudo chown -R $USER: /var/cache/omnibus
           cd omnibus
           bundle exec omnibus build gemfast
+          sha512sum pkg/*.deb | cut -d " " -f 1  > "pkg/gemfast_${{ steps.get-version.outputs.VERSION }}_checksums.txt"
       - name: Upload omnibus package
         uses: actions/upload-artifact@v3
         with:
@@ -139,9 +145,13 @@ jobs:
       - private-gems-test
       - auth-test
     steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: gemfast-pkg
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
           files: |
             *.deb
+            *.txt
