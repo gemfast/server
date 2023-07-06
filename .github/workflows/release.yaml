@@ -46,7 +46,7 @@ jobs:
           sudo chown -R $USER: /var/cache/omnibus
           cd omnibus
           bundle exec omnibus build gemfast
-          sha512sum pkg/*.deb | cut -d " " -f 1  > "pkg/gemfast_${{ steps.get-version.outputs.VERSION }}_checksums.txt"
+          sha512sum pkg/*.deb > "pkg/gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Upload omnibus package
         uses: actions/upload-artifact@v3
         with:
