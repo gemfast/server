@@ -1,7 +1,6 @@
 package api
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -30,7 +29,7 @@ func (suite *ApiTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
-	dbFile, _ := ioutil.TempFile("", "ApiTestSuite")
+	dbFile, _ := os.CreateTemp("", "ApiTestSuite")
 	gemfix := fixturesDir + "/db/gems.yaml"
 	userfix := fixturesDir + "/db/users.yaml"
 	fixtureFiles := []string{gemfix, userfix}

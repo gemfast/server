@@ -2,7 +2,8 @@ package api
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"net/http"
 	"net/url"
 	"os"
@@ -121,9 +122,9 @@ func localDependenciesJSONHandler(c *gin.Context) {
 func localUploadGemHandler(c *gin.Context) {
 	var bodyBytes []byte
 	if c.Request.Body != nil {
-		bodyBytes, _ = ioutil.ReadAll(c.Request.Body)
+		bodyBytes, _ = io.ReadAll(c.Request.Body)
 	}
-	tmpfile, err := ioutil.TempFile("/tmp", "*.gem")
+	tmpfile, err := os.CreateTemp("/tmp", "*.gem")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmp file")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to index gem: %v", err))
@@ -225,7 +226,7 @@ func geminaboxUploadGem(c *gin.Context) {
 		c.String(http.StatusBadRequest, "failed to read form file parameter")
 		return
 	}
-	tmpfile, err := ioutil.TempFile("/tmp", "*.gem")
+	tmpfile, err := os.CreateTemp("/tmp", "*.gem")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmp file")
 		c.String(http.StatusInternalServerError, "failed to index gem")

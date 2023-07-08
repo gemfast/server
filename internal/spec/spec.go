@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
@@ -121,7 +120,7 @@ func GunzipMetadata(path string) (string, error) {
 		return "", err
 	}
 
-	output, err := ioutil.ReadAll(gzreader)
+	output, err := io.ReadAll(gzreader)
 	if err != nil {
 		log.Error().Err(err).Str("detail", fname).Msg("failed to read gzip content")
 		return "", err

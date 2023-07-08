@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 	"regexp"
@@ -208,7 +208,7 @@ func (indexer *Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) {
 		// NEED TO CLOSE EXPLICITLY
 		err := rz.Close()
 		check(err)
-		ioutil.WriteFile(marshalName, b.Bytes(), 0666)
+		os.WriteFile(marshalName, b.Bytes(), 0666)
 	}
 }
 
@@ -242,7 +242,7 @@ func (indexer *Indexer) compressIndicies() {
 }
 
 func gzipFile(src string) {
-	content, err := ioutil.ReadFile(src) // just pass the file name
+	content, err := os.ReadFile(src) // just pass the file name
 	if err != nil {
 		panic(err)
 	}
@@ -257,7 +257,7 @@ func gzipFile(src string) {
 	if err != nil {
 		panic(err)
 	}
-	ioutil.WriteFile(fmt.Sprintf("%s.gz", src), b.Bytes(), 0666)
+	os.WriteFile(fmt.Sprintf("%s.gz", src), b.Bytes(), 0666)
 }
 
 func (indexer *Indexer) buildIndicies() error {
@@ -312,7 +312,7 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 	defer file.Close()
 
 	var fileReader io.ReadCloser = file
-	out, err := ioutil.ReadAll(fileReader)
+	out, err := io.ReadAll(fileReader)
 	if err != nil {
 		log.Error().Err(err).Str("detail", src).Msg("failed to read index")
 		ch <- 0

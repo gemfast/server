@@ -1,7 +1,6 @@
 package models
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,7 +23,7 @@ func (suite *ModelsTestSuite) SetupTest() {
 		suite.FailNow("unable to get the current filename")
 	}
 	dirname := filepath.Dir(filename)
-	dbFile, _ := ioutil.TempFile("", "ModelsTestSuite")
+	dbFile, _ := os.CreateTemp("", "ModelsTestSuite")
 	fixturesDir, err := filepath.Abs(dirname + "/../../test/fixtures")
 	if err != nil {
 		suite.FailNow(err.Error())

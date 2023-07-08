@@ -2,7 +2,7 @@ package cve
 
 import (
 	"fmt"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -140,7 +140,7 @@ func cacheAdvisoryDB(path string) error {
 }
 
 func gemAdvisoryFromFile(path string, ga *GemAdvisory) *GemAdvisory {
-	yamlFile, err := ioutil.ReadFile(path)
+	yamlFile, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
