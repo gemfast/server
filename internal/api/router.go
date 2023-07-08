@@ -97,7 +97,7 @@ func configureNoneAuth(r *gin.Engine) {
 		mirror := r.Group("/")
 		configureMirror(mirror)
 	}
-	private := r.Group("/private")
+	private := r.Group(config.Cfg.PrivateGemURL)
 	configurePrivateRead(private)
 	configurePrivateWrite(private)
 	admin := r.Group("/admin")
@@ -119,7 +119,7 @@ func configureMirror(mirror *gin.RouterGroup) {
 
 // /private
 func configurePrivate(r *gin.Engine) {
-	privateTokenAuth := r.Group("/private")
+	privateTokenAuth := r.Group(config.Cfg.PrivateGemURL)
 	privateTokenAuth.Use(middleware.NewTokenMiddleware())
 	{
 		if !config.Cfg.Auth.AllowAnonymousRead {
@@ -132,7 +132,7 @@ func configurePrivate(r *gin.Engine) {
 		configureMirror(mirror)
 	}
 	if config.Cfg.Auth.AllowAnonymousRead {
-		private := r.Group("/private")
+		private := r.Group(config.Cfg.PrivateGemURL)
 		configurePrivateRead(private)
 	}
 	middleware.InitACL()
