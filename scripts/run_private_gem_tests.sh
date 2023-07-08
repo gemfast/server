@@ -16,6 +16,7 @@ caddy {
 }
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
+private_gems_url = "foobar"
 CONFIG
 
 sudo dpkg -i gemfast*.deb
@@ -67,7 +68,7 @@ mkdir ./test-private-gems
 cd test-private-gems
 
 cat << CONFIG > Gemfile
-source "http://localhost:80/private"
+source "http://localhost:80/foobar"
 gem "rails"
 CONFIG
 bundle

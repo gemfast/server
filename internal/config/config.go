@@ -12,14 +12,14 @@ import (
 )
 
 type Config struct {
-	Port          int    `hcl:"port,optional"`
-	LogLevel      string `hcl:"log_level,optional"`
-	Dir           string `hcl:"dir,optional"`
-	GemDir        string `hcl:"gem_dir,optional"`
-	DBDir         string `hcl:"db_dir,optional"`
-	ACLPath       string `hcl:"acl_path,optional"`
-	AuthModelPath string `hcl:"auth_model_path,optional"`
-	PrivateGemURL string `hcl:"private_gem_url,optional"`
+	Port           int    `hcl:"port,optional"`
+	LogLevel       string `hcl:"log_level,optional"`
+	Dir            string `hcl:"dir,optional"`
+	GemDir         string `hcl:"gem_dir,optional"`
+	DBDir          string `hcl:"db_dir,optional"`
+	ACLPath        string `hcl:"acl_path,optional"`
+	AuthModelPath  string `hcl:"auth_model_path,optional"`
+	PrivateGemsURL string `hcl:"private_gems_url,optional"`
 
 	TrialMode   bool            `hcl:"trial_mode,optional"`
 	LicenseKey  string          `hcl:"license_key,optional"`
@@ -136,8 +136,8 @@ func setDefaultServerConfig(c *Config) {
 	if c.DBDir == "" {
 		c.DBDir = fmt.Sprintf("%s/db", c.Dir)
 	}
-	if c.PrivateGemURL == "" {
-		c.PrivateGemURL = "/private"
+	if c.PrivateGemsURL == "" {
+		c.PrivateGemsURL = "/private"
 	}
 }
 
