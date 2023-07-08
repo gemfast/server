@@ -7,3 +7,4 @@ gemfast.db
 bin/gemfast-server
 omnibus/pkg
 tmp
+!test/fixtures/spec/*.gem
