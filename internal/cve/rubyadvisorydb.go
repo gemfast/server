@@ -119,8 +119,10 @@ func cacheAdvisoryDB(path string) error {
 			cacheKey = info.Name()
 			return nil
 		}
-		ga := &GemAdvisory{}
-		gemAdvisoryFromFile(path, ga)
+		ga, err := gemAdvisoryFromFile(path)
+		if err != nil {
+			return err
+		}
 		a, found := getCache().Get(cacheKey)
 		if found {
 			advisories = a.([]GemAdvisory)
@@ -139,17 +141,18 @@ func cacheAdvisoryDB(path string) error {
 	return nil
 }
 
-func gemAdvisoryFromFile(path string, ga *GemAdvisory) *GemAdvisory {
+func gemAdvisoryFromFile(path string) (*GemAdvisory, error) {
 	yamlFile, err := os.ReadFile(path)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
 	}
+	ga := &GemAdvisory{}
 	err = yaml.Unmarshal(yamlFile, ga)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to unmarshal yaml file %s: %w", path, err)
 	}
 
-	return ga
+	return ga, nil
 }
 
 func isPatched(gem string, version string) (bool, GemAdvisory, error) {

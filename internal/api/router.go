@@ -17,6 +17,8 @@ import (
 //go:embed templates/*
 var efs embed.FS
 
+const adminAPIPath = "/admin/api/v1"
+
 func checkLicense(l *license.License) {
 	if !l.Validated {
 		config.Cfg.Auth = &config.AuthConfig{
@@ -43,7 +45,6 @@ func initRouter() (r *gin.Engine) {
 	r.SetHTMLTemplate(tmpl)
 	r.Use(gin.Recovery())
 	r.GET("/up", health)
-	r.GET("/auth", authMode)
 	authMode := config.Cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
@@ -58,7 +59,7 @@ func initRouter() (r *gin.Engine) {
 }
 
 func configureGitHubAuth(r *gin.Engine) {
-	adminGitHubAuth := r.Group("/admin")
+	adminGitHubAuth := r.Group(adminAPIPath)
 	adminGitHubAuth.POST("/login", middleware.GitHubLoginHandler)
 	slash := r.Group("/")
 	slash.GET("/github/callback", middleware.GitHubCallbackHandler)
@@ -82,7 +83,7 @@ func configureLocalAuth(r *gin.Engine) {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize auth middleware")
 	}
-	adminLocalAuth := r.Group("/admin")
+	adminLocalAuth := r.Group(adminAPIPath)
 	adminLocalAuth.POST("/login", jwtMiddleware.LoginHandler)
 	adminLocalAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
 	adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
@@ -100,7 +101,7 @@ func configureNoneAuth(r *gin.Engine) {
 	private := r.Group(config.Cfg.PrivateGemURL)
 	configurePrivateRead(private)
 	configurePrivateWrite(private)
-	admin := r.Group("/admin")
+	admin := r.Group(adminAPIPath)
 	configureAdmin(admin)
 }
 
@@ -161,6 +162,7 @@ func configurePrivateWrite(private *gin.RouterGroup) {
 
 // /admin
 func configureAdmin(admin *gin.RouterGroup) {
+	admin.GET("/auth", authMode)
 	admin.POST("/token", middleware.CreateTokenHandler)
 	admin.GET("/gems", listGems)
 	admin.GET("/gems/:gem", getGem)
