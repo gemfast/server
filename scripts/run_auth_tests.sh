@@ -36,10 +36,10 @@ sudo systemctl status caddy
 journalctl -u gemfast
 journalctl -u caddy
 
-jwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/login -d '{"username": "admin", "password":"foobar"}' | jq -r .token)
-token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" http://localhost:80/admin/token | jq -r .token)
-bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
-bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:80/admin/token | jq -r .token)
+jwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/api/v1/login -d '{"username": "admin", "password":"foobar"}' | jq -r .token)
+token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" http://localhost:80/admin/api/v1/token | jq -r .token)
+bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/api/v1/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
+bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:80/admin/api/v1/token | jq -r .token)
 
 
 

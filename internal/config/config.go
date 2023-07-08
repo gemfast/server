@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 
@@ -13,13 +12,14 @@ import (
 )
 
 type Config struct {
-	Port          int    `hcl:"port,optional"`
-	LogLevel      string `hcl:"log_level,optional"`
-	Dir           string `hcl:"dir,optional"`
-	GemDir        string `hcl:"gem_dir,optional"`
-	DBDir         string `hcl:"db_dir,optional"`
-	ACLPath       string `hcl:"acl_path,optional"`
-	AuthModelPath string `hcl:"auth_model_path,optional"`
+	Port           int    `hcl:"port,optional"`
+	LogLevel       string `hcl:"log_level,optional"`
+	Dir            string `hcl:"dir,optional"`
+	GemDir         string `hcl:"gem_dir,optional"`
+	DBDir          string `hcl:"db_dir,optional"`
+	ACLPath        string `hcl:"acl_path,optional"`
+	AuthModelPath  string `hcl:"auth_model_path,optional"`
+	PrivateGemsURL string `hcl:"private_gems_url,optional"`
 
 	TrialMode   bool            `hcl:"trial_mode,optional"`
 	LicenseKey  string          `hcl:"license_key,optional"`
@@ -119,24 +119,6 @@ func setDefaultConfig(c *Config) {
 	setDefaultCVEConfig(&Cfg)
 }
 
-func setDefaultCaddyConfig(c *Config) {
-	if c.CaddyConfig == nil {
-		c.CaddyConfig = &CaddyConfig{
-			AdminAPIEnabled: false,
-			MetricsDisabled: false,
-			Host:            "https://localhost:443",
-			Port:            443,
-		}
-		return
-	}
-	if c.CaddyConfig.Port == 0 {
-		c.CaddyConfig.Port = 443
-	}
-	if c.CaddyConfig.Host == "" {
-		c.CaddyConfig.Host = fmt.Sprintf("https://localhost:%d", c.CaddyConfig.Port)
-	}
-}
-
 func setDefaultServerConfig(c *Config) {
 	if c.Port == 0 {
 		c.Port = 2020
@@ -154,7 +136,27 @@ func setDefaultServerConfig(c *Config) {
 	if c.DBDir == "" {
 		c.DBDir = fmt.Sprintf("%s/db", c.Dir)
 	}
+	if c.PrivateGemsURL == "" {
+		c.PrivateGemsURL = "/private"
+	}
+}
 
+func setDefaultCaddyConfig(c *Config) {
+	if c.CaddyConfig == nil {
+		c.CaddyConfig = &CaddyConfig{
+			AdminAPIEnabled: false,
+			MetricsDisabled: false,
+			Host:            "https://localhost:443",
+			Port:            443,
+		}
+		return
+	}
+	if c.CaddyConfig.Port == 0 {
+		c.CaddyConfig.Port = 443
+	}
+	if c.CaddyConfig.Host == "" {
+		c.CaddyConfig.Host = fmt.Sprintf("https://localhost:%d", c.CaddyConfig.Port)
+	}
 }
 
 func configureLogLevel(ll string) {
@@ -179,7 +181,7 @@ func setDefaultMirrorConfig(c *Config) {
 func readJWTSecretKeyFromPath(keyPath string) string {
 	if _, err := os.Stat(keyPath); err == nil {
 		log.Info().Str("detail", keyPath).Msg("using JWT secret key from file")
-		key, err := ioutil.ReadFile(keyPath)
+		key, err := os.ReadFile(keyPath)
 		if err != nil {
 			log.Error().Err(err).Msg("unable to read JWT secret key from file")
 			os.Exit(1)

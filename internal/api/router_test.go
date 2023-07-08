@@ -1,7 +1,6 @@
 package api
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -30,7 +29,7 @@ func (suite *ApiTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
-	dbFile, _ := ioutil.TempFile("", "ApiTestSuite")
+	dbFile, _ := os.CreateTemp("", "ApiTestSuite")
 	gemfix := fixturesDir + "/db/gems.yaml"
 	userfix := fixturesDir + "/db/users.yaml"
 	fixtureFiles := []string{gemfix, userfix}
@@ -70,11 +69,43 @@ func (suite *ApiTestSuite) TestInitRouterNoneAuth() {
 	for _, route := range r.Routes() {
 		paths = append(paths, route.Path)
 	}
-	expectedPaths := []string{"/private/api/v1/dependencies", "/private/api/v1/dependencies.json", "/private/specs.4.8.gz", "/private/latest_specs.4.8.gz", "/private/prerelease_specs.4.8.gz", "/private/quick/Marshal.4.8/:gemspec.rz", "/private/gems/:gem", "/private/versions", "/private/info/:gem", "/private/names", "/prerelease_specs.4.8.gz", "/admin/gems", "/admin/gems/:gem", "/admin/users", "/admin/users/:username", "/api/v1/dependencies", "/api/v1/dependencies.json", "/auth", "/up", "/specs.4.8.gz", "/latest_specs.4.8.gz", "/quick/Marshal.4.8/:gemspec.rz", "/gems/:gem", "/info/*gem", "/versions", "/admin/token", "/private/api/v1/gems", "/private/upload", "/admin/users/:username", "/private/api/v1/gems/yank", "/admin/users/:username/role/:role"}
+	expectedPaths := []string{
+		"/private/api/v1/dependencies",
+		"/private/api/v1/dependencies.json",
+		"/private/specs.4.8.gz",
+		"/private/latest_specs.4.8.gz",
+		"/private/prerelease_specs.4.8.gz",
+		"/private/quick/Marshal.4.8/:gemspec.rz",
+		"/private/gems/:gem",
+		"/private/versions",
+		"/private/info/:gem",
+		"/private/names",
+		"/prerelease_specs.4.8.gz",
+		"/admin/api/v1/gems",
+		"/admin/api/v1/gems/:gem",
+		"/admin/api/v1/users",
+		"/admin/api/v1/users/:username",
+		"/api/v1/dependencies",
+		"/api/v1/dependencies.json",
+		"/admin/api/v1/auth",
+		"/up",
+		"/specs.4.8.gz",
+		"/latest_specs.4.8.gz",
+		"/quick/Marshal.4.8/:gemspec.rz",
+		"/gems/:gem",
+		"/info/*gem",
+		"/versions",
+		"/admin/api/v1/token",
+		"/private/api/v1/gems",
+		"/private/upload",
+		"/admin/api/v1/users/:username",
+		"/private/api/v1/gems/yank",
+		"/admin/api/v1/users/:username/role/:role",
+	}
 	for _, p := range expectedPaths {
 		suite.Contains(paths, p)
 	}
-	suite.NotContains(paths, "/admin/login")
+	suite.NotContains(paths, "/admin/api/v1/login")
 }
 
 func (suite *ApiTestSuite) TestInitRouterLocalAuth() {
@@ -87,7 +118,39 @@ func (suite *ApiTestSuite) TestInitRouterLocalAuth() {
 	for _, route := range r.Routes() {
 		paths = append(paths, route.Path)
 	}
-	expectedPaths := []string{"/private/api/v1/dependencies", "/private/api/v1/dependencies.json", "/private/specs.4.8.gz", "/private/latest_specs.4.8.gz", "/private/prerelease_specs.4.8.gz", "/private/quick/Marshal.4.8/:gemspec.rz", "/private/gems/:gem", "/private/versions", "/private/info/:gem", "/private/names", "/prerelease_specs.4.8.gz", "/admin/gems", "/admin/gems/:gem", "/admin/users", "/admin/users/:username", "/api/v1/dependencies", "/api/v1/dependencies.json", "/auth", "/up", "/specs.4.8.gz", "/latest_specs.4.8.gz", "/quick/Marshal.4.8/:gemspec.rz", "/gems/:gem", "/info/*gem", "/versions", "/private/api/v1/gems", "/private/upload", "/admin/token", "/private/api/v1/gems/yank", "/admin/users/:username", "/admin/users/:username/role/:role"}
+	expectedPaths := []string{
+		"/private/api/v1/dependencies",
+		"/private/api/v1/dependencies.json",
+		"/private/specs.4.8.gz",
+		"/private/latest_specs.4.8.gz",
+		"/private/prerelease_specs.4.8.gz",
+		"/private/quick/Marshal.4.8/:gemspec.rz",
+		"/private/gems/:gem",
+		"/private/versions",
+		"/private/info/:gem",
+		"/private/names",
+		"/prerelease_specs.4.8.gz",
+		"/admin/api/v1/gems",
+		"/admin/api/v1/gems/:gem",
+		"/admin/api/v1/users",
+		"/admin/api/v1/users/:username",
+		"/api/v1/dependencies",
+		"/api/v1/dependencies.json",
+		"/admin/api/v1/auth",
+		"/up",
+		"/specs.4.8.gz",
+		"/latest_specs.4.8.gz",
+		"/quick/Marshal.4.8/:gemspec.rz",
+		"/gems/:gem",
+		"/info/*gem",
+		"/versions",
+		"/private/api/v1/gems",
+		"/private/upload",
+		"/admin/api/v1/token",
+		"/private/api/v1/gems/yank",
+		"/admin/api/v1/users/:username",
+		"/admin/api/v1/users/:username/role/:role",
+	}
 	for _, p := range expectedPaths {
 		suite.Contains(paths, p)
 	}
@@ -104,7 +167,40 @@ func (suite *ApiTestSuite) TestInitRouterGitHubAuth() {
 	for _, route := range r.Routes() {
 		paths = append(paths, route.Path)
 	}
-	expectedPaths := []string{"/private/api/v1/dependencies", "/private/api/v1/dependencies.json", "/private/specs.4.8.gz", "/private/latest_specs.4.8.gz", "/private/prerelease_specs.4.8.gz", "/private/quick/Marshal.4.8/:gemspec.rz", "/private/gems/:gem", "/private/versions", "/private/info/:gem", "/private/names", "/prerelease_specs.4.8.gz", "/admin/gems", "/admin/gems/:gem", "/admin/users", "/admin/users/:username", "/api/v1/dependencies", "/api/v1/dependencies.json", "/auth", "/up", "/specs.4.8.gz", "/latest_specs.4.8.gz", "/quick/Marshal.4.8/:gemspec.rz", "/gems/:gem", "/info/*gem", "/versions", "/private/api/v1/gems", "/private/upload", "/admin/token", "/private/api/v1/gems/yank", "/admin/users/:username", "/admin/users/:username/role/:role", "/github/callback"}
+	expectedPaths := []string{
+		"/private/api/v1/dependencies",
+		"/private/api/v1/dependencies.json",
+		"/private/specs.4.8.gz",
+		"/private/latest_specs.4.8.gz",
+		"/private/prerelease_specs.4.8.gz",
+		"/private/quick/Marshal.4.8/:gemspec.rz",
+		"/private/gems/:gem",
+		"/private/versions",
+		"/private/info/:gem",
+		"/private/names",
+		"/prerelease_specs.4.8.gz",
+		"/admin/api/v1/gems",
+		"/admin/api/v1/gems/:gem",
+		"/admin/api/v1/users",
+		"/admin/api/v1/users/:username",
+		"/api/v1/dependencies",
+		"/api/v1/dependencies.json",
+		"/admin/api/v1/auth",
+		"/up",
+		"/specs.4.8.gz",
+		"/latest_specs.4.8.gz",
+		"/quick/Marshal.4.8/:gemspec.rz",
+		"/gems/:gem",
+		"/info/*gem",
+		"/versions",
+		"/private/api/v1/gems",
+		"/private/upload",
+		"/admin/api/v1/token",
+		"/private/api/v1/gems/yank",
+		"/admin/api/v1/users/:username",
+		"/admin/api/v1/users/:username/role/:role",
+		"/github/callback",
+	}
 	for _, p := range expectedPaths {
 		suite.Contains(paths, p)
 	}

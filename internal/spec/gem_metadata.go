@@ -45,7 +45,7 @@ type GemMetadata struct {
 	RequiredRubyGemsVersion GemRequirement  `yaml:"required_rubygems_version"`
 }
 
-func (gm GemMetadata) NumInstanceVars() (int, error) {
+func (gm *GemMetadata) NumInstanceVars() (int, error) {
 	ivarCount := 15
 	if gm.Name == "" || len(gm.Authors) == 0 || gm.Version.Version == "" {
 		return -1, fmt.Errorf("missing required field in gem metadata")

@@ -16,6 +16,7 @@ caddy {
 }
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
+private_gems_url = "foobar"
 CONFIG
 
 sudo dpkg -i gemfast*.deb
@@ -49,7 +50,7 @@ pushd vendor/cache
 for gem in *.gem; do
   [ -f "$gem" ] || break
   echo "Uploading $gem"
-  gem push "$gem" --host http://localhost:80/private -k gemfast
+  gem push "$gem" --host http://localhost:80/foobar -k gemfast
 done
 sleep 5
 
@@ -67,7 +68,7 @@ mkdir ./test-private-gems
 cd test-private-gems
 
 cat << CONFIG > Gemfile
-source "http://localhost:80/private"
+source "http://localhost:80/foobar"
 gem "rails"
 CONFIG
 bundle

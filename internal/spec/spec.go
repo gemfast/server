@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
@@ -25,7 +24,7 @@ type Spec struct {
 	Version          string
 	PreRelease       bool
 	LoadedFrom       string
-	GemMetadata      GemMetadata
+	GemMetadata      *GemMetadata
 	Checksum         string
 	Ruby             string //TODO: parse required_ruby_version from metadata
 	RubyGems         string //TODO: parse required_rubygems_version from metadata
@@ -121,7 +120,7 @@ func GunzipMetadata(path string) (string, error) {
 		return "", err
 	}
 
-	output, err := ioutil.ReadAll(gzreader)
+	output, err := io.ReadAll(gzreader)
 	if err != nil {
 		log.Error().Err(err).Str("detail", fname).Msg("failed to read gzip content")
 		return "", err
@@ -132,12 +131,12 @@ func GunzipMetadata(path string) (string, error) {
 }
 
 // TODO: break this method up into smaller methods
-func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
+func ParseGemMetadata(yamlBytes []byte) (*GemMetadata, error) {
 	var metadata GemMetadata
 	err := yaml.Unmarshal(yamlBytes, &metadata)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to unmarshal gem metadata")
-		return GemMetadata{}, err
+		return &GemMetadata{}, err
 	}
 	// var email string
 	switch t := metadata.Email.(type) {
@@ -163,7 +162,7 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 		}
 	default:
 		log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown email type in gem metadata")
-		return GemMetadata{}, err
+		return &GemMetadata{}, err
 	}
 
 	var c string
@@ -194,7 +193,7 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 				}
 			default:
 				log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown requirements type in gem metadata")
-				return GemMetadata{}, err
+				return &GemMetadata{}, err
 			}
 		}
 		metadata.Dependencies[i] = dep
@@ -223,7 +222,7 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 			}
 		default:
 			log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown ruby requirement type in gem metadata")
-			return GemMetadata{}, err
+			return &GemMetadata{}, err
 
 		}
 	}
@@ -252,10 +251,10 @@ func ParseGemMetadata(yamlBytes []byte) (GemMetadata, error) {
 			}
 		default:
 			log.Error().Err(err).Str("detail", metadata.Name).Str("detail", fmt.Sprintf("%T", t)).Msg("unknown rubygems requirement type in gem metadata")
-			return GemMetadata{}, err
+			return &GemMetadata{}, err
 		}
 	}
-	return metadata, nil
+	return &metadata, nil
 }
 
 func FromFile(gemfile string) (*Spec, error) {
@@ -354,7 +353,6 @@ func FindIndexOf(specs []*Spec, s *Spec) int {
 		h := len(specs) - 1
 		for l <= h {
 			mid := (l + h) / 2
-
 			if specs[mid].Name == k {
 				return mid
 			} else if specs[mid].Name < k {
@@ -370,6 +368,7 @@ func FindIndexOf(specs []*Spec, s *Spec) int {
 	}
 	for i := idx; i < len(specs); i++ {
 		spec := specs[i]
+		log.Warn().Str("detail", fmt.Sprintf("%s %s %s", spec.Name, spec.Version, spec.OriginalPlatform)).Msg("spec")
 		if spec.Name != s.Name {
 			break
 		} else if spec.Version == s.Version && spec.OriginalPlatform == s.OriginalPlatform {

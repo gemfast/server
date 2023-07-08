@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"net/http"
 	"strings"
 	"time"
@@ -120,7 +121,7 @@ func GitHubCallbackHandler(c *gin.Context) {
 		return
 	}
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to read POST login/oauth/access_token response from github")
 		c.String(http.StatusForbidden, "failed to read response of access token request")
@@ -165,7 +166,7 @@ func authenticateGitHubUser(at string) (*models.User, error) {
 		return nil, fmt.Errorf("github returned an error")
 	}
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read GET user response from github: %w", err)
 	}
@@ -215,7 +216,7 @@ func userMemberOfRequiredOrg(at string) error {
 		return fmt.Errorf("github returned an error")
 	}
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read GET user/orgs response from github: %w", err)
 	}

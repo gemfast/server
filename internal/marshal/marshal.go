@@ -226,7 +226,7 @@ func DumpSpecs(specs []*spec.Spec) []byte {
 	return buff.Bytes()
 }
 
-func DumpGemspecGemfast(meta spec.GemMetadata) []byte {
+func DumpGemspecGemfast(meta *spec.GemMetadata) []byte {
 	slinkidx := 0
 	slinktbl := make(map[string]int)
 	olinkidx := 0
