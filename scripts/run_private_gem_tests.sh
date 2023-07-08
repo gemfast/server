@@ -50,7 +50,7 @@ pushd vendor/cache
 for gem in *.gem; do
   [ -f "$gem" ] || break
   echo "Uploading $gem"
-  gem push "$gem" --host http://localhost:80/private -k gemfast
+  gem push "$gem" --host http://localhost:80/foobar -k gemfast
 done
 sleep 5
 
