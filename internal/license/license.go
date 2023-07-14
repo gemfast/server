@@ -18,7 +18,7 @@ type License struct {
 	Machine     *keygen.Machine
 }
 
-func NewLicense() (*License, error) {
+func NewLicense(cfg *config.Config) (*License, error) {
 	var l *License
 	fingerprint, err := machineid.ProtectedID(keygen.Product)
 	if err != nil {
@@ -27,7 +27,7 @@ func NewLicense() (*License, error) {
 	l = &License{
 		Account:     "5590bc22-b3de-4e34-a27a-7cc07c3ba683",
 		Product:     "2c4f54ab-c7a0-4f74-bfbd-9f4973c21121",
-		LicenseKey:  config.Cfg.LicenseKey,
+		LicenseKey:  cfg.LicenseKey,
 		Fingerprint: fingerprint,
 	}
 

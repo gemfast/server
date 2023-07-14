@@ -1,143 +1,209 @@
 package api
 
 import (
+	"embed"
 	"fmt"
-	"net/http"
-	"os"
+	"html/template"
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/indexer"
-	"github.com/gemfast/server/internal/models"
-	"github.com/gemfast/server/internal/spec"
+	"github.com/gemfast/server/internal/db"
+	"github.com/gemfast/server/internal/license"
+	"github.com/gemfast/server/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
-func health(c *gin.Context) {
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<html><body style=\"background-color: green\"></body></html>"))
-}
+//go:embed templates/*
+var efs embed.FS
 
-func authMode(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"auth": config.Cfg.Auth.Type})
-}
+const adminAPIPath = "/admin/api/v1"
 
-func listGems(c *gin.Context) {
-	gems, err := models.GetGems()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get gems")
-		c.String(http.StatusInternalServerError, "Failed to get gems")
-		return
-	}
-	c.JSON(http.StatusOK, gems)
-}
-
-func getGem(c *gin.Context) {
-	name := c.Param("gem")
-	gemVersions, err := models.GetGemVersions(name)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get gem")
-		c.String(http.StatusInternalServerError, "Failed to get gem")
-		return
-	}
-	c.JSON(http.StatusOK, gemVersions)
-}
-
-func listUsers(c *gin.Context) {
-	users, err := models.GetUsers()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get users")
-		c.String(http.StatusInternalServerError, "Failed to get users")
-		return
-	}
-	c.JSON(http.StatusOK, users)
-}
-
-func getUser(c *gin.Context) {
-	username := c.Param("username")
-	user, err := models.GetUser(username)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get user")
-		c.String(http.StatusInternalServerError, "Failed to get user")
-		return
-	}
-	user.Password = []byte{}
-	user.Token = ""
-	c.JSON(http.StatusOK, user)
-}
-
-func deleteUser(c *gin.Context) {
-	username := c.Param("username")
-	deleted, err := models.DeleteUser(username)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to delete user")
-		return
-	}
-	if !deleted {
-		c.String(http.StatusNotFound, "User not found")
-		return
-	}
-	c.String(http.StatusAccepted, "User deleted successfully")
-}
-
-func setUserRole(c *gin.Context) {
-	username := c.Param("username")
-	role := c.Param("role")
-	user, err := models.GetUser(username)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to get user")
-		return
-	}
-	user.Role = strings.ToLower(role)
-	err = models.UpdateUser(user)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to set user role")
-		return
-	}
-	c.String(http.StatusAccepted, "User role set successfully")
-}
-
-func saveAndReindex(tmpfile *os.File) error {
-	s, err := spec.FromFile(tmpfile.Name())
-	if err != nil {
-		log.Error().Err(err).Msg("failed to read spec from tmpfile")
-		return err
-	}
-	var fp string
-	if s.OriginalPlatform == "ruby" {
-		fp = fmt.Sprintf("%s/%s-%s.gem", config.Cfg.GemDir, s.Name, s.Version)
-	} else {
-		fp = fmt.Sprintf("%s/%s-%s-%s.gem", config.Cfg.GemDir, s.Name, s.Version, s.OriginalPlatform)
-	}
-	err = os.Rename(tmpfile.Name(), fp)
-	if err != nil {
-		log.Error().Err(err).Str("detail", fp).Msg("failed to rename tmpfile")
-		return err
-	}
-	err = indexer.Get().AddGemToIndex(fp)
-	if err != nil {
-		log.Error().Err(err).Str("detail", s.Name).Msg("failed to add gem to index")
-		return err
-	}
-	return nil
-}
-
-func fetchGemVersions(c *gin.Context, gemQuery string) ([]*models.Gem, error) {
-	gems := strings.Split(gemQuery, ",")
-	var gemVersions []*models.Gem
-	for _, gem := range gems {
-		gv, err := models.GetGemVersions(gem)
-		if err != nil {
-			log.Trace().Err(err).Str("detail", gem).Msg("failed to fetch dependencies for gem")
-			return nil, err
+func (api *API) checkLicense() {
+	if !api.license.Validated {
+		api.cfg.Auth = &config.AuthConfig{
+			Type: "none",
 		}
-		for _, g := range gv {
-			gemVersions = append(gemVersions, &models.Gem{
-				Name:         g.Name,
-				Number:       g.Number,
-				Dependencies: g.Dependencies,
-			})
-		}
+		api.cfg.Mirrors[0].Enabled = false
+		log.Warn().Msg("no valid license found, starting in trial mode")
 	}
-	return gemVersions, nil
+}
+
+type API struct {
+	apiV1Handler     *APIV1Handler
+	rubygemsHandler  *RubyGemsHandler
+	router           *gin.Engine
+	cfg              *config.Config
+	db               *db.DB
+	license          *license.License
+	tokenMiddleware  *middleware.TokenMiddleware
+	githubMiddleware *middleware.GitHubMiddleware
+	jwtMiddleware    *middleware.JWTMiddleware
+}
+
+func NewAPI(cfg *config.Config, l *license.License, db *db.DB, apiV1Handler *APIV1Handler, rubygemsHandler *RubyGemsHandler) *API {
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	return &API{
+		apiV1Handler:    apiV1Handler,
+		rubygemsHandler: rubygemsHandler,
+		router:          router,
+		cfg:             cfg,
+		license:         l,
+		db:              db,
+	}
+}
+
+func (api *API) Run() {
+	api.checkLicense()
+	api.loadMiddleware()
+	api.registerRoutes()
+	port := fmt.Sprintf(":%d", api.cfg.Port)
+	if api.cfg.Mirrors[0].Enabled {
+		log.Info().Str("detail", api.cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
+	}
+	log.Info().Str("detail", port).Msg("gemfast server listening on port")
+	err := api.router.Run(port)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start server")
+	}
+}
+
+func (api *API) loadMiddleware() {
+	acl := middleware.NewACL(api.cfg)
+	api.tokenMiddleware = middleware.NewTokenMiddleware(acl, api.db)
+	api.githubMiddleware = middleware.NewGitHubMiddleware(api.cfg, acl, api.db)
+	api.jwtMiddleware = middleware.NewJWTMiddleware(api.cfg, acl, api.db)
+}
+
+func (api *API) registerRoutes() {
+	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
+	api.router.SetHTMLTemplate(tmpl)
+	api.router.Use(gin.Recovery())
+	api.router.GET("/up", api.apiV1Handler.health)
+	authMode := api.cfg.Auth.Type
+	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
+	switch strings.ToLower(authMode) {
+	case "github":
+		api.configureGitHubAuth()
+	case "local":
+		api.configureLocalAuth()
+	case "none":
+		api.configureNoneAuth()
+	default:
+		log.Fatal().Msg(fmt.Sprintf("invalid auth type: %s", authMode))
+	}
+}
+
+func (api *API) configureGitHubAuth() {
+	adminGitHubAuth := api.router.Group(adminAPIPath)
+	adminGitHubAuth.POST("/login", api.githubMiddleware.GitHubLoginHandler)
+	slash := api.router.Group("/")
+	slash.GET("/github/callback", api.githubMiddleware.GitHubCallbackHandler)
+	adminGitHubAuth.Use(api.githubMiddleware.GitHubMiddlewareFunc())
+	{
+		api.configureAdmin(adminGitHubAuth)
+	}
+	api.configurePrivate()
+}
+
+func (api *API) configureLocalAuth() {
+	err := api.db.CreateAdminUserIfNotExists()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create admin user")
+	}
+	err = api.db.CreateLocalUsers()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create local users")
+	}
+	jwtMiddleware, err := api.jwtMiddleware.InitJwtMiddleware()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to initialize auth middleware")
+	}
+	adminLocalAuth := api.router.Group(adminAPIPath)
+	adminLocalAuth.POST("/login", jwtMiddleware.LoginHandler)
+	adminLocalAuth.GET("/refresh-token", jwtMiddleware.RefreshHandler)
+	adminLocalAuth.Use(jwtMiddleware.MiddlewareFunc())
+	{
+		api.configureAdmin(adminLocalAuth)
+	}
+	api.configurePrivate()
+}
+
+func (api *API) configureNoneAuth() {
+	if api.cfg.Mirrors[0].Enabled {
+		mirror := api.router.Group("/")
+		api.configureMirror(mirror)
+	}
+	private := api.router.Group(api.cfg.PrivateGemsURL)
+	api.configurePrivateRead(private)
+	api.configurePrivateWrite(private)
+	admin := api.router.Group(adminAPIPath)
+	api.configureAdmin(admin)
+}
+
+// /
+func (api *API) configureMirror(mirror *gin.RouterGroup) {
+	mirror.GET("/specs.4.8.gz", api.rubygemsHandler.mirroredIndexHandler)
+	mirror.GET("/latest_specs.4.8.gz", api.rubygemsHandler.mirroredIndexHandler)
+	mirror.GET("/prerelease_specs.4.8.gz", api.rubygemsHandler.mirroredIndexHandler)
+	mirror.GET("/quick/Marshal.4.8/:gemspec.rz", api.rubygemsHandler.mirroredGemspecRzHandler)
+	mirror.GET("/gems/:gem", api.rubygemsHandler.mirroredGemHandler)
+	mirror.GET("/api/v1/dependencies", api.rubygemsHandler.mirroredDependenciesHandler)
+	mirror.GET("/api/v1/dependencies.json", api.rubygemsHandler.mirroredDependenciesJSONHandler)
+	mirror.GET("/info/*gem", api.rubygemsHandler.mirroredInfoHandler)
+	mirror.GET("/versions", api.rubygemsHandler.mirroredVersionsHandler)
+}
+
+// /private
+func (api *API) configurePrivate() {
+	privateTokenAuth := api.router.Group(api.cfg.PrivateGemsURL)
+	privateTokenAuth.Use(api.tokenMiddleware.TokenMiddlewareFunc())
+	{
+		if !api.cfg.Auth.AllowAnonymousRead {
+			api.configurePrivateRead(privateTokenAuth)
+		}
+		api.configurePrivateWrite(privateTokenAuth)
+	}
+	if api.cfg.Mirrors[0].Enabled {
+		mirror := api.router.Group("/")
+		api.configureMirror(mirror)
+	}
+	if api.cfg.Auth.AllowAnonymousRead {
+		private := api.router.Group(api.cfg.PrivateGemsURL)
+		api.configurePrivateRead(private)
+	}
+}
+
+// /private
+func (api *API) configurePrivateRead(private *gin.RouterGroup) {
+	private.GET("/specs.4.8.gz", api.rubygemsHandler.localIndexHandler)
+	private.GET("/latest_specs.4.8.gz", api.rubygemsHandler.localIndexHandler)
+	private.GET("/prerelease_specs.4.8.gz", api.rubygemsHandler.localIndexHandler)
+	private.GET("/quick/Marshal.4.8/:gemspec.rz", api.rubygemsHandler.localGemspecRzHandler)
+	private.GET("/gems/:gem", api.rubygemsHandler.localGemHandler)
+	private.GET("/api/v1/dependencies", api.rubygemsHandler.localDependenciesHandler)
+	private.GET("/api/v1/dependencies.json", api.rubygemsHandler.localDependenciesJSONHandler)
+	private.GET("/versions", api.rubygemsHandler.localVersionsHandler)
+	private.GET("/info/:gem", api.rubygemsHandler.localInfoHandler)
+	private.GET("/names", api.rubygemsHandler.localNamesHandler)
+}
+
+// /private
+func (api *API) configurePrivateWrite(private *gin.RouterGroup) {
+	private.POST("/api/v1/gems", api.rubygemsHandler.localUploadGemHandler)
+	private.DELETE("/api/v1/gems/yank", api.rubygemsHandler.localYankHandler)
+	private.POST("/upload", api.rubygemsHandler.geminaboxUploadGem)
+}
+
+// /admin
+func (api *API) configureAdmin(admin *gin.RouterGroup) {
+	admin.GET("/auth", api.apiV1Handler.authMode)
+	admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
+	admin.GET("/gems", api.apiV1Handler.listGems)
+	admin.GET("/gems/:gem", api.apiV1Handler.getGem)
+	admin.GET("/users", api.apiV1Handler.listUsers)
+	admin.GET("/users/:username", api.apiV1Handler.getUser)
+	admin.DELETE("/users/:username", api.apiV1Handler.deleteUser)
+	admin.PUT("/users/:username/role/:role", api.apiV1Handler.setUserRole)
 }

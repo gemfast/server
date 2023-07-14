@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/db"
 
 	jmw "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -16,18 +16,32 @@ type login struct {
 	Password string `form:"password" json:"password" binding:"required"`
 }
 
+type JWTMiddleware struct {
+	cfg *config.Config
+	acl *ACL
+	db  *db.DB
+}
+
 const IdentityKey = "id"
 const RoleKey = "role"
 
-func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
+func NewJWTMiddleware(cfg *config.Config, acl *ACL, db *db.DB) *JWTMiddleware {
+	return &JWTMiddleware{
+		cfg: cfg,
+		acl: acl,
+		db:  db,
+	}
+}
+
+func (j *JWTMiddleware) InitJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 	authMiddleware, err := jmw.New(&jmw.GinJWTMiddleware{
 		Realm:       "zone",
-		Key:         []byte(config.Cfg.Auth.JWTSecretKey),
+		Key:         []byte(j.cfg.Auth.JWTSecretKey),
 		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
 		PayloadFunc: func(data interface{}) jmw.MapClaims {
-			if v, ok := data.(*models.User); ok {
+			if v, ok := data.(*db.User); ok {
 				return jmw.MapClaims{
 					IdentityKey: v.Username,
 					RoleKey:     v.Role,
@@ -39,7 +53,7 @@ func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 		},
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jmw.ExtractClaims(c)
-			return &models.User{
+			return &db.User{
 				Username: claims[IdentityKey].(string),
 				Role:     claims[RoleKey].(string),
 			}
@@ -49,11 +63,11 @@ func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 			if err := c.ShouldBind(&loginVals); err != nil {
 				return nil, jmw.ErrMissingLoginValues
 			}
-			user := &models.User{
+			user := &db.User{
 				Username: loginVals.Username,
 				Password: []byte(loginVals.Password),
 			}
-			authenticated, err := models.AuthenticateLocalUser(user)
+			authenticated, err := j.db.AuthenticateLocalUser(user)
 			if err != nil {
 				return nil, jmw.ErrFailedAuthentication
 			}
@@ -62,7 +76,7 @@ func NewJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 		Authorizator: func(data interface{}, c *gin.Context) bool {
 			claims := jmw.ExtractClaims(c)
 			role := claims[RoleKey].(string)
-			ok, err := ACL.Enforce(role, c.Request.URL.Path, c.Request.Method)
+			ok, err := j.acl.Enforce(role, c.Request.URL.Path, c.Request.Method)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to check acl")
 				return false

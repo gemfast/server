@@ -1,4 +1,4 @@
-package models
+package db
 
 import (
 	"crypto/md5"
@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/spec"
 	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
@@ -71,10 +70,10 @@ func GemVersionsFromBytes(data []byte) ([]*Gem, error) {
 	return gv, nil
 }
 
-func SaveGem(g *Gem) error {
+func (db *DB) SaveGem(g *Gem) error {
 	var existing []byte
-	db.BoltDB.View(func(tx *bolt.Tx) error {
-		gemBytes := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(g.Name))
+	db.boltDB.View(func(tx *bolt.Tx) error {
+		gemBytes := tx.Bucket([]byte(GemBucket)).Get([]byte(g.Name))
 		existing = gemBytes
 		return nil
 	})
@@ -85,8 +84,8 @@ func SaveGem(g *Gem) error {
 		if err != nil {
 			return fmt.Errorf("could not marshal gem to json: %v", err)
 		}
-		err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-			err = tx.Bucket([]byte(db.GEM_BUCKET)).Put([]byte(g.Name), gemBytes)
+		err = db.boltDB.Update(func(tx *bolt.Tx) error {
+			err = tx.Bucket([]byte(GemBucket)).Put([]byte(g.Name), gemBytes)
 			if err != nil {
 				return fmt.Errorf("could not set: %v", err)
 			}
@@ -110,8 +109,8 @@ func SaveGem(g *Gem) error {
 			g.InfoChecksum = infoChecksum
 			gemVersions = append(gemVersions, g)
 			gemBytes, _ := json.Marshal(gemVersions)
-			err := db.BoltDB.Update(func(tx *bolt.Tx) error {
-				err := tx.Bucket([]byte(db.GEM_BUCKET)).Put([]byte(g.Name), gemBytes)
+			err := db.boltDB.Update(func(tx *bolt.Tx) error {
+				err := tx.Bucket([]byte(GemBucket)).Put([]byte(g.Name), gemBytes)
 				if err != nil {
 					return fmt.Errorf("could not set: %v", err)
 				}
@@ -126,7 +125,7 @@ func SaveGem(g *Gem) error {
 }
 
 // Create
-func SaveGemVersions(specs []*spec.Spec) error {
+func (db *DB) SaveGemVersions(specs []*spec.Spec) error {
 	for _, s := range specs {
 		g := GemFromSpec(s)
 		var versionConstraints []string
@@ -145,7 +144,7 @@ func SaveGemVersions(specs []*spec.Spec) error {
 			versionConstraints = []string{}
 			constraint = ""
 		}
-		err := SaveGem(g)
+		err := db.SaveGem(g)
 		if err != nil {
 			log.Error().Err(err).Str("detail", g.Name).Msg("failed to save dependencies for gem")
 			return err
@@ -155,9 +154,9 @@ func SaveGemVersions(specs []*spec.Spec) error {
 }
 
 // Delete
-func DeleteGemVersion(toDelete *Gem) (int, error) {
+func (db *DB) DeleteGemVersion(toDelete *Gem) (int, error) {
 	count := 0
-	gemVersions, err := GetGemVersions(toDelete.Name)
+	gemVersions, err := db.GetGemVersions(toDelete.Name)
 	if err != nil {
 		return count, err
 	}
@@ -171,8 +170,8 @@ func DeleteGemVersion(toDelete *Gem) (int, error) {
 		}
 	}
 	gemBytes, _ := json.Marshal(gemVersions)
-	_ = db.BoltDB.Update(func(tx *bolt.Tx) error {
-		err := tx.Bucket([]byte(db.GEM_BUCKET)).Put([]byte(toDelete.Name), gemBytes)
+	_ = db.boltDB.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket([]byte(GemBucket)).Put([]byte(toDelete.Name), gemBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
 		}
@@ -182,10 +181,10 @@ func DeleteGemVersion(toDelete *Gem) (int, error) {
 }
 
 // Read
-func GetGemVersions(name string) ([]*Gem, error) {
+func (db *DB) GetGemVersions(name string) ([]*Gem, error) {
 	var gems []*Gem
-	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		g := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(name))
+	err := db.boltDB.View(func(tx *bolt.Tx) error {
+		g := tx.Bucket([]byte(GemBucket)).Get([]byte(name))
 		gem, _ := GemVersionsFromBytes(g)
 		gems = gem
 		return nil
@@ -197,10 +196,10 @@ func GetGemVersions(name string) ([]*Gem, error) {
 
 }
 
-func GetGems() ([][]*Gem, error) {
+func (db *DB) GetGems() ([][]*Gem, error) {
 	var allGems [][]*Gem
-	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(db.GEM_BUCKET))
+	err := db.boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(GemBucket))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			g, _ := GemVersionsFromBytes(v)
@@ -217,13 +216,13 @@ func GetGems() ([][]*Gem, error) {
 	return allGems, nil
 }
 
-func GetAllGemversions() ([]string, error) {
+func (db *DB) GetAllGemversions() ([]string, error) {
 	t := time.Now()
 	rfc := t.Format(time.RFC3339)
 	arr := []string{fmt.Sprintf("created_at: %s", rfc), "---"}
 	m := make(map[string][]string)
-	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(db.GEM_BUCKET))
+	err := db.boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(GemBucket))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			gemVersions, err := GemVersionsFromBytes(v)
@@ -259,10 +258,10 @@ func GetAllGemversions() ([]string, error) {
 	return arr, nil
 }
 
-func GetGemInfo(name string) (string, error) {
+func (db *DB) GetGemInfo(name string) (string, error) {
 	var gemVersions []*Gem
-	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		g := tx.Bucket([]byte(db.GEM_BUCKET)).Get([]byte(name))
+	err := db.boltDB.View(func(tx *bolt.Tx) error {
+		g := tx.Bucket([]byte(GemBucket)).Get([]byte(name))
 		gv, err := GemVersionsFromBytes(g)
 		gemVersions = gv
 		return err
@@ -273,11 +272,11 @@ func GetGemInfo(name string) (string, error) {
 	return CompactIndexInfo(gemVersions), nil
 }
 
-func GetAllGemNames() []string {
+func (db *DB) GetAllGemNames() []string {
 	var names []string
 	names = []string{"---"}
-	db.BoltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(db.GEM_BUCKET))
+	db.boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(GemBucket))
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			names = append(names, string(k))

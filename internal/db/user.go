@@ -1,11 +1,8 @@
-package models
+package db
 
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/db"
 
 	"github.com/rs/zerolog/log"
 	"github.com/sethvargo/go-password/password"
@@ -35,8 +32,8 @@ func userFromBytes(data []byte) (*User, error) {
 	return u, nil
 }
 
-func AuthenticateLocalUser(incoming *User) (*User, error) {
-	current, err := GetUser(incoming.Username)
+func (db *DB) AuthenticateLocalUser(incoming *User) (*User, error) {
+	current, err := db.GetUser(incoming.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -46,10 +43,10 @@ func AuthenticateLocalUser(incoming *User) (*User, error) {
 	return current, nil
 }
 
-func GetUser(username string) (*User, error) {
+func (db *DB) GetUser(username string) (*User, error) {
 	var existing []byte
-	db.BoltDB.View(func(tx *bolt.Tx) error {
-		userBytes := tx.Bucket([]byte(db.USER_BUCKET)).Get([]byte(username))
+	db.boltDB.View(func(tx *bolt.Tx) error {
+		userBytes := tx.Bucket([]byte(UserBucket)).Get([]byte(username))
 		existing = userBytes
 		return nil
 	})
@@ -64,10 +61,10 @@ func GetUser(username string) (*User, error) {
 	return user, nil
 }
 
-func GetUsers() ([]*User, error) {
+func (db *DB) GetUsers() ([]*User, error) {
 	var users []*User
-	err := db.BoltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(db.USER_BUCKET))
+	err := db.boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(UserBucket))
 		b.ForEach(func(k, v []byte) error {
 			user, err := userFromBytes(v)
 			if err != nil {
@@ -84,10 +81,10 @@ func GetUsers() ([]*User, error) {
 	return users, nil
 }
 
-func CreateUser(user *User) error {
+func (db *DB) CreateUser(user *User) error {
 	userBytes, err := json.Marshal(user)
-	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
 		}
@@ -96,23 +93,23 @@ func CreateUser(user *User) error {
 	return err
 }
 
-func CreateAdminUserIfNotExists() error {
-	user, err := GetUser("admin")
+func (db *DB) CreateAdminUserIfNotExists() error {
+	user, err := db.GetUser("admin")
 	if err != nil {
 		log.Trace().Msg("admin user not found")
 	}
 	if user != nil && user.Username != "" && len(user.Password) > 0 {
-		if config.Cfg.Auth.AdminPassword == "" {
+		if db.cfg.Auth.AdminPassword == "" {
 			return nil
 		}
-		pw := config.Cfg.Auth.AdminPassword
+		pw := db.cfg.Auth.AdminPassword
 		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(pw)); err != nil {
 			log.Info().Msg("updating admin user password")
 		} else {
 			return nil
 		}
 	}
-	pw, err := getAdminPassword()
+	pw, err := db.getAdminPassword()
 	if err != nil {
 		return err
 	}
@@ -127,8 +124,8 @@ func CreateAdminUserIfNotExists() error {
 	if err != nil {
 		return fmt.Errorf("could not marshal user to json: %v", err)
 	}
-	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
 		}
@@ -137,14 +134,14 @@ func CreateAdminUserIfNotExists() error {
 	return nil
 }
 
-func CreateLocalUsers() error {
-	if len(config.Cfg.Auth.LocalUsers) == 0 {
+func (db *DB) CreateLocalUsers() error {
+	if len(db.cfg.Auth.LocalUsers) == 0 {
 		log.Trace().Msg("no local users to add")
 		return nil
 	}
 	var usernames []string
-	db.BoltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(db.USER_BUCKET))
+	db.boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(UserBucket))
 		if b == nil {
 			return fmt.Errorf("get bucket: FAILED")
 		}
@@ -158,16 +155,16 @@ func CreateLocalUsers() error {
 	})
 
 	m := make(map[string]bool)
-	db.BoltDB.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(db.USER_BUCKET))
-		for _, u := range config.Cfg.Auth.LocalUsers {
+	db.boltDB.Batch(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(UserBucket))
+		for _, u := range db.cfg.Auth.LocalUsers {
 			username := u.Username
 			pw := u.Password
 			role := u.Role
 			if role == "" {
-				role = config.Cfg.Auth.DefaultUserRole
+				role = db.cfg.Auth.DefaultUserRole
 			}
-			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), config.Cfg.Auth.BcryptCost)
+			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), db.cfg.Auth.BcryptCost)
 			if err != nil {
 				panic(err)
 			}
@@ -188,7 +185,7 @@ func CreateLocalUsers() error {
 			}
 			log.Trace().Str("detail", username).Msg("added or modified user")
 		}
-		b = tx.Bucket([]byte(db.USER_BUCKET))
+		b = tx.Bucket([]byte(UserBucket))
 		for _, username := range usernames {
 			if !m[username] {
 				log.Trace().Str("detail", username).Msg("removed user")
@@ -200,18 +197,18 @@ func CreateLocalUsers() error {
 	return nil
 }
 
-func getAdminPassword() ([]byte, error) {
+func (db *DB) getAdminPassword() ([]byte, error) {
 	var pw string
 	var err error
-	if config.Cfg.Auth.AdminPassword == "" {
+	if db.cfg.Auth.AdminPassword == "" {
 		pw, err = generatePassword()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		pw = config.Cfg.Auth.AdminPassword
+		pw = db.cfg.Auth.AdminPassword
 	}
-	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), config.Cfg.Auth.BcryptCost)
+	pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), db.cfg.Auth.BcryptCost)
 	if err != nil {
 		return nil, err
 	}
@@ -229,8 +226,8 @@ func generatePassword() (string, error) {
 	return pw, nil
 }
 
-func CreateUserToken(username string) (string, error) {
-	user, err := GetUser(username)
+func (db *DB) CreateUserToken(username string) (string, error) {
+	user, err := db.GetUser(username)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get existing user")
 		return "", err
@@ -245,8 +242,8 @@ func CreateUserToken(username string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not marshal user to json: %v", err)
 	}
-	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
 		}
@@ -258,7 +255,7 @@ func CreateUserToken(username string) (string, error) {
 	return token, nil
 }
 
-func UpdateUser(user *User) error {
+func (db *DB) UpdateUser(user *User) error {
 	ok := func(user *User) bool {
 		for _, role := range ValidUserRoles() {
 			if role == user.Role {
@@ -275,8 +272,8 @@ func UpdateUser(user *User) error {
 	if err != nil {
 		return fmt.Errorf("could not marshal user to json: %v", err)
 	}
-	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
-		err = tx.Bucket([]byte(db.USER_BUCKET)).Put([]byte(user.Username), userBytes)
+	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
 		}
@@ -288,10 +285,10 @@ func UpdateUser(user *User) error {
 	return nil
 }
 
-func DeleteUser(username string) (bool, error) {
+func (db *DB) DeleteUser(username string) (bool, error) {
 	deleted := false
-	err := db.BoltDB.Update(func(tx *bolt.Tx) error {
-		err := tx.Bucket([]byte(db.USER_BUCKET)).Delete([]byte(username))
+	err := db.boltDB.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket([]byte(UserBucket)).Delete([]byte(username))
 		if err != nil {
 			return fmt.Errorf("could not delete: %v", err)
 		}

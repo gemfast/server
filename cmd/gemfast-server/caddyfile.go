@@ -40,14 +40,15 @@ func init() {
 }
 
 func caddyfile() {
+	cfg := config.NewConfig()
 	m := make(map[string]interface{})
-	m["Host"] = config.Cfg.CaddyConfig.Host
-	m["Port"] = config.Cfg.CaddyConfig.Port
-	m["GemfastPort"] = config.Cfg.Port
-	if !config.Cfg.CaddyConfig.AdminAPIEnabled {
+	m["Host"] = cfg.CaddyConfig.Host
+	m["Port"] = cfg.CaddyConfig.Port
+	m["GemfastPort"] = cfg.Port
+	if !cfg.CaddyConfig.AdminAPIEnabled {
 		m["AdminDisabled"] = true
 	}
-	if !config.Cfg.CaddyConfig.MetricsDisabled {
+	if !cfg.CaddyConfig.MetricsDisabled {
 		m["MetricsEnabled"] = true
 	}
 	t, err := template.New("Caddyfile").Parse(CaddyfileTemplate)

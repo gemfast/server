@@ -2,12 +2,11 @@ package cve
 
 import (
 	"fmt"
+	"time"
 
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
-	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -37,44 +36,39 @@ type GemAdvisory struct {
 	} `yaml:"related"`
 }
 
-var lock = &sync.Mutex{}
-
-var advisoryDB *cache.Cache
-
-func getCache() *cache.Cache {
-	if advisoryDB == nil {
-		lock.Lock()
-		defer lock.Unlock()
-		if advisoryDB == nil {
-			log.Trace().Msg("creating singleton ruby advisory db")
-			advisoryDB = cache.New(24 * time.Hour)
-		}
-	}
-	return advisoryDB
+type GemAdvisoryDB struct {
+	db  *cache.Cache
+	cfg *config.Config
 }
 
-func InitRubyAdvisoryDB(l *license.License) error {
-	if !config.Cfg.CVE.Enabled || !l.Validated {
+func NewGemAdvisoryDB(cfg *config.Config, l *license.License) *GemAdvisoryDB {
+	if !cfg.CVE.Enabled || !l.Validated {
 		log.Trace().Msg("ruby advisory db disabled")
-		return nil
 	}
-	err := updateAdvisoryRepo()
+	advisoryDB := cache.New(24 * time.Hour)
+	return &GemAdvisoryDB{
+		db:  advisoryDB,
+		cfg: cfg,
+	}
+}
+
+func (g *GemAdvisoryDB) Refresh() error {
+	err := g.updateAdvisoryRepo()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to update ruby-advisory-db")
+		log.Warn().Err(err).Msg("failed to update ruby-advisory-db")
 	}
-	getCache().Close()
-	err = cacheAdvisoryDB(config.Cfg.CVE.RubyAdvisoryDBDir + "/gems")
+	g.db.Close()
+	err = g.cacheAdvisoryDB("/gems")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to cache github.com/rubysec/ruby-advisory-db")
 		return fmt.Errorf("failed to cache github.com/rubysec/ruby-advisory-db: %w", err)
 	}
 	log.Info().Msg("successfully cached github.com/rubysec/ruby-advisory-db")
-
 	return nil
 }
 
-func updateAdvisoryRepo() error {
-	raDB := config.Cfg.CVE.RubyAdvisoryDBDir
+func (g *GemAdvisoryDB) updateAdvisoryRepo() error {
+	raDB := g.cfg.CVE.RubyAdvisoryDBDir
 	if _, err := os.Stat(raDB); os.IsNotExist(err) {
 		_, err := git.PlainClone(raDB, false, &git.CloneOptions{
 			URL: "https://github.com/rubysec/ruby-advisory-db.git",
@@ -105,8 +99,9 @@ func updateAdvisoryRepo() error {
 	return nil
 }
 
-func cacheAdvisoryDB(path string) error {
+func (g *GemAdvisoryDB) cacheAdvisoryDB(suffix string) error {
 	var cacheKey string
+	path := g.cfg.CVE.RubyAdvisoryDBDir + suffix
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return fmt.Errorf("failed to stat github.com/rubysec/ruby-advisory-db: %w", err)
 	}
@@ -123,14 +118,14 @@ func cacheAdvisoryDB(path string) error {
 		if err != nil {
 			return err
 		}
-		a, found := getCache().Get(cacheKey)
+		a, found := g.db.Get(cacheKey)
 		if found {
 			advisories = a.([]GemAdvisory)
 			advisories = append(advisories, *ga)
 		} else {
 			advisories = append(advisories, *ga)
 		}
-		getCache().Set(cacheKey, advisories, 0)
+		g.db.Set(cacheKey, advisories, 0)
 
 		return nil
 	})
@@ -155,9 +150,9 @@ func gemAdvisoryFromFile(path string) (*GemAdvisory, error) {
 	return ga, nil
 }
 
-func isPatched(gem string, version string) (bool, GemAdvisory, error) {
+func (g *GemAdvisoryDB) isPatched(gem string, version string) (bool, GemAdvisory, error) {
 	var cves []GemAdvisory
-	c, found := getCache().Get(gem)
+	c, found := g.db.Get(gem)
 	if !found {
 		return true, GemAdvisory{}, nil
 	}
@@ -186,9 +181,9 @@ func isPatchedVersion(version ggv.Version, cve GemAdvisory) bool {
 	return false
 }
 
-func isUnaffected(gem string, version string) (bool, GemAdvisory, error) {
+func (g *GemAdvisoryDB) isUnaffected(gem string, version string) (bool, GemAdvisory, error) {
 	var cves []GemAdvisory
-	c, found := getCache().Get(gem)
+	c, found := g.db.Get(gem)
 	if !found {
 		return true, GemAdvisory{}, nil
 	}
@@ -217,17 +212,17 @@ func isUnaffectedVersion(version ggv.Version, cve GemAdvisory) bool {
 	return false
 }
 
-func GetCVEs(gem string, version string) []GemAdvisory {
+func (g *GemAdvisoryDB) GetCVEs(gem string, version string) []GemAdvisory {
 	var cves []GemAdvisory
-	patched, cve1, _ := isPatched(gem, version)
+	patched, cve1, _ := g.isPatched(gem, version)
 	if !patched {
-		if !acceptableSeverity(cve1) {
+		if !g.acceptableSeverity(cve1) {
 			cves = append(cves, cve1)
 		}
-		unaffected, cve2, _ := isUnaffected(gem, version)
+		unaffected, cve2, _ := g.isUnaffected(gem, version)
 		if !unaffected {
 			if cve2.Cve != cve1.Cve {
-				if !acceptableSeverity(cve1) {
+				if !g.acceptableSeverity(cve1) {
 					cves = append(cves, cve2)
 				}
 			}
@@ -262,9 +257,9 @@ func severity(cve GemAdvisory) string {
 	return "none"
 }
 
-func acceptableSeverity(cve GemAdvisory) bool {
+func (g *GemAdvisoryDB) acceptableSeverity(cve GemAdvisory) bool {
 	severity := severity(cve)
-	highestSeverity := strings.ToLower(config.Cfg.CVE.MaxSeverity)
+	highestSeverity := strings.ToLower(g.cfg.CVE.MaxSeverity)
 	if severity == "none" || highestSeverity == "critical" {
 		return true
 	}

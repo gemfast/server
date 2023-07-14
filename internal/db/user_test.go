@@ -1,11 +1,13 @@
-package models
+package db
 
 import (
 	"github.com/gemfast/server/internal/config"
 )
 
 func (suite *ModelsTestSuite) TestGetUser() {
-	user, err := GetUser("bobvance")
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	user, err := db.GetUser("bobvance")
 	suite.Nil(err)
 	suite.NotNil(user)
 	suite.Equal("bobvance", user.Username)
@@ -13,13 +15,17 @@ func (suite *ModelsTestSuite) TestGetUser() {
 }
 
 func (suite *ModelsTestSuite) TestGetUserNotFound() {
-	user, err := GetUser("notfound")
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	user, err := db.GetUser("notfound")
 	suite.Nil(user)
 	suite.NotNil(err)
 }
 
 func (suite *ModelsTestSuite) TestGetAllUsers() {
-	users, err := GetUsers()
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	users, err := db.GetUsers()
 	suite.Nil(err)
 	suite.Equal(2, len(users))
 	suite.Equal("bobvance", users[0].Username)
@@ -27,32 +33,37 @@ func (suite *ModelsTestSuite) TestGetAllUsers() {
 }
 
 func (suite *ModelsTestSuite) TestAuthenticateLocalUser() {
-	user, err := AuthenticateLocalUser(&User{Username: "bobvance", Password: []byte("mypassword")})
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	user, err := db.AuthenticateLocalUser(&User{Username: "bobvance", Password: []byte("mypassword")})
 	suite.Nil(err)
 	suite.NotNil(user)
 	suite.Equal("bobvance", user.Username)
-	user, err = AuthenticateLocalUser(&User{Username: "bobvance", Password: []byte("notmypassword")})
+	user, err = db.AuthenticateLocalUser(&User{Username: "bobvance", Password: []byte("notmypassword")})
 	suite.Nil(user)
 	suite.NotNil(err)
-	user, err = AuthenticateLocalUser(&User{Username: "notauser", Password: []byte("mypassword")})
+	user, err = db.AuthenticateLocalUser(&User{Username: "notauser", Password: []byte("mypassword")})
 	suite.Nil(user)
 	suite.NotNil(err)
 }
 
 func (suite *ModelsTestSuite) TestCreateUser() {
-	err := CreateUser(&User{Username: "newuser", Password: []byte("newpassword"), Role: "read"})
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	err := db.CreateUser(&User{Username: "newuser", Password: []byte("newpassword"), Role: "read"})
 	suite.Nil(err)
-	user, err := GetUser("newuser")
+	user, err := db.GetUser("newuser")
 	suite.Nil(err)
 	suite.NotNil(user)
 	suite.Equal("read", user.Role)
 }
 
 func (suite *ModelsTestSuite) TestCreateAdminUserIfNotExists() {
-	config.LoadConfig()
-	err := CreateAdminUserIfNotExists()
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	err := db.CreateAdminUserIfNotExists()
 	suite.Nil(err)
-	user, err := GetUser("admin")
+	user, err := db.GetUser("admin")
 	suite.Nil(err)
 	suite.NotNil(user)
 	suite.Equal("admin", user.Role)
@@ -60,13 +71,14 @@ func (suite *ModelsTestSuite) TestCreateAdminUserIfNotExists() {
 }
 
 func (suite *ModelsTestSuite) TestGetAdminPassword() {
-	config.LoadConfig()
-	config.Cfg.Auth.AdminPassword = "mypassword"
-	pw, err := getAdminPassword()
+	cfg := config.NewConfig()
+	cfg.Auth.AdminPassword = "mypassword"
+	db := NewTestDB(suite.db, cfg)
+	pw, err := db.getAdminPassword()
 	suite.Nil(err)
 	suite.NotNil(pw)
-	config.Cfg.Auth.AdminPassword = ""
-	generated, err := getAdminPassword()
+	cfg.Auth.AdminPassword = ""
+	generated, err := db.getAdminPassword()
 	suite.Nil(err)
 	suite.NotNil(generated)
 	suite.NotEqual(pw, generated)

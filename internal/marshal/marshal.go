@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/spec"
 )
 
@@ -176,7 +176,7 @@ func encGemVersion(buff *bytes.Buffer, version string, olinktbl map[string]int, 
 	}
 }
 
-func DumpBundlerDeps(gems []*models.Gem) ([]byte, error) {
+func DumpBundlerDeps(gems []*db.Gem) ([]byte, error) {
 	slinkidx := 0
 	slinktbl := make(map[string]int)
 	olinkidx := 0
