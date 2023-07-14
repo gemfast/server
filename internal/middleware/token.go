@@ -5,11 +5,23 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gemfast/server/internal/models"
+	"github.com/gemfast/server/internal/db"
 	"github.com/gin-gonic/gin"
 )
 
-func NewTokenMiddleware() gin.HandlerFunc {
+type TokenMiddleware struct {
+	acl *ACL
+	db  *db.DB
+}
+
+func NewTokenMiddleware(acl *ACL, db *db.DB) *TokenMiddleware {
+	return &TokenMiddleware{
+		acl: acl,
+		db:  db,
+	}
+}
+
+func (t *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, token, ok := c.Request.BasicAuth()
 		if !ok {
@@ -28,7 +40,7 @@ func NewTokenMiddleware() gin.HandlerFunc {
 			username = s[0]
 			token = s[1]
 		}
-		user, err := models.GetUser(username)
+		user, err := t.db.GetUser(username)
 		if err != nil {
 			c.String(http.StatusForbidden, fmt.Sprintf("no user found with username %s", username))
 			c.Abort()
@@ -36,7 +48,7 @@ func NewTokenMiddleware() gin.HandlerFunc {
 		}
 		ok = (user.Token == token)
 		if ok {
-			ok, err = ACL.Enforce(user.Role, c.Request.URL.Path, c.Request.Method)
+			ok, err = t.acl.Enforce(user.Role, c.Request.URL.Path, c.Request.Method)
 			if err != nil {
 				c.String(http.StatusInternalServerError, "failed to check access control list")
 				c.Abort()
@@ -57,18 +69,18 @@ func NewTokenMiddleware() gin.HandlerFunc {
 	}
 }
 
-func CreateTokenHandler(c *gin.Context) {
+func (t *TokenMiddleware) CreateUserTokenHandler(c *gin.Context) {
 	user, ok := c.Get(IdentityKey)
 	if !ok {
 		c.String(http.StatusInternalServerError, "Failed to get user from context")
 		return
 	}
-	u, ok := user.(*models.User)
+	u, ok := user.(*db.User)
 	if !ok {
-		c.String(http.StatusInternalServerError, "Failed to cast user to models.User")
+		c.String(http.StatusInternalServerError, "Failed to cast user to db.User")
 		return
 	}
-	token, err := models.CreateUserToken(u.Username)
+	token, err := t.db.CreateUserToken(u.Username)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate token for user")
 		return

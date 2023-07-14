@@ -8,18 +8,24 @@ import (
 
 	fixtures "github.com/aquasecurity/bolt-fixtures"
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/cve"
 	"github.com/gemfast/server/internal/db"
+	"github.com/gemfast/server/internal/filter"
+	"github.com/gemfast/server/internal/indexer"
+	"github.com/gemfast/server/internal/license"
 	"github.com/stretchr/testify/suite"
+	bolt "go.etcd.io/bbolt"
 )
 
-type ApiTestSuite struct {
+type APITestSuite struct {
 	suite.Suite
 	Loader      *fixtures.Loader
 	DBFile      string
 	FixturesDir string
+	DB          *bolt.DB
 }
 
-func (suite *ApiTestSuite) SetupTest() {
+func (suite *APITestSuite) SetupTest() {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		suite.FailNow("unable to get the current filename")
@@ -29,7 +35,7 @@ func (suite *ApiTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
-	dbFile, _ := os.CreateTemp("", "ApiTestSuite")
+	dbFile, _ := os.CreateTemp("", "APITestSuite")
 	gemfix := fixturesDir + "/db/gems.yaml"
 	userfix := fixturesDir + "/db/users.yaml"
 	fixtureFiles := []string{gemfix, userfix}
@@ -44,10 +50,30 @@ func (suite *ApiTestSuite) SetupTest() {
 	suite.Loader = l
 	suite.DBFile = dbFile.Name()
 	suite.FixturesDir = fixturesDir
-	db.BoltDB = l.DB()
+	suite.DB = l.DB()
 }
 
-func (suite *ApiTestSuite) TearDownTest() {
+func createTestAPI(testDB *bolt.DB, cfg *config.Config) (*API, error) {
+	l, err := license.NewLicense(cfg)
+	if err != nil {
+		return nil, err
+	}
+	database := db.NewTestDB(testDB, cfg)
+	indexer, err := indexer.NewIndexer(cfg, database)
+	if err != nil {
+		return nil, err
+	}
+	f := filter.NewFilter(cfg, l)
+	gdb := cve.NewGemAdvisoryDB(cfg, l)
+	apiV1Handler := NewAPIV1Handler(cfg, database, indexer, f, gdb)
+	rubygemsHandler := NewRubyGemsHandler(cfg, database, indexer, f, gdb)
+	api := NewAPI(cfg, l, database, apiV1Handler, rubygemsHandler)
+	api.loadMiddleware()
+	api.registerRoutes()
+	return api, nil
+}
+
+func (suite *APITestSuite) TearDownTest() {
 	suite.Loader.Close()
 	err := os.Remove(suite.DBFile)
 	if err != nil {
@@ -55,18 +81,19 @@ func (suite *ApiTestSuite) TearDownTest() {
 	}
 }
 
-func TestApiTestSuite(t *testing.T) {
-	suite.Run(t, new(ApiTestSuite))
+func TestAPITestSuite(t *testing.T) {
+	suite.Run(t, new(APITestSuite))
 }
 
-func (suite *ApiTestSuite) TestInitRouterNoneAuth() {
-	config.LoadConfig()
-	config.Cfg.Auth.Type = "none"
-	config.Cfg.ACLPath = suite.FixturesDir + "/gemfast_acl.csv"
-	config.Cfg.AuthModelPath = suite.FixturesDir + "/auth_model.conf"
-	r := initRouter()
+func (suite *APITestSuite) TestInitRouterNoneAuth() {
+	cfg := config.NewConfig()
+	cfg.Auth.Type = "none"
+	cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
+	cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
+	api, err := createTestAPI(suite.DB, cfg)
+	suite.Nil(err)
 	var paths []string
-	for _, route := range r.Routes() {
+	for _, route := range api.router.Routes() {
 		paths = append(paths, route.Path)
 	}
 	expectedPaths := []string{
@@ -108,14 +135,15 @@ func (suite *ApiTestSuite) TestInitRouterNoneAuth() {
 	suite.NotContains(paths, "/admin/api/v1/login")
 }
 
-func (suite *ApiTestSuite) TestInitRouterLocalAuth() {
-	config.LoadConfig()
-	config.Cfg.Auth.Type = "local"
-	config.Cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
-	config.Cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
-	r := initRouter()
+func (suite *APITestSuite) TestInitRouterLocalAuth() {
+	cfg := config.NewConfig()
+	cfg.Auth.Type = "local"
+	cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
+	cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
+	api, err := createTestAPI(suite.DB, cfg)
+	suite.Nil(err)
 	var paths []string
-	for _, route := range r.Routes() {
+	for _, route := range api.router.Routes() {
 		paths = append(paths, route.Path)
 	}
 	expectedPaths := []string{
@@ -157,14 +185,15 @@ func (suite *ApiTestSuite) TestInitRouterLocalAuth() {
 	suite.NotContains(paths, "/github/callback")
 }
 
-func (suite *ApiTestSuite) TestInitRouterGitHubAuth() {
-	config.LoadConfig()
-	config.Cfg.Auth.Type = "github"
-	config.Cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
-	config.Cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
-	r := initRouter()
+func (suite *APITestSuite) TestInitRouterGitHubAuth() {
+	cfg := config.NewConfig()
+	cfg.Auth.Type = "github"
+	cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
+	cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
+	api, err := createTestAPI(suite.DB, cfg)
+	suite.Nil(err)
 	var paths []string
-	for _, route := range r.Routes() {
+	for _, route := range api.router.Routes() {
 		paths = append(paths, route.Path)
 	}
 	expectedPaths := []string{

@@ -1,4 +1,4 @@
-package models
+package db
 
 import (
 	"os"
@@ -7,14 +7,16 @@ import (
 	"testing"
 
 	fixtures "github.com/aquasecurity/bolt-fixtures"
-	"github.com/gemfast/server/internal/db"
+	"github.com/gemfast/server/internal/config"
 	"github.com/stretchr/testify/suite"
+	bolt "go.etcd.io/bbolt"
 )
 
 type ModelsTestSuite struct {
 	suite.Suite
 	Loader *fixtures.Loader
 	DBFile string
+	db     *bolt.DB
 }
 
 func (suite *ModelsTestSuite) SetupTest() {
@@ -41,7 +43,7 @@ func (suite *ModelsTestSuite) SetupTest() {
 	}
 	suite.Loader = l
 	suite.DBFile = dbFile.Name()
-	db.BoltDB = l.DB()
+	suite.db = l.DB()
 }
 
 func (suite *ModelsTestSuite) TearDownTest() {
@@ -63,20 +65,24 @@ func (suite *ModelsTestSuite) TestSaveGem() {
 		Platform: "ruby",
 		Checksum: "1234567890",
 	}
-	err := SaveGem(gem)
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	err := db.SaveGem(gem)
 	suite.Nil(err)
 	suite.Equal("activesupport", gem.Name)
 	suite.NotNil(gem.InfoChecksum)
 	gem.Number = "6.0.4.3"
 	ic := gem.InfoChecksum
-	err = SaveGem(gem)
+	err = db.SaveGem(gem)
 	suite.Nil(err)
 	suite.Equal("activesupport", gem.Name)
 	suite.NotEqual(ic, gem.InfoChecksum)
 }
 
 func (suite *ModelsTestSuite) TestGetGems() {
-	gems, err := GetGems()
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	gems, err := db.GetGems()
 	suite.Nil(err)
 	suite.Equal(2, len(gems))
 	suite.Equal("chef", gems[0][0].Name)
@@ -84,26 +90,34 @@ func (suite *ModelsTestSuite) TestGetGems() {
 }
 
 func (suite *ModelsTestSuite) TestGetGem() {
-	gem, err := GetGemVersions("rails")
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	gem, err := db.GetGemVersions("rails")
 	suite.Nil(err)
 	suite.Equal(1, len(gem))
 	suite.Equal("rails", gem[0].Name)
 }
 
 func (suite *ModelsTestSuite) TestDeleteGemVersion() {
-	count, err := DeleteGemVersion(&Gem{Name: "rails", Number: "6.0.3.rc1"})
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	count, err := db.DeleteGemVersion(&Gem{Name: "rails", Number: "6.0.3.rc1"})
 	suite.Nil(err)
 	suite.Equal(1, count)
 }
 
 func (suite *ModelsTestSuite) TestGemAllGemVersions() {
-	gemVersions, err := GetAllGemversions()
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	gemVersions, err := db.GetAllGemversions()
 	suite.Nil(err)
 	suite.NotEqual(0, len(gemVersions))
 }
 
 func (suite *ModelsTestSuite) TestGemAllGemNames() {
-	names := GetAllGemNames()
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	names := db.GetAllGemNames()
 	suite.Equal(3, len(names))
 	suite.Contains(names, "---")
 	suite.Contains(names, "chef")

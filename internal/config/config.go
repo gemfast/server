@@ -74,9 +74,8 @@ type LocalUser struct {
 	Role     string `hcl:"role,optional"`
 }
 
-var Cfg Config
-
-func LoadConfig() {
+func NewConfig() *Config {
+	cfg := Config{}
 	cfgFile := os.Getenv("GEMFAST_CONFIG_FILE")
 	if cfgFile == "" {
 		cfgFileTries := []string{"/etc/gemfast/gemfast.hcl"}
@@ -97,29 +96,29 @@ func LoadConfig() {
 		if cfgFile == "" {
 			log.Warn().Err(err).Msg(fmt.Sprintf("unable to find a gemfast.hcl file at any of %v", cfgFileTries))
 			log.Warn().Msg("using default configuration values")
-			Cfg = Config{}
-			setDefaultConfig(&Cfg)
-			return
+			cfg.setDefaultConfig()
+			return &cfg
 		}
 	}
-	err := hclsimple.DecodeFile(cfgFile, nil, &Cfg)
+	err := hclsimple.DecodeFile(cfgFile, nil, &cfg)
 	if err != nil {
 		log.Error().Err(err).Msg(fmt.Sprintf("failed to load configuration file %s", cfgFile))
 		os.Exit(1)
 	}
-	setDefaultConfig(&Cfg)
+	cfg.setDefaultConfig()
+	return &cfg
 }
 
-func setDefaultConfig(c *Config) {
-	setDefaultServerConfig(&Cfg)
-	setDefaultCaddyConfig(&Cfg)
-	setDefaultMirrorConfig(&Cfg)
-	setDefaultAuthConfig(&Cfg)
-	setDefaultFilterConfig(&Cfg)
-	setDefaultCVEConfig(&Cfg)
+func (c *Config) setDefaultConfig() {
+	c.setDefaultServerConfig()
+	c.setDefaultCaddyConfig()
+	c.setDefaultMirrorConfig()
+	c.setDefaultAuthConfig()
+	c.setDefaultFilterConfig()
+	c.setDefaultCVEConfig()
 }
 
-func setDefaultServerConfig(c *Config) {
+func (c *Config) setDefaultServerConfig() {
 	if c.Port == 0 {
 		c.Port = 2020
 	}
@@ -141,7 +140,7 @@ func setDefaultServerConfig(c *Config) {
 	}
 }
 
-func setDefaultCaddyConfig(c *Config) {
+func (c *Config) setDefaultCaddyConfig() {
 	if c.CaddyConfig == nil {
 		c.CaddyConfig = &CaddyConfig{
 			AdminAPIEnabled: false,
@@ -169,7 +168,7 @@ func configureLogLevel(ll string) {
 	log.Info().Str("detail", level.String()).Msg("set global log level")
 }
 
-func setDefaultMirrorConfig(c *Config) {
+func (c *Config) setDefaultMirrorConfig() {
 	if (c.Mirrors == nil) || (len(c.Mirrors) == 0) {
 		c.Mirrors = []*MirrorConfig{{
 			Enabled:  true,
@@ -209,7 +208,7 @@ func readJWTSecretKeyFromPath(keyPath string) string {
 	return pw
 }
 
-func setDefaultAuthConfig(c *Config) {
+func (c *Config) setDefaultAuthConfig() {
 	defaultJWTSecretKeyPath := "/opt/gemfast/etc/gemfast/.jwt_secret_key"
 	if c.Auth == nil {
 		c.Auth = &AuthConfig{
@@ -239,7 +238,7 @@ func setDefaultAuthConfig(c *Config) {
 	}
 }
 
-func setDefaultFilterConfig(c *Config) {
+func (c *Config) setDefaultFilterConfig() {
 	if c.Filter == nil {
 		c.Filter = &FilterConfig{
 			Enabled: false,
@@ -256,7 +255,7 @@ func setDefaultFilterConfig(c *Config) {
 	}
 }
 
-func setDefaultCVEConfig(c *Config) {
+func (c *Config) setDefaultCVEConfig() {
 	if c.CVE == nil {
 		c.CVE = &CVEConfig{
 			Enabled:           false,

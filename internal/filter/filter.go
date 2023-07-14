@@ -8,25 +8,31 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var Filters []string
-
-func InitFilter(l *license.License) error {
-	if !config.Cfg.Filter.Enabled || !l.Validated {
-		log.Trace().Msg("gem filter disabled")
-		return nil
-	}
-	filters := config.Cfg.Filter.Regex
-	Filters = filters
-	log.Info().Msg("gem filter initialized")
-	return nil
+type RegexFilter struct {
+	filters []string
+	action  string
+	enabled bool
 }
 
-func IsAllowed(input string) bool {
-	if !config.Cfg.Filter.Enabled {
+func NewFilter(cfg *config.Config, l *license.License) *RegexFilter {
+	enabled := false
+	if cfg.Filter.Enabled && l.Validated {
+		log.Trace().Msg("gem filter enabled")
+		enabled = true
+	}
+	return &RegexFilter{
+		filters: cfg.Filter.Regex,
+		action:  cfg.Filter.Action,
+		enabled: enabled,
+	}
+}
+
+func (r *RegexFilter) IsAllowed(input string) bool {
+	if !r.enabled {
 		return true
 	}
-	negate := !(config.Cfg.Filter.Action == "deny")
-	for _, f := range Filters {
+	negate := !(r.action == "deny")
+	for _, f := range r.filters {
 		m, _ := regexp.MatchString(f, input)
 
 		if m {
