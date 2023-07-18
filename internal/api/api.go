@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"path/filepath"
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
@@ -135,7 +136,7 @@ func (api *API) configureNoneAuth() {
 		mirror := api.router.Group("/")
 		api.configureMirror(mirror)
 	}
-	private := api.router.Group(api.cfg.PrivateGemsURL)
+	private := api.router.Group(filepath.Join("/", api.cfg.PrivateGemsNamespace))
 	api.configurePrivateRead(private)
 	api.configurePrivateWrite(private)
 	admin := api.router.Group(adminAPIPath)
@@ -157,7 +158,7 @@ func (api *API) configureMirror(mirror *gin.RouterGroup) {
 
 // /private
 func (api *API) configurePrivate() {
-	privateTokenAuth := api.router.Group(api.cfg.PrivateGemsURL)
+	privateTokenAuth := api.router.Group(filepath.Join("/", api.cfg.PrivateGemsNamespace))
 	privateTokenAuth.Use(api.tokenMiddleware.TokenMiddlewareFunc())
 	{
 		if !api.cfg.Auth.AllowAnonymousRead {
@@ -170,7 +171,7 @@ func (api *API) configurePrivate() {
 		api.configureMirror(mirror)
 	}
 	if api.cfg.Auth.AllowAnonymousRead {
-		private := api.router.Group(api.cfg.PrivateGemsURL)
+		private := api.router.Group(filepath.Join("/", api.cfg.PrivateGemsNamespace))
 		api.configurePrivateRead(private)
 	}
 }
