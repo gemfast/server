@@ -16,7 +16,7 @@ caddy {
 }
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
-private_gems_url = "foobar"
+private_gems_namespace = "foobar"
 CONFIG
 
 sudo dpkg -i gemfast*.deb
