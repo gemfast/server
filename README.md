@@ -1,57 +1,29 @@
 # gemfast
 
-**This is currently experimental code. Although it works in its current state, do not use it for anything serious**
-
-Gemfast is a rubygems server that can be compiled into a single binary file and built for linux, darwin and windows operating systems. Gemfast can be quickly installed on a server without any other dependencies and configured using YAML.
+Gemfast is a fast and secure rubygems server that can be compiled into a single binary file and built for linux, darwin and windows operating systems. Gemfast can be quickly installed on a server without any other dependencies and configured using a single HCL file.
 
 ## Server Setup
 
-A new gemfast server can be started with a single command:
+Gemfast is distributed as a `.deb` package that can be installed on ubunutu or debian operating systems.
 
 ```bash
-./gemfast
+dpkg -i gemfast-<VERSION>-<ARCH>.deb
 ```
 
-The first time you start gemfast, it will initialize a database in the current directory and create an admin user. The admin user's password will be generated and printed out in the logs at first startup if you have not set the `GEMFAST_ADMIN_PASSWORD` environment variable.
+The first time you start gemfast, it will initialize a database in the current directory and create an admin user. The admin user's password will be generated and printed out in the logs at first startup if you have not set the `admin_password` setting in the `/etc/gemfast/gemfast.hcl` file.
 
 eg:
 
 ```bash
-{"level":"info","password":"9XhnYu43pqH0Wto5FGmf8MQE126kyl7P","time":1664910687,"message":"generated admin password"}
+{"level":"info","detail":"9XhnYu43pqH0Wto5FGmf8MQE126kyl7P","time":1664910687,"message":"generated admin password"}
 ```
 
 ## Server Configuration
 
-You can configure gemfast settings using environment variables
+You can configure gemfast settings using the `/etc/gemfast/gemfast.hcl` file.
 
-The default settings are:
+For more information see: https://gemfast.io/docs
 
-```bash
-GEMFAST_ADMIN_PASSWORD="<generated>" # The admin user password
-GEMFAST_DIR="/var/gemfast" # The base directory to store gem index files
-GEMFAST_GEM_DIR="/var/gemfast/gems" # The directory where to store gems
-GEMFAST_DB_DIR="." # Where to create the database file
-GEMFAST_AUTH="local" # The auth mode. Can be local or none.
-```
+## License
 
-## Usage
-
-Usage with `bundler`: TBD
-
-Usage with `gem` command: TBD
-
-## Using the API
-
-TBD
-
-## Supported API Endpoints
-
-* HEAD /
-* GET /specs.4.8.gz
-* GET /latest_specs.4.8.gz
-* GET /prerelease_specs.4.8.gz
-* GET /quick/Marshal.4.8/*gemspec.rz
-* GET /gems/*gem
-* GET /api/v1/dependencies
-* GET /api/v1/dependencies.json
-
+Apache 2.0
