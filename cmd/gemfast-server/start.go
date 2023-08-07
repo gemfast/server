@@ -74,6 +74,6 @@ func start() {
 	// Start the API
 	apiV1Handler := api.NewAPIV1Handler(cfg, database, indexer, f, advisoryDB)
 	rubygemsHandler := api.NewRubyGemsHandler(cfg, database, indexer, f, advisoryDB)
-	api := api.NewAPI(cfg, license, database, apiV1Handler, rubygemsHandler)
+	api := api.NewAPI(cfg, database, apiV1Handler, rubygemsHandler)
 	api.Run()
 }
