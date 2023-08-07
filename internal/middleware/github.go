@@ -50,10 +50,10 @@ func NewGitHubMiddleware(cfg *config.Config, acl *ACL, db *db.DB) *GitHubMiddlew
 	}
 }
 
-func (ghm *GitHubMiddleware) InitGitHubMiddleware() (*jmw.GinJWTMiddleware, error) {
+func (m *GitHubMiddleware) InitGitHubMiddleware() (*jmw.GinJWTMiddleware, error) {
 	authMiddleware, err := jmw.New(&jmw.GinJWTMiddleware{
 		Realm:       "zone",
-		Key:         []byte(ghm.cfg.Auth.JWTSecretKey),
+		Key:         []byte(m.cfg.Auth.JWTSecretKey),
 		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
@@ -86,8 +86,8 @@ func payload(user *db.User) jwt.MapClaims {
 	}
 }
 
-func (ghm *GitHubMiddleware) generateJWTToken(user *db.User) (string, time.Time, error) {
-	mw, err := ghm.InitGitHubMiddleware()
+func (m *GitHubMiddleware) generateJWTToken(user *db.User) (string, time.Time, error) {
+	mw, err := m.InitGitHubMiddleware()
 	if err != nil {
 		panic(err)
 	}
@@ -109,13 +109,13 @@ func (ghm *GitHubMiddleware) generateJWTToken(user *db.User) (string, time.Time,
 	return tokenString, expire, nil
 }
 
-func (ghm *GitHubMiddleware) GitHubLoginHandler(c *gin.Context) {
-	c.String(http.StatusOK, fmt.Sprintf("Login URL: https://github.com/login/oauth/authorize?scope=read:user,read:org&client_id=%s\n", ghm.cfg.Auth.GitHubClientId))
+func (m *GitHubMiddleware) GitHubLoginHandler(c *gin.Context) {
+	c.String(http.StatusOK, fmt.Sprintf("Login URL: https://github.com/login/oauth/authorize?scope=read:user,read:org&client_id=%s\n", m.cfg.Auth.GitHubClientId))
 }
 
-func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
+func (m *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	code := c.Query("code")
-	login := OAuthLogin{ClientID: ghm.cfg.Auth.GitHubClientId, ClientSecret: ghm.cfg.Auth.GitHubClientSecret, Code: code}
+	login := OAuthLogin{ClientID: m.cfg.Auth.GitHubClientId, ClientSecret: m.cfg.Auth.GitHubClientSecret, Code: code}
 	jsonData, _ := json.Marshal(login)
 	bodyReader := bytes.NewBuffer(jsonData)
 	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", bodyReader)
@@ -144,7 +144,7 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	}
 	json := string(body)
 	at := gjson.Get(json, "access_token").String()
-	user, err := ghm.authenticateGitHubUser(at)
+	user, err := m.authenticateGitHubUser(at)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to authenticate github user")
 		c.String(http.StatusForbidden, fmt.Sprintf("failed to fetch github user with provided token: %v", err))
@@ -153,7 +153,7 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	}
 	ed := gjson.Get(json, "error_description").String()
 	eu := gjson.Get(json, "error_uri").String()
-	jwt, _, err := ghm.generateJWTToken(user)
+	jwt, _, err := m.generateJWTToken(user)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to generate JWT token")
 		c.String(http.StatusInternalServerError, "failed to generate JWT token")
@@ -167,7 +167,7 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	})
 }
 
-func (ghm *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error) {
+func (m *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error) {
 	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GET user request: %w", err)
@@ -189,35 +189,35 @@ func (ghm *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error)
 	if username == "" {
 		return nil, fmt.Errorf("user login not returned from github")
 	}
-	err = ghm.userMemberOfRequiredOrg(at)
+	err = m.userMemberOfRequiredOrg(at)
 	if err != nil {
 		return nil, err
 	}
-	user, err := ghm.db.GetUser(username)
+	user, err := m.db.GetUser(username)
 	if err != nil {
 		newUser := &db.User{
 			Username:    username,
-			Role:        ghm.cfg.Auth.DefaultUserRole,
+			Role:        m.cfg.Auth.DefaultUserRole,
 			Type:        "github",
 			GitHubToken: at,
 		}
-		err = ghm.db.CreateUser(newUser)
+		err = m.db.CreateUser(newUser)
 		if err != nil {
 			return nil, err
 		}
 		return newUser, nil
 	} else if user.GitHubToken != at {
 		user.GitHubToken = at
-		err = ghm.db.UpdateUser(user)
+		err = m.db.UpdateUser(user)
 		if err != nil {
 			return nil, err
 		}
 	}
-	ghm.cache.Set(at, at, 5*time.Minute)
+	m.cache.Set(at, at, 5*time.Minute)
 	return user, nil
 }
 
-func (ghm *GitHubMiddleware) userMemberOfRequiredOrg(at string) error {
+func (m *GitHubMiddleware) userMemberOfRequiredOrg(at string) error {
 	req, err := http.NewRequest("GET", "https://api.github.com/user/orgs", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create GET user/orgs request: %w", err)
@@ -242,7 +242,7 @@ func (ghm *GitHubMiddleware) userMemberOfRequiredOrg(at string) error {
 	}
 
 	var requiredOrgs []string
-	for _, gho := range ghm.cfg.Auth.GitHubUserOrgs {
+	for _, gho := range m.cfg.Auth.GitHubUserOrgs {
 		requiredOrgs = append(requiredOrgs, strings.ToLower(gho))
 	}
 	if len(intersect.Hash(requiredOrgs, userOrgs)) != 0 {
@@ -251,7 +251,7 @@ func (ghm *GitHubMiddleware) userMemberOfRequiredOrg(at string) error {
 	return fmt.Errorf("user is not a member of any required github org")
 }
 
-func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
+func (m *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")
 		if auth == "" {
@@ -270,7 +270,7 @@ func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 			if jwt.GetSigningMethod("HS256") != t.Method {
 				return nil, jmw.ErrInvalidSigningAlgorithm
 			}
-			return []byte(ghm.cfg.Auth.JWTSecretKey), nil
+			return []byte(m.cfg.Auth.JWTSecretKey), nil
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("failed to parse jwt token from request")
@@ -286,15 +286,15 @@ func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 		}
 		role := claims[RoleKey].(string)
 		ghAccessToken := claims[GitHubTokenKey].(string)
-		if _, found := ghm.cache.Get(ghAccessToken); !found {
-			_, err := ghm.authenticateGitHubUser(ghAccessToken)
+		if _, found := m.cache.Get(ghAccessToken); !found {
+			_, err := m.authenticateGitHubUser(ghAccessToken)
 			if err != nil {
 				c.String(http.StatusForbidden, fmt.Sprintf("failed to fetch github user with provided token: %v", err))
 				c.Abort()
 				return
 			}
 		}
-		ok, err := ghm.acl.Enforce(role, c.Request.URL.Path, c.Request.Method)
+		ok, err := m.acl.Enforce(role, c.Request.URL.Path, c.Request.Method)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to check acl")
 			c.String(http.StatusForbidden, "failed to check acl")

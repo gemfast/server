@@ -33,10 +33,10 @@ func NewJWTMiddleware(cfg *config.Config, acl *ACL, db *db.DB) *JWTMiddleware {
 	}
 }
 
-func (j *JWTMiddleware) InitJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
+func (m *JWTMiddleware) InitJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 	authMiddleware, err := jmw.New(&jmw.GinJWTMiddleware{
 		Realm:       "zone",
-		Key:         []byte(j.cfg.Auth.JWTSecretKey),
+		Key:         []byte(m.cfg.Auth.JWTSecretKey),
 		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour * 24,
 		IdentityKey: IdentityKey,
@@ -67,7 +67,7 @@ func (j *JWTMiddleware) InitJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 				Username: loginVals.Username,
 				Password: []byte(loginVals.Password),
 			}
-			authenticated, err := j.db.AuthenticateLocalUser(user)
+			authenticated, err := m.db.AuthenticateLocalUser(user)
 			if err != nil {
 				return nil, jmw.ErrFailedAuthentication
 			}
@@ -76,7 +76,7 @@ func (j *JWTMiddleware) InitJwtMiddleware() (*jmw.GinJWTMiddleware, error) {
 		Authorizator: func(data interface{}, c *gin.Context) bool {
 			claims := jmw.ExtractClaims(c)
 			role := claims[RoleKey].(string)
-			ok, err := j.acl.Enforce(role, c.Request.URL.Path, c.Request.Method)
+			ok, err := m.acl.Enforce(role, c.Request.URL.Path, c.Request.Method)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to check acl")
 				return false

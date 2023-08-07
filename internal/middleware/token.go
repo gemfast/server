@@ -21,7 +21,7 @@ func NewTokenMiddleware(acl *ACL, db *db.DB) *TokenMiddleware {
 	}
 }
 
-func (t *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
+func (m *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, token, ok := c.Request.BasicAuth()
 		if !ok {
@@ -40,7 +40,7 @@ func (t *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
 			username = s[0]
 			token = s[1]
 		}
-		user, err := t.db.GetUser(username)
+		user, err := m.db.GetUser(username)
 		if err != nil {
 			c.String(http.StatusForbidden, fmt.Sprintf("no user found with username %s", username))
 			c.Abort()
@@ -48,7 +48,7 @@ func (t *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
 		}
 		ok = (user.Token == token)
 		if ok {
-			ok, err = t.acl.Enforce(user.Role, c.Request.URL.Path, c.Request.Method)
+			ok, err = m.acl.Enforce(user.Role, c.Request.URL.Path, c.Request.Method)
 			if err != nil {
 				c.String(http.StatusInternalServerError, "failed to check access control list")
 				c.Abort()
@@ -69,7 +69,7 @@ func (t *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
 	}
 }
 
-func (t *TokenMiddleware) CreateUserTokenHandler(c *gin.Context) {
+func (m *TokenMiddleware) CreateUserTokenHandler(c *gin.Context) {
 	user, ok := c.Get(IdentityKey)
 	if !ok {
 		c.String(http.StatusInternalServerError, "Failed to get user from context")
@@ -80,7 +80,7 @@ func (t *TokenMiddleware) CreateUserTokenHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to cast user to db.User")
 		return
 	}
-	token, err := t.db.CreateUserToken(u.Username)
+	token, err := m.db.CreateUserToken(u.Username)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate token for user")
 		return

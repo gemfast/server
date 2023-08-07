@@ -28,6 +28,7 @@ type Config struct {
 	Filter      *FilterConfig   `hcl:"filter,block"`
 	CVE         *CVEConfig      `hcl:"cve,block"`
 	Auth        *AuthConfig     `hcl:"auth,block"`
+	ChefConfig  *ChefConfig     `hcl:"chef,block"`
 }
 
 type CaddyConfig struct {
@@ -74,6 +75,10 @@ type LocalUser struct {
 	Role     string `hcl:"role,optional"`
 }
 
+type ChefConfig struct {
+	TimeSkew int `hcl:"allowed_time_skew_seconds,optional"`
+}
+
 func NewConfig() *Config {
 	cfg := Config{}
 	cfgFile := os.Getenv("GEMFAST_CONFIG_FILE")
@@ -116,6 +121,7 @@ func (c *Config) setDefaultConfig() {
 	c.setDefaultAuthConfig()
 	c.setDefaultFilterConfig()
 	c.setDefaultCVEConfig()
+	c.setDefaultChefConfig()
 }
 
 func (c *Config) setDefaultServerConfig() {
@@ -269,5 +275,17 @@ func (c *Config) setDefaultCVEConfig() {
 	}
 	if c.CVE.RubyAdvisoryDBDir == "" {
 		c.CVE.RubyAdvisoryDBDir = "/opt/gemfast/share/ruby-advisory-db"
+	}
+}
+
+func (c *Config) setDefaultChefConfig() {
+	if c.ChefConfig == nil {
+		c.ChefConfig = &ChefConfig{
+			TimeSkew: 900,
+		}
+		return
+	}
+	if c.ChefConfig.TimeSkew == 0 {
+		c.ChefConfig.TimeSkew = 900
 	}
 }

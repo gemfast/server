@@ -17,6 +17,7 @@ type User struct {
 	Role        string `json:"role"`
 	Type        string `json:"type"`
 	GitHubToken string `json:"github_token,omitempty"`
+	PublicKey   []byte `json:"public_key,omitempty"`
 }
 
 func ValidUserRoles() []string {

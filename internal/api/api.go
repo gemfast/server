@@ -30,27 +30,29 @@ func (api *API) checkLicense() {
 }
 
 type API struct {
-	apiV1Handler     *APIV1Handler
-	rubygemsHandler  *RubyGemsHandler
-	router           *gin.Engine
-	cfg              *config.Config
-	db               *db.DB
-	license          *license.License
-	tokenMiddleware  *middleware.TokenMiddleware
-	githubMiddleware *middleware.GitHubMiddleware
-	jwtMiddleware    *middleware.JWTMiddleware
+	apiV1Handler       *APIV1Handler
+	rubygemsHandler    *RubyGemsHandler
+	supermarketHandler *SupermarketHandler
+	router             *gin.Engine
+	cfg                *config.Config
+	db                 *db.DB
+	license            *license.License
+	tokenMiddleware    *middleware.TokenMiddleware
+	githubMiddleware   *middleware.GitHubMiddleware
+	jwtMiddleware      *middleware.JWTMiddleware
 }
 
-func NewAPI(cfg *config.Config, l *license.License, db *db.DB, apiV1Handler *APIV1Handler, rubygemsHandler *RubyGemsHandler) *API {
+func NewAPI(cfg *config.Config, l *license.License, db *db.DB, apiV1Handler *APIV1Handler, rubygemsHandler *RubyGemsHandler, supermarketHandler *SupermarketHandler) *API {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	return &API{
-		apiV1Handler:    apiV1Handler,
-		rubygemsHandler: rubygemsHandler,
-		router:          router,
-		cfg:             cfg,
-		license:         l,
-		db:              db,
+		apiV1Handler:       apiV1Handler,
+		rubygemsHandler:    rubygemsHandler,
+		router:             router,
+		cfg:                cfg,
+		license:            l,
+		db:                 db,
+		supermarketHandler: supermarketHandler,
 	}
 }
 
@@ -128,6 +130,8 @@ func (api *API) configureLocalAuth() {
 		api.configureAdmin(adminLocalAuth)
 	}
 	api.configurePrivate()
+	api.configureMirroredSupermarket(api.router.Group("/"))
+	api.configurePrivateSupermarket(api.router.Group("/private"))
 }
 
 func (api *API) configureNoneAuth() {
@@ -206,4 +210,14 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/users/:username", api.apiV1Handler.getUser)
 	admin.DELETE("/users/:username", api.apiV1Handler.deleteUser)
 	admin.PUT("/users/:username/role/:role", api.apiV1Handler.setUserRole)
+}
+
+func (api *API) configureMirroredSupermarket(supermarket *gin.RouterGroup) {
+	supermarket.GET("/api/v1/cookbooks/:cookbook", api.supermarketHandler.mirroredGetCookbook)
+}
+
+// /supermarket
+func (api *API) configurePrivateSupermarket(supermarket *gin.RouterGroup) {
+	supermarket.GET("/api/v1/cookbooks/:cookbook", api.supermarketHandler.getCookbook)
+	supermarket.POST("/api/v1/cookbooks", api.supermarketHandler.createCookbook)
 }

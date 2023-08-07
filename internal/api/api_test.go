@@ -67,7 +67,8 @@ func createTestAPI(testDB *bolt.DB, cfg *config.Config) (*API, error) {
 	gdb := cve.NewGemAdvisoryDB(cfg, l)
 	apiV1Handler := NewAPIV1Handler(cfg, database, indexer, f, gdb)
 	rubygemsHandler := NewRubyGemsHandler(cfg, database, indexer, f, gdb)
-	api := NewAPI(cfg, l, database, apiV1Handler, rubygemsHandler)
+	supermarketHandler := NewSupermarketHandler(cfg, database)
+	api := NewAPI(cfg, l, database, apiV1Handler, rubygemsHandler, supermarketHandler)
 	api.loadMiddleware()
 	api.registerRoutes()
 	return api, nil
