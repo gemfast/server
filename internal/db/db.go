@@ -3,8 +3,10 @@ package db
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/license"
@@ -54,6 +56,16 @@ func (db *DB) Open() {
 
 func (db *DB) Close() error {
 	return db.boltDB.Close()
+}
+
+func (db *DB) Backup(w http.ResponseWriter) error {
+	return db.boltDB.View(func(tx *bolt.Tx) error {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", `attachment; filename="gemfast.db"`)
+		w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
+		_, err := tx.WriteTo(w)
+		return err
+	})
 }
 
 func (db *DB) createBucket(bucket string) {

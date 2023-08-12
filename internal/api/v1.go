@@ -114,3 +114,11 @@ func (h *APIV1Handler) setUserRole(c *gin.Context) {
 	}
 	c.String(http.StatusAccepted, "User role set successfully")
 }
+
+func (h *APIV1Handler) backup(c *gin.Context) {
+	err := h.db.Backup(c.Writer)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to backup database")
+		return
+	}
+}

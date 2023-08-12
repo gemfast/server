@@ -207,4 +207,5 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/users/:username", api.apiV1Handler.getUser)
 	admin.DELETE("/users/:username", api.apiV1Handler.deleteUser)
 	admin.PUT("/users/:username/role/:role", api.apiV1Handler.setUserRole)
+	admin.GET("/backup", api.apiV1Handler.backup)
 }
