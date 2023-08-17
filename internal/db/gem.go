@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -19,11 +20,11 @@ type Gem struct {
 	Name         string          `json:"name"`
 	Number       string          `json:"number"`
 	Platform     string          `json:"platform"`
-	Checksum     string          `json:"checksum"`
-	InfoChecksum string          `json:"info_checksum"`
-	Ruby         string          `json:"ruby"`
-	RubyGems     string          `json:"rubygems"`
-	Dependencies []GemDependency `json:"dependencies"`
+	Checksum     string          `json:"checksum,omitempty"`
+	InfoChecksum string          `json:"info_checksum,omitempty"`
+	Ruby         string          `json:"ruby,omitempty"`
+	RubyGems     string          `json:"rubygems,omitempty"`
+	Dependencies []GemDependency `json:"dependencies,omitempty"`
 }
 
 type GemDependency struct {
@@ -319,4 +320,32 @@ func CalculateInfoChecksum(gems []*Gem) string {
 	info := CompactIndexInfo(gems)
 	md5 := md5.Sum([]byte(info))
 	return hex.EncodeToString(md5[:])
+}
+
+func (db *DB) SearchGems(name string) []string {
+	var names []string
+	db.boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(GemBucket))
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			if strings.Contains(string(k), name) {
+				names = append(names, string(k))
+			}
+		}
+		return nil
+	})
+	return names
+}
+
+func (db *DB) PrefixScanGems(prefix string) []string {
+	var names []string
+	bytePrefix := []byte(prefix)
+	db.boltDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte(GemBucket)).Cursor()
+		for k, _ := c.Seek(bytePrefix); k != nil && bytes.HasPrefix(k, bytePrefix); k, _ = c.Next() {
+			names = append(names, string(k))
+		}
+		return nil
+	})
+	return names
 }
