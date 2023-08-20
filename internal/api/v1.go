@@ -47,7 +47,44 @@ func (h *APIV1Handler) listGems(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to get gems")
 		return
 	}
+	if len(gems) == 0 {
+		c.JSON(http.StatusOK, []string{})
+		return
+	}
+	for _, gemVersions := range gems {
+		for _, gv := range gemVersions {
+			minimalGem(gv)
+		}
+	}
 	c.JSON(http.StatusOK, gems)
+}
+
+func (h *APIV1Handler) searchGems(c *gin.Context) {
+	name := c.Param("name")
+	matches := h.db.SearchGems(name)
+	if len(matches) == 0 {
+		c.JSON(http.StatusOK, []string{})
+		return
+	}
+	c.JSON(http.StatusOK, matches)
+}
+
+func (h *APIV1Handler) prefixScanGems(c *gin.Context) {
+	prefix := c.Param("prefix")
+	matches := h.db.PrefixScanGems(prefix)
+	if len(matches) == 0 {
+		c.JSON(http.StatusOK, []string{})
+		return
+	}
+	c.JSON(http.StatusOK, matches)
+}
+
+func minimalGem(gem *db.Gem) {
+	gem.Dependencies = []db.GemDependency{}
+	gem.Checksum = ""
+	gem.InfoChecksum = ""
+	gem.Ruby = ""
+	gem.RubyGems = ""
 }
 
 func (h *APIV1Handler) getGem(c *gin.Context) {
@@ -68,6 +105,13 @@ func (h *APIV1Handler) listUsers(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to get users")
 		return
 	}
+	if len(users) == 0 {
+		c.JSON(http.StatusOK, []string{})
+		return
+	}
+	for _, u := range users {
+		hidePassword(u)
+	}
 	c.JSON(http.StatusOK, users)
 }
 
@@ -79,9 +123,13 @@ func (h *APIV1Handler) getUser(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to get user")
 		return
 	}
+	hidePassword(user)
+	c.JSON(http.StatusOK, user)
+}
+
+func hidePassword(user *db.User) {
 	user.Password = []byte{}
 	user.Token = ""
-	c.JSON(http.StatusOK, user)
 }
 
 func (h *APIV1Handler) deleteUser(c *gin.Context) {
@@ -113,4 +161,20 @@ func (h *APIV1Handler) setUserRole(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusAccepted, "User role set successfully")
+}
+
+func (h *APIV1Handler) backup(c *gin.Context) {
+	err := h.db.Backup(c.Writer)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to backup database")
+		return
+	}
+}
+
+func (h *APIV1Handler) dbStats(c *gin.Context) {
+	c.JSON(http.StatusOK, h.db.Stats())
+}
+
+func (h *APIV1Handler) bucketStats(c *gin.Context) {
+	c.JSON(http.StatusOK, h.db.BucketStats())
 }

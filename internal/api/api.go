@@ -189,8 +189,13 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
 	admin.GET("/gems", api.apiV1Handler.listGems)
 	admin.GET("/gems/:gem", api.apiV1Handler.getGem)
+	admin.GET("/gems/search/:name", api.apiV1Handler.searchGems)
+	admin.GET("/gems/prefix/:prefix", api.apiV1Handler.prefixScanGems)
 	admin.GET("/users", api.apiV1Handler.listUsers)
 	admin.GET("/users/:username", api.apiV1Handler.getUser)
 	admin.DELETE("/users/:username", api.apiV1Handler.deleteUser)
 	admin.PUT("/users/:username/role/:role", api.apiV1Handler.setUserRole)
+	admin.GET("/backup", api.apiV1Handler.backup)
+	admin.GET("/stats/db", api.apiV1Handler.dbStats)
+	admin.GET("/stats/bucket", api.apiV1Handler.bucketStats)
 }

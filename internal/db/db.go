@@ -3,12 +3,15 @@ package db
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/license"
 	"github.com/rs/zerolog/log"
+	"go.etcd.io/bbolt"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -54,6 +57,32 @@ func (db *DB) Open() {
 
 func (db *DB) Close() error {
 	return db.boltDB.Close()
+}
+
+func (db *DB) Backup(w http.ResponseWriter) error {
+	return db.boltDB.View(func(tx *bolt.Tx) error {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", `attachment; filename="gemfast.db"`)
+		w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
+		_, err := tx.WriteTo(w)
+		return err
+	})
+}
+
+func (db *DB) Stats() bbolt.Stats {
+	return db.boltDB.Stats()
+}
+
+func (db *DB) BucketStats() map[string]bbolt.BucketStats {
+	bucketStatsMap := make(map[string]bbolt.BucketStats)
+	db.boltDB.View(func(tx *bolt.Tx) error {
+		bucketStatsMap[GemBucket] = tx.Bucket([]byte(GemBucket)).Stats()
+		bucketStatsMap[KeyBucket] = tx.Bucket([]byte(KeyBucket)).Stats()
+		bucketStatsMap[LicenseBucket] = tx.Bucket([]byte(LicenseBucket)).Stats()
+		bucketStatsMap[UserBucket] = tx.Bucket([]byte(UserBucket)).Stats()
+		return nil
+	})
+	return bucketStatsMap
 }
 
 func (db *DB) createBucket(bucket string) {
