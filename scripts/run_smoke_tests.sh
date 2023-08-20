@@ -39,6 +39,8 @@ curl -s http://localhost/admin/api/v1/backup > gemfast.db
 sudo systemctl stop gemfast
 sudo rm -rf /var/gemfast/db/gemfast.db
 sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
+sudo chown gemfast: /var/gemfast/db/gemfast.db
+sleep 2
 sudo systemctl start gemfast
 sleep 5
 sudo systemctl status gemfast

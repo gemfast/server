@@ -103,6 +103,7 @@ gem "rails"
 CONFIG
 
 bundle config http://localhost:80/private/ "noauth:faketoken"
+bundle
 if [[ $(bundle 2>&1 | grep "Bad username or password") ]]; then
   echo "gemfast is blocking unauthenticated access"
 else
