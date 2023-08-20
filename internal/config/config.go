@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/user"
 
@@ -40,6 +41,7 @@ type CaddyConfig struct {
 type MirrorConfig struct {
 	Enabled  bool   `hcl:"enabled,optional"`
 	Upstream string `hcl:"upstream,label"`
+	Hostname string `hcl:"hostname,optional"`
 }
 
 type FilterConfig struct {
@@ -175,6 +177,15 @@ func (c *Config) setDefaultMirrorConfig() {
 			Upstream: "https://rubygems.org",
 		}}
 	}
+
+	for _, m := range c.Mirrors {
+		u, err := url.Parse(m.Upstream)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to parse upstream url")
+		}
+		m.Hostname = u.Hostname()
+	}
+
 }
 
 func readJWTSecretKeyFromPath(keyPath string) string {

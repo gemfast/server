@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 
 	"net/http"
 	"net/url"
@@ -72,7 +73,8 @@ func (h *RubyGemsHandler) localGemspecRzHandler(c *gin.Context) {
 
 func (h *RubyGemsHandler) localGemHandler(c *gin.Context) {
 	fileName := c.Param("gem")
-	fp := filepath.Join(h.cfg.GemDir, fileName)
+	fc := strings.Split(fileName, "")[0] // first character
+	fp := filepath.Join(h.cfg.GemDir, h.cfg.PrivateGemsNamespace, fc, fileName)
 	c.FileAttachment(fp, fileName)
 }
 
@@ -160,7 +162,7 @@ func (h *RubyGemsHandler) localUploadGemHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
 	}
-	if err = h.saveAndReindex(tmpfile); err != nil {
+	if err = h.saveAndReindexLocalGem(tmpfile); err != nil {
 		log.Error().Err(err).Msg("failed to reindex gem")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
@@ -183,7 +185,7 @@ func (h *RubyGemsHandler) localYankHandler(c *gin.Context) {
 		return
 	}
 	fileName := g + "-" + v + ".gem"
-	fp := filepath.Join(h.cfg.GemDir, fileName)
+	fp := filepath.Join(h.cfg.GemDir, h.cfg.PrivateGemsNamespace, fileName)
 	err = utils.RemoveFileIfExists(fp)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to delete gem file system")
@@ -261,7 +263,7 @@ func (h *RubyGemsHandler) geminaboxUploadGem(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
-	if err = h.saveAndReindex(tmpfile); err != nil {
+	if err = h.saveAndReindexLocalGem(tmpfile); err != nil {
 		log.Error().Err(err).Msg("failed to reindex gem")
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
@@ -289,18 +291,20 @@ func (h *RubyGemsHandler) fetchGemVersions(gemQuery string) ([]*db.Gem, error) {
 	return gemVersions, nil
 }
 
-func (h *RubyGemsHandler) saveAndReindex(tmpfile *os.File) error {
+func (h *RubyGemsHandler) saveAndReindexLocalGem(tmpfile *os.File) error {
 	s, err := spec.FromFile(tmpfile.Name())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to read spec from tmpfile")
 		return err
 	}
+	fc := strings.Split(s.Name, "")[0] // first character
 	var fp string
 	if s.OriginalPlatform == "ruby" {
-		fp = fmt.Sprintf("%s/%s-%s.gem", h.cfg.GemDir, s.Name, s.Version)
+		fp = fmt.Sprintf("%s/%s/%s/%s-%s.gem", h.cfg.GemDir, h.cfg.PrivateGemsNamespace, fc, s.Name, s.Version)
 	} else {
-		fp = fmt.Sprintf("%s/%s-%s-%s.gem", h.cfg.GemDir, s.Name, s.Version, s.OriginalPlatform)
+		fp = fmt.Sprintf("%s/%s/%s/%s-%s-%s.gem", h.cfg.GemDir, h.cfg.PrivateGemsNamespace, fc, s.Name, s.Version, s.OriginalPlatform)
 	}
+	utils.MkDirs(path.Dir(fp))
 	err = os.Rename(tmpfile.Name(), fp)
 	if err != nil {
 		log.Error().Err(err).Str("detail", fp).Msg("failed to rename tmpfile")
@@ -334,17 +338,20 @@ func (h *RubyGemsHandler) mirroredGemspecRzHandler(c *gin.Context) {
 	if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
 		out, err := os.Create(fp)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Failed to create gem file")
+			log.Error().Err(err).Msg("failed to create gemspec.rz file")
+			c.String(http.StatusInternalServerError, "Failed to create gemspec.rz file")
 			return
 		}
 		defer out.Close()
 		path, err := url.JoinPath(h.cfg.Mirrors[0].Upstream, "quick/Marshal.4.8", fileName)
 		if err != nil {
 			log.Error().Str("detail", fileName).Msg("failed to fetch quick marshal")
-			panic(err)
+			c.String(http.StatusInternalServerError, "Failed to fetch quick marshal")
+			return
 		}
 		resp, err := http.Get(path)
 		if err != nil {
+			log.Error().Err(err).Str("detail", path).Msg("failed to connect to upstream")
 			c.String(http.StatusInternalServerError, "Failed to connect to upstream")
 			return
 		}
@@ -358,7 +365,8 @@ func (h *RubyGemsHandler) mirroredGemspecRzHandler(c *gin.Context) {
 		}
 		_, err = io.Copy(out, resp.Body)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Failed to write gem file")
+			log.Error().Err(err).Msg("failed to write gemspec.rz file")
+			c.String(http.StatusInternalServerError, "Failed to write gemspec.rz file")
 			return
 		}
 	} else {
@@ -383,21 +391,27 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 			return
 		}
 	}
-	fp := filepath.Join(h.cfg.GemDir, fileName)
+	fc := strings.Split(fileName, "")[0] // first character
+	fp := filepath.Join(h.cfg.GemDir, h.cfg.Mirrors[0].Hostname, fc, fileName)
 	info, err := os.Stat(fp)
 	if (err != nil && errors.Is(err, os.ErrNotExist)) || info.Size() == 0 {
+		utils.MkDirs(path.Dir(fp))
 		out, err := os.Create(fp)
 		if err != nil {
+			log.Error().Err(err).Msg("failed to create gem file")
 			c.String(http.StatusInternalServerError, "Failed to create gem file")
+			return
 		}
 		defer out.Close()
 		path, err := url.JoinPath(h.cfg.Mirrors[0].Upstream, "gems", fileName)
 		if err != nil {
+			log.Error().Err(err).Str("detail", fileName).Msg("failed to fetch gem file from upstream")
 			c.String(http.StatusInternalServerError, "Failed to fetch gem file from upstream")
 			return
 		}
 		resp, err := http.Get(path)
 		if err != nil {
+			log.Error().Err(err).Str("detail", path).Msg("failed to connect to upstream")
 			c.String(http.StatusInternalServerError, "Failed to connect to upstream")
 			return
 		}
@@ -409,6 +423,7 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 		}
 		_, err = io.Copy(out, resp.Body)
 		if err != nil {
+			log.Error().Err(err).Msg("failed to write gem file")
 			c.String(http.StatusInternalServerError, "Failed to write gem file")
 			return
 		}
@@ -416,6 +431,7 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 		err = h.indexer.AddGemToIndex(fp)
 		if err != nil {
 			defer os.Remove(fp)
+			log.Error().Err(err).Msg("failed to index gem")
 			c.String(http.StatusInternalServerError, "Failed to index gem")
 			return
 		}

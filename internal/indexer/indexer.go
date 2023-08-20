@@ -22,6 +22,7 @@ import (
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/marshal"
 	"github.com/gemfast/server/internal/spec"
+	"github.com/gemfast/server/internal/utils"
 	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
@@ -102,9 +103,11 @@ func NewIndexer(cfg *config.Config, db *db.DB) (*Indexer, error) {
 }
 
 func (indexer *Indexer) GenerateIndex() error {
-	mkDirs(indexer.quickMarshalDir)
-	mkDirs(indexer.cfg.GemDir)
-	mkDirs(indexer.cfg.DBDir)
+	utils.MkDirs(indexer.quickMarshalDir)
+	utils.MkDirs(indexer.cfg.GemDir)
+	utils.MkDirs(indexer.cfg.GemDir + "/" + indexer.cfg.PrivateGemsNamespace)
+	utils.MkDirs(indexer.cfg.GemDir + "/" + indexer.cfg.Mirrors[0].Hostname)
+	utils.MkDirs(indexer.cfg.DBDir)
 	_, specsMissing := os.Stat(fmt.Sprintf("%s/specs.4.8.gz", indexer.cfg.Dir))
 	_, prereleaseSpecsMissing := os.Stat(fmt.Sprintf("%s/prerelease_specs.4.8.gz", indexer.cfg.Dir))
 	_, latestSpecsMissing := os.Stat(fmt.Sprintf("%s/latest_specs.4.8.gz", indexer.cfg.Dir))
@@ -127,14 +130,6 @@ func mkTempDir(name string) (string, error) {
 		log.Error().Err(err).Msg("failed to create tmpdir")
 	}
 	return dir, err
-}
-
-func mkDirs(dir string) error {
-	err := os.MkdirAll(dir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("failed to create dir %s: %w", dir, err)
-	}
-	return nil
 }
 
 func (indexer *Indexer) gemList() ([]string, error) {
@@ -420,7 +415,7 @@ func (indexer *Indexer) UpdateIndex(updatedGems []string) error {
 	lock.Lock()
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
-	mkDirs(indexer.quickMarshalDir)
+	utils.MkDirs(indexer.quickMarshalDir)
 
 	specs, err := mapGemsToSpecs(updatedGems)
 	if err != nil {
