@@ -178,3 +178,27 @@ func (h *APIV1Handler) dbStats(c *gin.Context) {
 func (h *APIV1Handler) bucketStats(c *gin.Context) {
 	c.JSON(http.StatusOK, h.db.BucketStats())
 }
+
+func (h *APIV1Handler) uiGems(c *gin.Context) {
+	c.HTML(http.StatusOK, "gems.tmpl", nil)
+}
+
+func (h *APIV1Handler) uiGemsOptions(c *gin.Context) {
+	c.String(http.StatusOK, "GET")
+}
+
+func (h *APIV1Handler) uiGemsAlpha(c *gin.Context) {
+	c.HTML(http.StatusOK, "gems/alpha.tmpl", nil)
+}
+
+func (h *APIV1Handler) uiGemsData(c *gin.Context) {
+	prefix := c.Query("prefix")
+	gems := h.db.PrefixScanGems(prefix)
+	c.HTML(http.StatusOK, "gems/data.tmpl", gin.H{
+		"gems": gems,
+	})
+}
+
+func (h *APIV1Handler) uiUploadGem(c *gin.Context) {
+	c.HTML(http.StatusOK, "upload.tmpl", nil)
+}

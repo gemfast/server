@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -78,7 +79,10 @@ func (api *API) loadMiddleware() {
 }
 
 func (api *API) registerRoutes() {
-	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
+	tmpl := template.Must(template.New("").ParseFS(efs, "templates/**/*.tmpl"))
+	api.router.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.tmpl", nil)
+	})
 	api.router.SetHTMLTemplate(tmpl)
 	api.router.Use(gin.Recovery())
 	api.router.GET("/up", api.apiV1Handler.health)
@@ -212,4 +216,9 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/backup", api.apiV1Handler.backup)
 	admin.GET("/stats/db", api.apiV1Handler.dbStats)
 	admin.GET("/stats/bucket", api.apiV1Handler.bucketStats)
+	admin.GET("/ui/gems", api.apiV1Handler.uiGems)
+	admin.GET("/ui/gems/alpha", api.apiV1Handler.uiGemsAlpha)
+	admin.GET("/ui/gems/data", api.apiV1Handler.uiGemsData)
+	admin.OPTIONS("/ui/gems/data", api.apiV1Handler.uiGemsOptions)
+	admin.GET("/ui/upload", api.apiV1Handler.uiUploadGem)
 }
