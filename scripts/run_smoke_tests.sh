@@ -34,6 +34,25 @@ pushd rails
 bundle config mirror.https://rubygems.org http://localhost
 bundle
 
+numGems=$(curl -s http://localhost/admin/api/v1/stats/bucket | jq -r '.gems.KeyN')
+curl -s http://localhost/admin/api/v1/backup > gemfast.db
+sudo systemctl stop gemfast
+sudo rm -rf /var/gemfast/db/gemfast.db
+sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
+sudo chown gemfast: /var/gemfast/db/gemfast.db
+sleep 2
+sudo systemctl start gemfast
+sleep 5
+sudo systemctl status gemfast
+sleep 2
+sudo systemctl status caddy
+
+numGemsBackup=$(curl -s http://localhost/admin/api/v1/stats/bucket | jq -r '.gems.KeyN')
+if [ "$numGems" != "$numGemsBackup" ]; then
+  echo "Number of gems in backup ($numGemsBackup) does not match number of gems in original ($numGems)"
+  exit 1
+fi
+
 # TODO: make this test work
 # mv Gemfile Gemfile.backup
 # cat << GEMFILE > Gemfile

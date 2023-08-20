@@ -10,7 +10,6 @@ import (
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
-	"github.com/gemfast/server/internal/license"
 	"github.com/gemfast/server/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -21,29 +20,18 @@ var efs embed.FS
 
 const adminAPIPath = "/admin/api/v1"
 
-func (api *API) checkLicense() {
-	if !api.license.Validated {
-		api.cfg.Auth = &config.AuthConfig{
-			Type: "none",
-		}
-		api.cfg.Mirrors[0].Enabled = false
-		log.Warn().Msg("no valid license found, starting in trial mode")
-	}
-}
-
 type API struct {
 	apiV1Handler     *APIV1Handler
 	rubygemsHandler  *RubyGemsHandler
 	router           *gin.Engine
 	cfg              *config.Config
 	db               *db.DB
-	license          *license.License
 	tokenMiddleware  *middleware.TokenMiddleware
 	githubMiddleware *middleware.GitHubMiddleware
 	jwtMiddleware    *middleware.JWTMiddleware
 }
 
-func NewAPI(cfg *config.Config, l *license.License, db *db.DB, apiV1Handler *APIV1Handler, rubygemsHandler *RubyGemsHandler) *API {
+func NewAPI(cfg *config.Config, db *db.DB, apiV1Handler *APIV1Handler, rubygemsHandler *RubyGemsHandler) *API {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	return &API{
@@ -51,13 +39,11 @@ func NewAPI(cfg *config.Config, l *license.License, db *db.DB, apiV1Handler *API
 		rubygemsHandler: rubygemsHandler,
 		router:          router,
 		cfg:             cfg,
-		license:         l,
 		db:              db,
 	}
 }
 
 func (api *API) Run() {
-	api.checkLicense()
 	api.loadMiddleware()
 	api.registerRoutes()
 	port := fmt.Sprintf(":%d", api.cfg.Port)
@@ -216,9 +202,12 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/backup", api.apiV1Handler.backup)
 	admin.GET("/stats/db", api.apiV1Handler.dbStats)
 	admin.GET("/stats/bucket", api.apiV1Handler.bucketStats)
+<<<<<<< HEAD
 	admin.GET("/ui/gems", api.apiV1Handler.uiGems)
 	admin.GET("/ui/gems/alpha", api.apiV1Handler.uiGemsAlpha)
 	admin.GET("/ui/gems/data", api.apiV1Handler.uiGemsData)
 	admin.OPTIONS("/ui/gems/data", api.apiV1Handler.uiGemsOptions)
 	admin.GET("/ui/upload", api.apiV1Handler.uiUploadGem)
+=======
+>>>>>>> 91856ee079ff6ea7c78772d44aac97e8bf5559e5
 }

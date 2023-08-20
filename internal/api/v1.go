@@ -178,6 +178,7 @@ func (h *APIV1Handler) dbStats(c *gin.Context) {
 func (h *APIV1Handler) bucketStats(c *gin.Context) {
 	c.JSON(http.StatusOK, h.db.BucketStats())
 }
+<<<<<<< HEAD
 
 func (h *APIV1Handler) uiGems(c *gin.Context) {
 	c.HTML(http.StatusOK, "gems.tmpl", nil)
@@ -202,3 +203,5 @@ func (h *APIV1Handler) uiGemsData(c *gin.Context) {
 func (h *APIV1Handler) uiUploadGem(c *gin.Context) {
 	c.HTML(http.StatusOK, "upload.tmpl", nil)
 }
+=======
+>>>>>>> 91856ee079ff6ea7c78772d44aac97e8bf5559e5
