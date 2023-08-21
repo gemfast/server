@@ -1,0 +1,13 @@
+{{ define "upload" }}
+<form class="form" hx-encoding="multipart/form-data">
+    <h2>Select Gem to upload:</h2>
+    <br>
+
+    <input class="form-control" type="file" name="file" />
+
+    <br>
+    <button class="btn" style="background-color: #00ADD8; color: white" hx-post="http://localhost:2020/private/upload" hx-include="[name='file']">
+      Upload Gem
+    </button>
+</form>
+{{ end }}

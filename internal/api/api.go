@@ -1,9 +1,7 @@
 package api
 
 import (
-	"embed"
 	"fmt"
-	"html/template"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -11,12 +9,10 @@ import (
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/middleware"
+	"github.com/gemfast/server/internal/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
-
-//go:embed templates/*
-var efs embed.FS
 
 const adminAPIPath = "/admin/api/v1"
 
@@ -65,13 +61,12 @@ func (api *API) loadMiddleware() {
 }
 
 func (api *API) registerRoutes() {
-	tmpl := template.Must(template.New("").ParseFS(efs, "templates/**/*.tmpl"))
-	api.router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl", nil)
-	})
-	api.router.SetHTMLTemplate(tmpl)
+	ui := ui.NewUI(api.cfg, api.db)
+	api.router.StaticFS("/ui/assets", http.FS(ui.Assets))
+	api.router.SetHTMLTemplate(ui.Templates)
 	api.router.Use(gin.Recovery())
 	api.router.GET("/up", api.apiV1Handler.health)
+	api.configureUI(ui, api.router.Group("/ui"))
 	authMode := api.cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
@@ -202,12 +197,16 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/backup", api.apiV1Handler.backup)
 	admin.GET("/stats/db", api.apiV1Handler.dbStats)
 	admin.GET("/stats/bucket", api.apiV1Handler.bucketStats)
-<<<<<<< HEAD
-	admin.GET("/ui/gems", api.apiV1Handler.uiGems)
-	admin.GET("/ui/gems/alpha", api.apiV1Handler.uiGemsAlpha)
-	admin.GET("/ui/gems/data", api.apiV1Handler.uiGemsData)
-	admin.OPTIONS("/ui/gems/data", api.apiV1Handler.uiGemsOptions)
-	admin.GET("/ui/upload", api.apiV1Handler.uiUploadGem)
-=======
->>>>>>> 91856ee079ff6ea7c78772d44aac97e8bf5559e5
+}
+
+// /ui
+func (api *API) configureUI(ui *ui.UI, uiPath *gin.RouterGroup) {
+	uiPath.GET("/", ui.Index)
+	uiPath.GET("/gems", ui.Gems)
+	uiPath.GET("/upload", ui.UploadGem)
+	uiPath.GET("/license", ui.License)
+	uiPath.POST("/gems/search", ui.SearchGems)
+	uiPath.GET("/gems/:source/prefix", ui.GemsByPrefix)
+	uiPath.GET("/gems/:source/prefix/:prefix", ui.GemsData)
+	uiPath.GET("/gems/:source/prefix/:prefix/inspect/:gem", ui.GemsInspect)
 }

@@ -41,7 +41,8 @@ func (h *APIV1Handler) authMode(c *gin.Context) {
 }
 
 func (h *APIV1Handler) listGems(c *gin.Context) {
-	gems, err := h.db.GetGems()
+	source := c.Param("source")
+	gems, err := h.db.GetGems(source)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gems")
 		c.String(http.StatusInternalServerError, "Failed to get gems")
@@ -61,7 +62,8 @@ func (h *APIV1Handler) listGems(c *gin.Context) {
 
 func (h *APIV1Handler) searchGems(c *gin.Context) {
 	name := c.Param("name")
-	matches := h.db.SearchGems(name)
+	source := c.Param("source")
+	matches := h.db.SearchGems(source, name)
 	if len(matches) == 0 {
 		c.JSON(http.StatusOK, []string{})
 		return
@@ -71,7 +73,8 @@ func (h *APIV1Handler) searchGems(c *gin.Context) {
 
 func (h *APIV1Handler) prefixScanGems(c *gin.Context) {
 	prefix := c.Param("prefix")
-	matches := h.db.PrefixScanGems(prefix)
+	source := c.Param("source")
+	matches := h.db.PrefixScanGems(source, prefix)
 	if len(matches) == 0 {
 		c.JSON(http.StatusOK, []string{})
 		return
@@ -89,7 +92,8 @@ func minimalGem(gem *db.Gem) {
 
 func (h *APIV1Handler) getGem(c *gin.Context) {
 	name := c.Param("gem")
-	gemVersions, err := h.db.GetGemVersions(name)
+	source := c.Param("source")
+	gemVersions, err := h.db.GetGemVersions(source, name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gem")
 		c.String(http.StatusInternalServerError, "Failed to get gem")
@@ -178,30 +182,3 @@ func (h *APIV1Handler) dbStats(c *gin.Context) {
 func (h *APIV1Handler) bucketStats(c *gin.Context) {
 	c.JSON(http.StatusOK, h.db.BucketStats())
 }
-<<<<<<< HEAD
-
-func (h *APIV1Handler) uiGems(c *gin.Context) {
-	c.HTML(http.StatusOK, "gems.tmpl", nil)
-}
-
-func (h *APIV1Handler) uiGemsOptions(c *gin.Context) {
-	c.String(http.StatusOK, "GET")
-}
-
-func (h *APIV1Handler) uiGemsAlpha(c *gin.Context) {
-	c.HTML(http.StatusOK, "gems/alpha.tmpl", nil)
-}
-
-func (h *APIV1Handler) uiGemsData(c *gin.Context) {
-	prefix := c.Query("prefix")
-	gems := h.db.PrefixScanGems(prefix)
-	c.HTML(http.StatusOK, "gems/data.tmpl", gin.H{
-		"gems": gems,
-	})
-}
-
-func (h *APIV1Handler) uiUploadGem(c *gin.Context) {
-	c.HTML(http.StatusOK, "upload.tmpl", nil)
-}
-=======
->>>>>>> 91856ee079ff6ea7c78772d44aac97e8bf5559e5

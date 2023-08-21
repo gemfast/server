@@ -67,13 +67,13 @@ func (suite *ModelsTestSuite) TestSaveGem() {
 	}
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
-	err := db.SaveGem(gem)
+	err := db.SaveGem("private", gem)
 	suite.Nil(err)
 	suite.Equal("activesupport", gem.Name)
 	suite.NotNil(gem.InfoChecksum)
 	gem.Number = "6.0.4.3"
 	ic := gem.InfoChecksum
-	err = db.SaveGem(gem)
+	err = db.SaveGem("private", gem)
 	suite.Nil(err)
 	suite.Equal("activesupport", gem.Name)
 	suite.NotEqual(ic, gem.InfoChecksum)
@@ -82,7 +82,7 @@ func (suite *ModelsTestSuite) TestSaveGem() {
 func (suite *ModelsTestSuite) TestGetGems() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
-	gems, err := db.GetGems()
+	gems, err := db.GetGems("private")
 	suite.Nil(err)
 	suite.Equal(2, len(gems))
 	suite.Equal("chef", gems[0][0].Name)
@@ -92,7 +92,7 @@ func (suite *ModelsTestSuite) TestGetGems() {
 func (suite *ModelsTestSuite) TestGetGem() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
-	gem, err := db.GetGemVersions("rails")
+	gem, err := db.GetGemVersions("private", "rails")
 	suite.Nil(err)
 	suite.Equal(1, len(gem))
 	suite.Equal("rails", gem[0].Name)
@@ -101,7 +101,7 @@ func (suite *ModelsTestSuite) TestGetGem() {
 func (suite *ModelsTestSuite) TestDeleteGemVersion() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
-	count, err := db.DeleteGemVersion(&Gem{Name: "rails", Number: "6.0.3.rc1"})
+	count, err := db.DeleteGemVersion("private", &Gem{Name: "rails", Number: "6.0.3.rc1"})
 	suite.Nil(err)
 	suite.Equal(1, count)
 }
@@ -109,7 +109,7 @@ func (suite *ModelsTestSuite) TestDeleteGemVersion() {
 func (suite *ModelsTestSuite) TestGemAllGemVersions() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
-	gemVersions, err := db.GetAllGemversions()
+	gemVersions, err := db.GetAllGemversions("private")
 	suite.Nil(err)
 	suite.NotEqual(0, len(gemVersions))
 }
@@ -117,7 +117,7 @@ func (suite *ModelsTestSuite) TestGemAllGemVersions() {
 func (suite *ModelsTestSuite) TestGemAllGemNames() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
-	names := db.GetAllGemNames()
+	names := db.GetAllGemNames("private")
 	suite.Equal(3, len(names))
 	suite.Contains(names, "---")
 	suite.Contains(names, "chef")

@@ -1,0 +1,22 @@
+{{ define "gems" }}
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">Gem Sources</li>
+  </ol>
+</nav>
+<br>
+<table class="table table-dark table-striped">
+  <thead>
+    <tr>
+      <th scope="col" style="font-size: x-large; text-decoration: underline;">Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range .sources }}
+    <tr>
+      <td hx-get="http://localhost:2020/ui/gems/{{ . }}/prefix" hx-target="#content" hx-push-url=true><strong>{{ . }}/</strong></td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }}

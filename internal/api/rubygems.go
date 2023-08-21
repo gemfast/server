@@ -91,7 +91,7 @@ func (h *RubyGemsHandler) localDependenciesHandler(c *gin.Context) {
 		c.Status(http.StatusOK)
 		return
 	}
-	gemVersions, err := h.fetchGemVersions(gemQuery)
+	gemVersions, err := h.fetchGemVersions(h.cfg.PrivateGemsNamespace, gemQuery)
 	if err != nil && !h.cfg.Mirrors[0].Enabled {
 		c.String(http.StatusNotFound, fmt.Sprintf("failed to fetch dependencies for gem: %s", gemQuery))
 		return
@@ -124,7 +124,7 @@ func (h *RubyGemsHandler) localDependenciesJSONHandler(c *gin.Context) {
 		c.Status(http.StatusOK)
 		return
 	}
-	gemVersions, err := h.fetchGemVersions(gemQuery)
+	gemVersions, err := h.fetchGemVersions(h.cfg.PrivateGemsNamespace, gemQuery)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to fetch gem versions")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to fetch gem versions: %v", err))
@@ -162,7 +162,7 @@ func (h *RubyGemsHandler) localUploadGemHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
 	}
-	if err = h.saveAndReindexLocalGem(tmpfile); err != nil {
+	if err = h.saveAndReindexLocalGem(h.cfg.PrivateGemsNamespace, tmpfile); err != nil {
 		log.Error().Err(err).Msg("failed to reindex gem")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
@@ -200,7 +200,7 @@ func (h *RubyGemsHandler) localYankHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to delete gem file system: %v", err))
 		return
 	}
-	num, err := h.db.DeleteGemVersion(&db.Gem{Name: g, Number: v, Platform: p})
+	num, err := h.db.DeleteGemVersion(h.cfg.PrivateGemsNamespace, &db.Gem{Name: g, Number: v, Platform: p})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to yank gem")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem: %v", err))
@@ -214,7 +214,7 @@ func (h *RubyGemsHandler) localYankHandler(c *gin.Context) {
 }
 
 func (h *RubyGemsHandler) localVersionsHandler(c *gin.Context) {
-	versions, err := h.db.GetAllGemversions()
+	versions, err := h.db.GetAllGemversions(h.cfg.PrivateGemsNamespace)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get all gem versions")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get all gem versions: %v", err))
@@ -224,7 +224,7 @@ func (h *RubyGemsHandler) localVersionsHandler(c *gin.Context) {
 }
 
 func (h *RubyGemsHandler) localNamesHandler(c *gin.Context) {
-	names := h.db.GetAllGemNames()
+	names := h.db.GetAllGemNames(h.cfg.PrivateGemsNamespace)
 	c.String(http.StatusOK, (strings.Join(names, "\n") + "\n"))
 }
 
@@ -234,7 +234,7 @@ func (h *RubyGemsHandler) localInfoHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "must provide gem name")
 		return
 	}
-	info, err := h.db.GetGemInfo(gem)
+	info, err := h.db.GetGemInfo(h.cfg.PrivateGemsNamespace, gem)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gem info")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get gem info: %v", err))
@@ -263,7 +263,7 @@ func (h *RubyGemsHandler) geminaboxUploadGem(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
-	if err = h.saveAndReindexLocalGem(tmpfile); err != nil {
+	if err = h.saveAndReindexLocalGem(h.cfg.PrivateGemsNamespace, tmpfile); err != nil {
 		log.Error().Err(err).Msg("failed to reindex gem")
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
@@ -271,11 +271,11 @@ func (h *RubyGemsHandler) geminaboxUploadGem(c *gin.Context) {
 	c.String(http.StatusOK, "uploaded successfully")
 }
 
-func (h *RubyGemsHandler) fetchGemVersions(gemQuery string) ([]*db.Gem, error) {
+func (h *RubyGemsHandler) fetchGemVersions(source, gemQuery string) ([]*db.Gem, error) {
 	gems := strings.Split(gemQuery, ",")
 	var gemVersions []*db.Gem
 	for _, gem := range gems {
-		gv, err := h.db.GetGemVersions(gem)
+		gv, err := h.db.GetGemVersions(source, gem)
 		if err != nil {
 			log.Trace().Err(err).Str("detail", gem).Msg("failed to fetch dependencies for gem")
 			return nil, err
@@ -291,7 +291,7 @@ func (h *RubyGemsHandler) fetchGemVersions(gemQuery string) ([]*db.Gem, error) {
 	return gemVersions, nil
 }
 
-func (h *RubyGemsHandler) saveAndReindexLocalGem(tmpfile *os.File) error {
+func (h *RubyGemsHandler) saveAndReindexLocalGem(source string, tmpfile *os.File) error {
 	s, err := spec.FromFile(tmpfile.Name())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to read spec from tmpfile")
@@ -310,7 +310,7 @@ func (h *RubyGemsHandler) saveAndReindexLocalGem(tmpfile *os.File) error {
 		log.Error().Err(err).Str("detail", fp).Msg("failed to rename tmpfile")
 		return err
 	}
-	err = h.indexer.AddGemToIndex(fp)
+	err = h.indexer.AddGemToIndex(source, fp)
 	if err != nil {
 		log.Error().Err(err).Str("detail", s.Name).Msg("failed to add gem to index")
 		return err
@@ -428,7 +428,7 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 			return
 		}
 		out.Close()
-		err = h.indexer.AddGemToIndex(fp)
+		err = h.indexer.AddGemToIndex(h.cfg.Mirrors[0].Hostname, fp)
 		if err != nil {
 			defer os.Remove(fp)
 			log.Error().Err(err).Msg("failed to index gem")
