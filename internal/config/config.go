@@ -21,6 +21,7 @@ type Config struct {
 	ACLPath              string `hcl:"acl_path,optional"`
 	AuthModelPath        string `hcl:"auth_model_path,optional"`
 	PrivateGemsNamespace string `hcl:"private_gems_namespace,optional"`
+	UIDisabled           bool   `hcl:"ui_disabled,optional"`
 
 	TrialMode   bool            `hcl:"trial_mode,optional"`
 	LicenseKey  string          `hcl:"license_key,optional"`
@@ -147,7 +148,7 @@ func (c *Config) setDefaultCaddyConfig() {
 		c.CaddyConfig = &CaddyConfig{
 			AdminAPIEnabled: false,
 			MetricsDisabled: false,
-			Host:            "https://localhost:443",
+			Host:            "https://localhost",
 			Port:            443,
 		}
 		return
