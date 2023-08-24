@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -25,6 +26,14 @@ func RemoveFileIfExists(filePath string) error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func MkDirs(dir string) error {
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("failed to create dir %s: %w", dir, err)
 	}
 	return nil
 }
