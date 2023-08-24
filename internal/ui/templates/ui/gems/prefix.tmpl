@@ -9,13 +9,13 @@
 <table class="table table-dark table-striped">
   <thead>
     <tr>
-      <th scope="col" style="font-size: x-large; text-decoration: underline;">Prefix</th>
+      <th scope="col" style="font-size: x-large">Prefix</th>
     </tr>
   </thead>
   <tbody>
     {{ range $key, $value := .dirs }}
     <tr>
-      <td hx-get="http://localhost:2020/ui/gems/{{ $.source }}/prefix/{{ $key }}" hx-target="#content" hx-push-url=true><strong>{{ $key }}/ ( {{ $value }} )</strong></td>
+      <td hx-get="http://localhost:2020/ui/gems/{{ $.source }}/prefix/{{ $key }}" hx-target="#content" hx-push-url=true><a style="text-decoration: none; color: white" href="#">{{ $key }}/ ( {{ $value }} )</a></td>
     </tr>
     {{ end }}
   </tbody>

@@ -74,5 +74,11 @@ gem install {{ .spec.Name }}
 {{ . }}
 <br>
 {{ end }}
+
+<hr>
+<h2>
+  Homepage:
+</h2>
+<a href="{{ .spec.GemMetadata.Homepage }}">{{ .spec.GemMetadata.Homepage }}</a>
 {{ end }}
 
