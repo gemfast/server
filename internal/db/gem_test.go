@@ -58,7 +58,7 @@ func TestModelsTestSuite(t *testing.T) {
 	suite.Run(t, new(ModelsTestSuite))
 }
 
-func (suite *ModelsTestSuite) TestSaveGem() {
+func (suite *ModelsTestSuite) TestSaveGemPrivate() {
 	gem := &Gem{
 		Name:     "activesupport",
 		Number:   "7.0.4.3",
@@ -79,6 +79,27 @@ func (suite *ModelsTestSuite) TestSaveGem() {
 	suite.NotEqual(ic, gem.InfoChecksum)
 }
 
+func (suite *ModelsTestSuite) TestSaveGemMirror() {
+	gem := &Gem{
+		Name:     "activesupport",
+		Number:   "7.0.4.3",
+		Platform: "ruby",
+		Checksum: "1234567890",
+	}
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+	err := db.SaveGem("rubygems.org", gem)
+	suite.Nil(err)
+	suite.Equal("activesupport", gem.Name)
+	suite.NotNil(gem.InfoChecksum)
+	gem.Number = "6.0.4.3"
+	ic := gem.InfoChecksum
+	err = db.SaveGem("rubygems.org", gem)
+	suite.Nil(err)
+	suite.Equal("activesupport", gem.Name)
+	suite.NotEqual(ic, gem.InfoChecksum)
+}
+
 func (suite *ModelsTestSuite) TestGetGems() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
@@ -87,6 +108,10 @@ func (suite *ModelsTestSuite) TestGetGems() {
 	suite.Equal(2, len(gems))
 	suite.Equal("chef", gems[0][0].Name)
 	suite.Equal("rails", gems[1][0].Name)
+	gems, err = db.GetGems("rubygems.org")
+	suite.Nil(err)
+	suite.Equal(1, len(gems))
+	suite.Equal("good_job", gems[0][0].Name)
 }
 
 func (suite *ModelsTestSuite) TestGetGem() {
@@ -96,6 +121,10 @@ func (suite *ModelsTestSuite) TestGetGem() {
 	suite.Nil(err)
 	suite.Equal(1, len(gem))
 	suite.Equal("rails", gem[0].Name)
+	gem, err = db.GetGemVersions("rubygems.org", "good_job")
+	suite.Nil(err)
+	suite.Equal(1, len(gem))
+	suite.Equal("good_job", gem[0].Name)
 }
 
 func (suite *ModelsTestSuite) TestDeleteGemVersion() {
@@ -104,12 +133,18 @@ func (suite *ModelsTestSuite) TestDeleteGemVersion() {
 	count, err := db.DeleteGemVersion("private", &Gem{Name: "rails", Number: "6.0.3.rc1"})
 	suite.Nil(err)
 	suite.Equal(1, count)
+	count, err = db.DeleteGemVersion("rubygems.org", &Gem{Name: "good_job", Number: "3.7.14"})
+	suite.Nil(err)
+	suite.Equal(1, count)
 }
 
 func (suite *ModelsTestSuite) TestGemAllGemVersions() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
 	gemVersions, err := db.GetAllGemversions("private")
+	suite.Nil(err)
+	suite.NotEqual(0, len(gemVersions))
+	gemVersions, err = db.GetAllGemversions("rubygems.org")
 	suite.Nil(err)
 	suite.NotEqual(0, len(gemVersions))
 }
@@ -122,6 +157,11 @@ func (suite *ModelsTestSuite) TestGemAllGemNames() {
 	suite.Contains(names, "---")
 	suite.Contains(names, "chef")
 	suite.Contains(names, "rails")
+
+	names = db.GetAllGemNames("rubygems.org")
+	suite.Equal(2, len(names))
+	suite.Contains(names, "---")
+	suite.Contains(names, "good_job")
 }
 
 func TestGemFromGemParameter(t *testing.T) {
