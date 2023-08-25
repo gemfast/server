@@ -62,14 +62,14 @@ func (api *API) loadMiddleware() {
 
 func (api *API) registerRoutes() {
 	ui := ui.NewUI(api.cfg, api.db)
+	api.router.SetHTMLTemplate(ui.Templates)
 	if !api.cfg.UIDisabled {
 		api.router.StaticFS("/ui/assets", http.FS(ui.Assets))
-		api.router.SetHTMLTemplate(ui.Templates)
-		log.Info().Str("detail", "/ui").Msg("gemfast ui available enabled")
+		api.configureUI(ui, api.router.Group("/ui"))
+		log.Info().Str("detail", "/ui").Msg("gemfast ui enabled")
 	}
 	api.router.Use(gin.Recovery())
 	api.router.GET("/up", api.apiV1Handler.health)
-	api.configureUI(ui, api.router.Group("/ui"))
 	authMode := api.cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {

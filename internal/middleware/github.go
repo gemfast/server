@@ -160,7 +160,7 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	c.HTML(http.StatusOK, "github/callback.tmpl", gin.H{
+	c.HTML(http.StatusOK, "github/callback", gin.H{
 		"accessToken": jwt,
 		"errorDesc":   ed,
 		"errorURI":    eu,
