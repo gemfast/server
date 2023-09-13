@@ -266,7 +266,6 @@ func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 			return
 		}
 		jwtToken, err := jwt.Parse(authFields[1], func(t *jwt.Token) (interface{}, error) {
-			fmt.Println(t.Method.Alg())
 			if jwt.GetSigningMethod("HS256") != t.Method {
 				return nil, jmw.ErrInvalidSigningAlgorithm
 			}

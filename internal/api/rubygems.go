@@ -250,6 +250,16 @@ func (h *RubyGemsHandler) geminaboxUploadGem(c *gin.Context) {
 		c.String(http.StatusBadRequest, "failed to read form file parameter")
 		return
 	}
+	if h.cfg.Auth.Type != "none" {
+		at := c.Request.FormValue("token")
+		if at == "" {
+			log.Error().Msg("token is required")
+			c.String(http.StatusBadRequest, "token is required")
+			return
+		}
+		//TODO: validate token
+	}
+
 	tmpfile, err := os.CreateTemp("/tmp", "*.gem")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmp file")

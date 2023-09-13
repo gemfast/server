@@ -21,6 +21,20 @@ You can configure gemfast settings using the `/etc/gemfast/gemfast.hcl` file. Th
 
 For more information see: https://gemfast.io/docs
 
+## UI
+
+![Dashboard UI](https://github.com/gemfast/server/raw/main/SCREENSHOT.png)
+
+Gemfast includes a basic ui which is accessible from `my.server.url/ui`. For example, running it locally you can access it at `http://localhost:2020/ui`.
+
+The ui currently supports viewing and searching gems from both the private gems namespace and gems that have been cached from an upsteam. 
+
+You can also disable the ui in /etc/gemfast/gemfast.hcl:
+
+```terraform
+ui_disabled = true
+```
+
 ## License
 
 Gemfast is source available software licensed under the Elastic License 2.0 (ELv2) License. The license restricts users from:
