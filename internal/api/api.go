@@ -1,21 +1,18 @@
 package api
 
 import (
-	"embed"
 	"fmt"
-	"html/template"
+	"net/http"
 	"path/filepath"
 	"strings"
 
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/middleware"
+	"github.com/gemfast/server/internal/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
-
-//go:embed templates/*
-var efs embed.FS
 
 const adminAPIPath = "/admin/api/v1"
 
@@ -64,9 +61,17 @@ func (api *API) loadMiddleware() {
 }
 
 func (api *API) registerRoutes() {
-	tmpl := template.Must(template.New("").ParseFS(efs, "templates/github/*.tmpl"))
-	api.router.SetHTMLTemplate(tmpl)
 	api.router.Use(gin.Recovery())
+	ui := ui.NewUI(api.cfg, api.db)
+	api.router.SetHTMLTemplate(ui.Templates)
+	if !api.cfg.UIDisabled {
+		api.router.StaticFS("/ui/assets", http.FS(ui.Assets))
+		api.configureUI(ui, api.router.Group("/ui"))
+		log.Info().Str("detail", "/ui").Msg("gemfast ui enabled")
+	}
+	api.router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/ui")
+	})
 	api.router.GET("/up", api.apiV1Handler.health)
 	authMode := api.cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
@@ -187,10 +192,10 @@ func (api *API) configurePrivateWrite(private *gin.RouterGroup) {
 func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/auth", api.apiV1Handler.authMode)
 	admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
-	admin.GET("/gems", api.apiV1Handler.listGems)
-	admin.GET("/gems/:gem", api.apiV1Handler.getGem)
-	admin.GET("/gems/search/:name", api.apiV1Handler.searchGems)
-	admin.GET("/gems/prefix/:prefix", api.apiV1Handler.prefixScanGems)
+	admin.GET("/gems/:source", api.apiV1Handler.listGems)
+	admin.GET("/gems/:source/:gem", api.apiV1Handler.getGem)
+	admin.GET("/gems/:source/search/:name", api.apiV1Handler.searchGems)
+	admin.GET("/gems/:source/prefix/:prefix", api.apiV1Handler.prefixScanGems)
 	admin.GET("/users", api.apiV1Handler.listUsers)
 	admin.GET("/users/:username", api.apiV1Handler.getUser)
 	admin.DELETE("/users/:username", api.apiV1Handler.deleteUser)
@@ -198,4 +203,16 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/backup", api.apiV1Handler.backup)
 	admin.GET("/stats/db", api.apiV1Handler.dbStats)
 	admin.GET("/stats/bucket", api.apiV1Handler.bucketStats)
+}
+
+// /ui
+func (api *API) configureUI(ui *ui.UI, uiPath *gin.RouterGroup) {
+	uiPath.GET("/", ui.Index)
+	uiPath.GET("/gems", ui.Gems)
+	uiPath.GET("/upload", ui.UploadGem)
+	uiPath.GET("/license", ui.License)
+	uiPath.POST("/gems/search", ui.SearchGems)
+	uiPath.GET("/gems/:source/prefix", ui.GemsByPrefix)
+	uiPath.GET("/gems/:source/prefix/:prefix", ui.GemsData)
+	uiPath.GET("/gems/:source/prefix/:prefix/inspect/:gem", ui.GemsInspect)
 }

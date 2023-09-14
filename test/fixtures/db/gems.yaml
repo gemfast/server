@@ -1,12 +1,21 @@
 - bucket: gems
   pairs:
-    - key: chef
-      value:
-        - Name: chef
-          Number: 18.1.0
-          Platform: ruby
-    - key: rails
-      value:
-        - Name: rails
-          Number: 6.0.3.rc1
-          Platform: ruby
+    - bucket: private
+      pairs:
+        - key: chef
+          value:
+            - Name: chef
+              Number: 18.1.0
+              Platform: ruby
+        - key: rails
+          value:
+            - Name: rails
+              Number: 6.0.3.rc1
+              Platform: ruby
+    - bucket: rubygems.org
+      pairs:
+        - key: good_job
+          value:
+            - Name: good_job
+              Number: 3.7.14
+              Platform: ruby

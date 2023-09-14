@@ -411,7 +411,7 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 }
 
 // TODO: refactor this to not reopen the gemspec files that have been uploaded
-func (indexer *Indexer) UpdateIndex(updatedGems []string) error {
+func (indexer *Indexer) UpdateIndex(source string, updatedGems []string) error {
 	lock.Lock()
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
@@ -419,13 +419,13 @@ func (indexer *Indexer) UpdateIndex(updatedGems []string) error {
 
 	specs, err := mapGemsToSpecs(updatedGems)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to update index - unable to map gems to specs")
+		log.Error().Err(err).Str("detail", source).Msg("failed to update index - unable to map gems to specs")
 		return err
 	}
 
-	err = indexer.db.SaveGemVersions(specs)
+	err = indexer.db.SaveGemVersions(source, specs)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to update index - unable to save gem dependencies")
+		log.Error().Err(err).Str("detail", source).Msg("failed to update index - unable to save gem dependencies")
 		return err
 	}
 
@@ -445,8 +445,8 @@ func (indexer *Indexer) UpdateIndex(updatedGems []string) error {
 	return indexer.compressAndMoveIndices()
 }
 
-func (indexer *Indexer) AddGemToIndex(gem string) error {
-	return indexer.UpdateIndex([]string{gem})
+func (indexer *Indexer) AddGemToIndex(source, gem string) error {
+	return indexer.UpdateIndex(source, []string{gem})
 }
 
 func (indexer *Indexer) Reindex() error {
@@ -487,8 +487,17 @@ func (indexer *Indexer) Reindex() error {
 		return nil
 	}
 	log.Trace().Str("detail", strings.Join(updatedGems, ",")).Msg("updated gems")
-
-	return indexer.UpdateIndex(updatedGems)
+	err = indexer.UpdateIndex(indexer.cfg.PrivateGemsNamespace, updatedGems)
+	if err != nil {
+		log.Error().Err(err).Str("detail", indexer.cfg.PrivateGemsNamespace).Msg("failed to reindex - unable to update index")
+		return err
+	}
+	err = indexer.UpdateIndex(indexer.cfg.Mirrors[0].Hostname, updatedGems)
+	if err != nil {
+		log.Error().Err(err).Str("detail", indexer.cfg.Mirrors[0].Hostname).Msg("failed to reindex - unable to update index")
+		return err
+	}
+	return nil
 }
 
 func (indexer *Indexer) compressAndMoveIndices() error {

@@ -1,0 +1,22 @@
+{{ define "gems/search" }}
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">Search Results</li>
+  </ol>
+</nav>
+<br>
+<table class="table table-dark table-striped">
+  <thead>
+    <tr>
+      <th scope="col" style="font-size: x-large">Results</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{ range .gems }}
+    <tr>
+      <td hx-get="http://localhost:2020/ui/gems/{{ .Source }}/prefix/{{ slice .Name 0 1 }}/inspect/{{ .Name }}" hx-target="#content" hx-push-url=true><a style="text-decoration: none; color: white" href="#">{{ .Source }}/{{ .Name }}/</a></td>
+    </tr>
+  {{ end }}
+  </tbody>
+</table>
+{{ end }}

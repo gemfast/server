@@ -41,7 +41,8 @@ func (h *APIV1Handler) authMode(c *gin.Context) {
 }
 
 func (h *APIV1Handler) listGems(c *gin.Context) {
-	gems, err := h.db.GetGems()
+	source := c.Param("source")
+	gems, err := h.db.GetGems(source)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gems")
 		c.String(http.StatusInternalServerError, "Failed to get gems")
@@ -61,7 +62,8 @@ func (h *APIV1Handler) listGems(c *gin.Context) {
 
 func (h *APIV1Handler) searchGems(c *gin.Context) {
 	name := c.Param("name")
-	matches := h.db.SearchGems(name)
+	source := c.Param("source")
+	matches := h.db.SearchGems(source, name)
 	if len(matches) == 0 {
 		c.JSON(http.StatusOK, []string{})
 		return
@@ -71,7 +73,8 @@ func (h *APIV1Handler) searchGems(c *gin.Context) {
 
 func (h *APIV1Handler) prefixScanGems(c *gin.Context) {
 	prefix := c.Param("prefix")
-	matches := h.db.PrefixScanGems(prefix)
+	source := c.Param("source")
+	matches := h.db.PrefixScanGems(source, prefix)
 	if len(matches) == 0 {
 		c.JSON(http.StatusOK, []string{})
 		return
@@ -89,7 +92,8 @@ func minimalGem(gem *db.Gem) {
 
 func (h *APIV1Handler) getGem(c *gin.Context) {
 	name := c.Param("gem")
-	gemVersions, err := h.db.GetGemVersions(name)
+	source := c.Param("source")
+	gemVersions, err := h.db.GetGemVersions(source, name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gem")
 		c.String(http.StatusInternalServerError, "Failed to get gem")

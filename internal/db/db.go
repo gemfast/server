@@ -85,19 +85,51 @@ func (db *DB) BucketStats() map[string]bbolt.BucketStats {
 	return bucketStatsMap
 }
 
-func (db *DB) createBucket(bucket string) {
-	err := db.boltDB.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(bucket))
+func (db *DB) createBucket(bucket string) *bolt.Bucket {
+	var b *bolt.Bucket
+	var err error
+	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+		b, err = tx.CreateBucketIfNotExists([]byte(bucket))
 		if err != nil {
 			log.Error().Err(err).Msg(fmt.Sprintf("could not create %s bucket", bucket))
 			return err
 		}
 		log.Logger.Trace().Msg(fmt.Sprintf("created %s bucket", bucket))
+		if bucket == GemBucket {
+			_, err = b.CreateBucketIfNotExists([]byte(db.cfg.Mirrors[0].Hostname))
+			if err != nil {
+				log.Fatal().Err(err).Msg(fmt.Sprintf("could not create %s bucket", db.cfg.Mirrors[0].Hostname))
+			}
+			_, err = b.CreateBucketIfNotExists([]byte(db.cfg.PrivateGemsNamespace))
+			if err != nil {
+				log.Fatal().Err(err).Msg(fmt.Sprintf("could not create %s bucket", db.cfg.PrivateGemsNamespace))
+			}
+		}
 		return nil
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg(fmt.Sprintf("could not create %s bucket", bucket))
 	}
+	return b
+}
+
+func (db *DB) GetLicense() (*license.License, error) {
+	l := &license.License{}
+	err := db.boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(LicenseBucket))
+		v := b.Get([]byte("license"))
+		err := json.Unmarshal(v, l)
+		if err != nil {
+			log.Error().Err(err).Msg("could not unmarshal license")
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("could not get license")
+		return nil, err
+	}
+	return l, nil
 }
 
 func (db *DB) SaveLicense(l *license.License) error {
@@ -107,7 +139,7 @@ func (db *DB) SaveLicense(l *license.License) error {
 		if err != nil {
 			return fmt.Errorf("could not marshal gem to json: %v", err)
 		}
-		err = b.Put([]byte(l.Fingerprint), []byte(licenseBytes))
+		err = b.Put([]byte("license"), []byte(licenseBytes))
 		if err != nil {
 			log.Error().Err(err).Msg("could not persist license")
 			return err

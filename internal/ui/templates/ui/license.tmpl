@@ -1,0 +1,16 @@
+{{ define "license" }}
+
+<h1>License Info</h1>
+<br>
+<h2>Valid: </h2>
+{{ .license.Validated }}
+
+<hr>
+<h2>Machine: </h2>
+{{ .license.Machine }}
+
+<hr>
+<h2>Fingerprint: </h2>
+{{ .license.Fingerprint }}
+
+{{ end }}
