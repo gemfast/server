@@ -18,10 +18,7 @@ mkdir -p /etc/gemfast
 mkdir -p /var/gemfast/db
 
 if [ ! -f "/etc/gemfast/gemfast.hcl" ]; then
-  cat << CONFIG > /etc/gemfast/gemfast.hcl
-# This is the configuration file for Gemfast Server.
-# For documentation of all options, please visit https://gemfast.io/docs/configuration/
-CONFIG
+  cp /opt/gemfast/default/gemfast.hcl /etc/gemfast
 fi
 
 for d in "/var/gemfast" "/etc/gemfast" "/opt/gemfast"
