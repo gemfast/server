@@ -51,14 +51,28 @@ jobs:
       - name: Upload omnibus package
         uses: actions/upload-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-omnibus
           path: omnibus/pkg/
+          if-no-files-found: error
+      - name: Build docker image
+        run: |
+          docker build -t gemfast:${{ steps.get-version.outputs.VERSION }}-pre .
+          docker tag gemfast:${{ steps.get-version.outputs.VERSION }}-pre gemfast:latest
+          docker save gemfast:latest > gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
+      - name: Upload docker image
+        uses: actions/upload-artifact@v3
+        with:
+          name: gemfast-docker
+          path: gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
           if-no-files-found: error
 
   smoke-test:
     name: "smoke"
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      matrix:
+        pkg: [omnibus, docker]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/checkout@v3
@@ -70,14 +84,19 @@ jobs:
           ruby-version: ${{ env.RUBY_VERSION }}
       - uses: actions/download-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-${{ matrix.pkg }}
       - name: Smoke test
-        run: ./scripts/run_smoke_tests.sh
+        run: ./scripts/run_smoke_tests.sh "${{ matrix.pkg }}"
+        env:
+          BUILD_TYPE: "${{ matrix.pkg }}"
   
   cve-test:
     name: "cve"
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      matrix:
+        pkg: [omnibus, docker]
     steps:
       - uses: actions/checkout@v3
       - uses: ruby/setup-ruby@v1
@@ -85,14 +104,19 @@ jobs:
           ruby-version: ${{ env.RUBY_VERSION }}
       - uses: actions/download-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-${{ matrix.pkg }}
       - name: CVE test
-        run: ./scripts/run_cve_tests.sh
+        run: ./scripts/run_cve_tests.sh "${{ matrix.pkg }}"
+        env:
+          BUILD_TYPE: "${{ matrix.pkg }}"
   
   filter-test:
     name: "filter"
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      matrix:
+        pkg: [omnibus, docker]
     steps:
       - uses: actions/checkout@v3
       - uses: ruby/setup-ruby@v1
@@ -100,14 +124,19 @@ jobs:
           ruby-version: ${{ env.RUBY_VERSION }}
       - uses: actions/download-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-${{ matrix.pkg }}
       - name: Filter test
-        run: ./scripts/run_filter_tests.sh
+        run: ./scripts/run_filter_tests.sh "${{ matrix.pkg }}"
+        env:
+          BUILD_TYPE: "${{ matrix.pkg }}"
   
   private-gems-test:
     name: "private-gems"
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      matrix:
+        pkg: [omnibus, docker]
     steps:
       - uses: actions/checkout@v3
       - uses: ruby/setup-ruby@v1
@@ -115,14 +144,19 @@ jobs:
           ruby-version: ${{ env.RUBY_VERSION }}
       - uses: actions/download-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-${{ matrix.pkg }}
       - name: Private gems test
-        run: ./scripts/run_private_gem_tests.sh
+        run: ./scripts/run_private_gem_tests.sh "${{ matrix.pkg }}"
+        env:
+          BUILD_TYPE: "${{ matrix.pkg }}"
   
   auth-test:
     name: "auth"
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      matrix:
+        pkg: [omnibus, docker]
     steps:
       - uses: actions/checkout@v3
       - uses: ruby/setup-ruby@v1
@@ -130,9 +164,11 @@ jobs:
           ruby-version: ${{ env.RUBY_VERSION }}
       - uses: actions/download-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-${{ matrix.pkg }}
       - name: Private gems test
         run: ./scripts/run_auth_tests.sh
+        env:
+          BUILD_TYPE: "${{ matrix.pkg }}"
 
   pre-release:
     name: "pre-release"
@@ -152,7 +188,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/download-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-omnibus
       - name: Get version
         id: get-version
         run: |
@@ -187,4 +223,4 @@ jobs:
     steps:
       - uses: geekyeggo/delete-artifact@v2
         with:
-          name: gemfast-pkg
+          name: gemfast-${{ matrix.pkg }}

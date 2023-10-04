@@ -148,10 +148,21 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: gemfast-pkg
+      - name: Get version
+        id: get-version
+        run: |
+          v=$(cat VERSION)
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+      - name: Rename artifact
+        run: |
+          v="${{ steps.get-version.outputs.VERSION }}"
+          mv *.deb gemfast-$v-amd64.deb
+          echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
+          title: "${{ steps.get-version.outputs.VERSION }}"
           files: |
             *.deb
             *.txt

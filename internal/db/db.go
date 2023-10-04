@@ -35,7 +35,7 @@ func NewTestDB(boltDB *bolt.DB, cfg *config.Config) *DB {
 func NewDB(cfg *config.Config) (*DB, error) {
 	err := os.MkdirAll(cfg.DBDir, os.ModePerm)
 	if err != nil {
-		log.Logger.Error().Err(err).Msg(fmt.Sprintf("could make db directory %s", cfg.DBDir))
+		log.Logger.Error().Err(err).Msg(fmt.Sprintf("failed to create db directory %s", cfg.DBDir))
 		return nil, err
 	}
 	dbFile := filepath.Join(cfg.DBDir, "gemfast.db")

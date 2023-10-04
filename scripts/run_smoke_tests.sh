@@ -18,15 +18,23 @@ license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 CONFIG
 
-sudo dpkg -i gemfast*.deb
-sudo systemctl start gemfast
-sleep 10
-sudo systemctl status gemfast
-sleep 2
-sudo systemctl status caddy
+if [[ "$BUILD_TYPE" == "docker" ]]; then
+  docker load -i gemfast*.tar
+  docker run -d --name gemfast -p 80:2020 -v /etc/gemfast:/etc/gemfast -v /var/gemfast:/var/gemfast -v /etc/machine-id:/etc/machine-id gemfast:latest
+  sleep 5
+  docker ps
+  docker logs gemfast
+else
+  sudo dpkg -i gemfast*.deb
+  sudo systemctl start gemfast
+  sleep 10
+  sudo systemctl status gemfast
+  sleep 2
+  sudo systemctl status caddy
 
-journalctl -u gemfast
-journalctl -u caddy
+  journalctl -u gemfast
+  journalctl -u caddy
+fi
 
 cd ./clones
 
@@ -36,16 +44,28 @@ bundle
 
 numGems=$(curl -s http://localhost/admin/api/v1/stats/bucket | jq -r '.gems.KeyN')
 curl -s http://localhost/admin/api/v1/backup > gemfast.db
-sudo systemctl stop gemfast
-sudo rm -rf /var/gemfast/db/gemfast.db
-sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
-sudo chown gemfast: /var/gemfast/db/gemfast.db
-sleep 2
-sudo systemctl start gemfast
-sleep 5
-sudo systemctl status gemfast
-sleep 2
-sudo systemctl status caddy
+
+if [[ "$BUILD_TYPE" == "docker" ]]; then
+  docker stop gemfast
+  sudo rm -rf /var/gemfast/db/gemfast.db
+  sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
+  sleep 5
+  docker start gemfast
+  sleep 5
+  docker ps
+  docker logs gemfast
+else
+  sudo systemctl stop gemfast
+  sudo rm -rf /var/gemfast/db/gemfast.db
+  sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
+  sudo chown gemfast: /var/gemfast/db/gemfast.db
+  sleep 2
+  sudo systemctl start gemfast
+  sleep 5
+  sudo systemctl status gemfast
+  sleep 2
+  sudo systemctl status caddy
+fi
 
 numGemsBackup=$(curl -s http://localhost/admin/api/v1/stats/bucket | jq -r '.gems.KeyN')
 if [ "$numGems" != "$numGemsBackup" ]; then

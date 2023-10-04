@@ -124,7 +124,7 @@ func (ui *UI) GemsInspect(c *gin.Context) {
 	}
 	gemFName := gv.Name + "-" + gv.Number + ".gem"
 	gemfile := filepath.Join(ui.cfg.GemDir, source, prefix, gemFName)
-	spec, err := spec.FromFile(gemfile)
+	spec, err := spec.FromFile(ui.cfg.Dir+"/tmp", gemfile)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

@@ -9,6 +9,7 @@ import (
 
 func TestGemList(t *testing.T) {
 	cfg := config.NewConfig()
+	cfg.Dir = "/tmp"
 	db, _ := db.NewDB(cfg)
 	cfg.GemDir = "../../test/fixtures/gem_list"
 	i, err := NewIndexer(cfg, db)

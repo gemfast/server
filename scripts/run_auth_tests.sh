@@ -8,7 +8,9 @@ bundle --version
 gem update --system
 
 sudo mkdir -p /etc/gemfast
+sudo mkdir -p /var/gemfast
 sudo chown -R $USER: /etc/gemfast
+sudo chown -R $USER: /var/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
 caddy {
   port = 80
@@ -26,22 +28,28 @@ auth "local"  {
 }
 CONFIG
 
-sudo dpkg -i gemfast*.deb
-sudo systemctl start gemfast
-sleep 10
-sudo systemctl status gemfast
-sleep 2
-sudo systemctl status caddy
+if [[ "$BUILD_TYPE" == "docker" ]]; then
+  docker load -i gemfast*.tar
+  docker run -d --name gemfast -p 80:2020 -v /etc/gemfast:/etc/gemfast -v /var/gemfast:/var/gemfast -v /etc/machine-id:/etc/machine-id gemfast:latest
+  sleep 5
+  docker ps
+  docker logs gemfast
+else
+  sudo dpkg -i gemfast*.deb
+  sudo systemctl start gemfast
+  sleep 10
+  sudo systemctl status gemfast
+  sleep 2
+  sudo systemctl status caddy
 
-journalctl -u gemfast
-journalctl -u caddy
+  journalctl -u gemfast
+  journalctl -u caddy
+fi
 
 jwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/api/v1/login -d '{"username": "admin", "password":"foobar"}' | jq -r .token)
 token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" http://localhost:80/admin/api/v1/token | jq -r .token)
 bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/api/v1/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
 bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:80/admin/api/v1/token | jq -r .token)
-
-
 
 mkdir ./test-vendor
 pushd test-vendor
