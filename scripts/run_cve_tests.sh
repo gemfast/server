@@ -2,6 +2,8 @@
 
 set -ueo pipefail
 
+source ./scripts/_functions.sh
+
 ruby --version
 bundle --version
 
@@ -22,23 +24,7 @@ cve {
 }
 CONFIG
 
-if [[ "$BUILD_TYPE" == "docker" ]]; then
-  docker load -i gemfast*.tar
-  docker run -d --name gemfast -p 80:2020 -v /etc/gemfast:/etc/gemfast -v /var/gemfast:/var/gemfast -v /etc/machine-id:/etc/machine-id gemfast:latest
-  sleep 5
-  docker ps
-  docker logs gemfast
-else
-    sudo dpkg -i gemfast*.deb
-    sudo systemctl start gemfast
-    sleep 10
-    sudo systemctl status gemfast
-    sleep 2
-    sudo systemctl status caddy
-
-    journalctl -u gemfast
-    journalctl -u caddy
-fi
+start_server "$BUILD_TYPE"
 
 mkdir ./test-cve
 

@@ -2,6 +2,8 @@
 
 set -ueo pipefail
 
+source ./scripts/_functions.sh
+
 ruby --version
 bundle --version
 
@@ -23,23 +25,7 @@ filter {
 }
 CONFIG
 
-if [[ "$BUILD_TYPE" == "docker" ]]; then
-  docker load -i gemfast*.tar
-  docker run -d --name gemfast -p 80:2020 -v /etc/gemfast:/etc/gemfast -v /var/gemfast:/var/gemfast -v /etc/machine-id:/etc/machine-id gemfast:latest
-  sleep 5
-  docker ps
-  docker logs gemfast
-else
-  sudo dpkg -i gemfast*.deb
-  sudo systemctl start gemfast
-  sleep 10
-  sudo systemctl status gemfast
-  sleep 2
-  sudo systemctl status caddy
-
-  journalctl -u gemfast
-  journalctl -u caddy
-fi
+start_server "$BUILD_TYPE"
 
 mkdir ./test-filter-allow
 pushd test-filter-allow
@@ -68,19 +54,9 @@ filter {
     regex = ["active.*"]
 }
 CONFIG
-if [[ "$BUILD_TYPE" == "docker" ]]; then
-  docker restart gemfast
-  sleep 10
-  docker ps
-  docker logs gemfast
-else
-  sudo chown -R $USER: /etc/gemfast
-  sudo systemctl restart gemfast
-  sleep 5
-  sudo systemctl status gemfast
-  sleep 2
-  sudo systemctl status caddy
-fi
+sudo chown -R $USER: /etc/gemfast
+
+restart_server "$BUILD_TYPE"
 
 mkdir ./test-filter-deny
 pushd test-filter-deny
