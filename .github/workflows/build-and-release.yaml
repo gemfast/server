@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  push:
     tags:
       - "v*"
+  pull_request:
+    branches: [ main ]
+    
 
 env:
   GO_VERSION: 1.19.8
@@ -174,7 +174,6 @@ jobs:
           BUILD_TYPE: "${{ matrix.pkg }}"
 
   pre-release:
-    if: github.ref_type != 'tag'
     name: "pre-release"
     permissions: write-all
     if: ${{ github.ref == 'refs/heads/main' }}
@@ -223,7 +222,7 @@ jobs:
             *.txt
     
   tagged-release:
-    if: github.ref_type == 'tag'
+    if: startsWith(github.ref, 'refs/tags/v')
     name: "release"
     permissions: write-all
     runs-on: "ubuntu-latest"
