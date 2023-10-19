@@ -30,9 +30,10 @@ bundle
 
 numGems=$(curl -s http://localhost/admin/api/v1/stats/bucket | jq -r '.gems.KeyN')
 curl -s http://localhost/admin/api/v1/backup > gemfast.db
-sudo chown gemfast: /var/gemfast/db/gemfast.db
+
 sudo rm -rf /var/gemfast/db/gemfast.db
 sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
+sudo chown gemfast: /var/gemfast/db/gemfast.db
 
 restart_server "$BUILD_TYPE"
 
@@ -41,19 +42,3 @@ if [ "$numGems" != "$numGemsBackup" ]; then
   echo "Number of gems in backup ($numGemsBackup) does not match number of gems in original ($numGems)"
   exit 1
 fi
-
-# TODO: make this test work
-# mv Gemfile Gemfile.backup
-# cat << GEMFILE > Gemfile
-# source "https://rubygems.org"
-# gem "rake", ">= 13"
-# GEMFILE
-
-# bundle clean --force
-# ls -la /var/gemfast/gems
-
-# mv Gemfile.backup Gemfile
-# sed -i -e 's/https:\/\/rubygems.org/http:\/\/localhost\/private/g' Gemfile
-# rm Gemfile.lock
-# bundle
-popd
