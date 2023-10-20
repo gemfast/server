@@ -2,6 +2,8 @@
 
 set -ueo pipefail
 
+source ./scripts/_functions.sh
+
 ruby --version
 bundle --version
 
@@ -23,16 +25,7 @@ filter {
 }
 CONFIG
 
-sudo dpkg -i gemfast*.deb
-
-sudo systemctl start gemfast
-sleep 10
-sudo systemctl status gemfast
-sleep 2
-sudo systemctl status caddy
-
-journalctl -u gemfast
-journalctl -u caddy
+start_server "$BUILD_TYPE"
 
 mkdir ./test-filter-allow
 pushd test-filter-allow
@@ -62,11 +55,8 @@ filter {
 }
 CONFIG
 sudo chown -R $USER: /etc/gemfast
-sudo systemctl restart gemfast
-sleep 5
-sudo systemctl status gemfast
-sleep 2
-sudo systemctl status caddy
+
+restart_server "$BUILD_TYPE"
 
 mkdir ./test-filter-deny
 pushd test-filter-deny

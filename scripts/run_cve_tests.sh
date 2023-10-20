@@ -2,6 +2,8 @@
 
 set -ueo pipefail
 
+source ./scripts/_functions.sh
+
 ruby --version
 bundle --version
 
@@ -22,17 +24,7 @@ cve {
 }
 CONFIG
 
-sudo dpkg -i gemfast*.deb
-
-
-sudo systemctl start gemfast
-sleep 10
-sudo systemctl status gemfast
-sleep 2
-sudo systemctl status caddy
-
-journalctl -u gemfast
-journalctl -u caddy
+start_server "$BUILD_TYPE"
 
 mkdir ./test-cve
 

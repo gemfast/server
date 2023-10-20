@@ -59,9 +59,10 @@ func NewIndexer(cfg *config.Config, db *db.DB) (*Indexer, error) {
 	gemfastDir := cfg.Dir
 	marshalName := "Marshal.4.8"
 	indexer := &Indexer{destDir: gemfastDir, cfg: cfg, db: db}
-	tmpdir, err := mkTempDir("gem_generate_index")
+	utils.MkDirs(gemfastDir + "/tmp")
+	tmpdir, err := mkTempDir(gemfastDir+"/tmp", "gem_generate_index")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create gem_generate_index tmpdir: %w", err)
 	}
 	indexer.dir = tmpdir
 	indexer.marshalIdx = fmt.Sprintf("%s/%s", indexer.dir, marshalName)
@@ -118,8 +119,8 @@ func (indexer *Indexer) GenerateIndex() error {
 	return nil
 }
 
-func mkTempDir(name string) (string, error) {
-	dir, err := os.MkdirTemp("/tmp", name)
+func mkTempDir(dir, name string) (string, error) {
+	dir, err := os.MkdirTemp(dir, name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
 		return dir, err
@@ -127,7 +128,7 @@ func mkTempDir(name string) (string, error) {
 	log.Trace().Msg(fmt.Sprintf("created tmpdir %s", dir))
 	err = os.Chmod(dir, 0700)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to create tmpdir")
+		log.Error().Err(err).Msg("failed to chmod tmpdir")
 	}
 	return dir, err
 }
@@ -150,7 +151,7 @@ func (indexer *Indexer) gemList() ([]string, error) {
 	return gems, nil
 }
 
-func mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
+func (indexer *Indexer) mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 	var specs []*spec.Spec
 	var s *spec.Spec
 	for _, g := range gems {
@@ -164,7 +165,7 @@ func mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 			continue
 		} else {
 			log.Trace().Str("detail", g).Msg("extracting spec from gem")
-			s, err = spec.FromFile(g)
+			s, err = spec.FromFile(indexer.cfg.Dir+"/tmp", g)
 			if err != nil {
 				log.Error().Err(err).Str("detail", g).Msg("failed to extract spec from gem")
 				return nil, err
@@ -268,7 +269,7 @@ func (indexer *Indexer) buildIndicies() error {
 	if err != nil {
 		return fmt.Errorf("failed to get gem list: %w", err)
 	}
-	specs, err := mapGemsToSpecs(gl)
+	specs, err := indexer.mapGemsToSpecs(gl)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to map gems to specs")
 		return err
@@ -417,7 +418,7 @@ func (indexer *Indexer) UpdateIndex(source string, updatedGems []string) error {
 	defer os.RemoveAll(indexer.dir)
 	utils.MkDirs(indexer.quickMarshalDir)
 
-	specs, err := mapGemsToSpecs(updatedGems)
+	specs, err := indexer.mapGemsToSpecs(updatedGems)
 	if err != nil {
 		log.Error().Err(err).Str("detail", source).Msg("failed to update index - unable to map gems to specs")
 		return err
@@ -541,7 +542,7 @@ func (indexer *Indexer) RemoveGemFromIndex(name string, version string, platform
 		log.Error().Err(err).Msg("failed to remove gem from index - unable to list gems")
 		return err
 	}
-	specs, err := mapGemsToSpecs(gl)
+	specs, err := indexer.mapGemsToSpecs(gl)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to map gems to specs")
 		return err

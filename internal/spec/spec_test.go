@@ -74,7 +74,7 @@ func (suite *SpecTestSuite) TestParseGemMetadata() {
 }
 
 func (suite *SpecTestSuite) TestSpecFromFile() {
-	spec, err := FromFile("../../test/fixtures/spec/nokogiri-1.15.3-arm64-darwin.gem")
+	spec, err := FromFile("/tmp", "../../test/fixtures/spec/nokogiri-1.15.3-arm64-darwin.gem")
 	suite.Nil(err)
 	suite.NotNil(spec)
 	suite.Equal("nokogiri", spec.Name)

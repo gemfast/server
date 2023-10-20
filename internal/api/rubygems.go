@@ -148,7 +148,7 @@ func (h *RubyGemsHandler) localUploadGemHandler(c *gin.Context) {
 	if c.Request.Body != nil {
 		bodyBytes, _ = io.ReadAll(c.Request.Body)
 	}
-	tmpfile, err := os.CreateTemp("/tmp", "*.gem")
+	tmpfile, err := os.CreateTemp(h.cfg.Dir+"/tmp", "*.gem")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmp file")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to index gem: %v", err))
@@ -260,7 +260,7 @@ func (h *RubyGemsHandler) geminaboxUploadGem(c *gin.Context) {
 		//TODO: validate token
 	}
 
-	tmpfile, err := os.CreateTemp("/tmp", "*.gem")
+	tmpfile, err := os.CreateTemp(h.cfg.Dir+"/tmp", "*.gem")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmp file")
 		c.String(http.StatusInternalServerError, "failed to index gem")
@@ -302,7 +302,7 @@ func (h *RubyGemsHandler) fetchGemVersions(source, gemQuery string) ([]*db.Gem, 
 }
 
 func (h *RubyGemsHandler) saveAndReindexLocalGem(source string, tmpfile *os.File) error {
-	s, err := spec.FromFile(tmpfile.Name())
+	s, err := spec.FromFile(h.cfg.Dir+"/tmp", tmpfile.Name())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to read spec from tmpfile")
 		return err

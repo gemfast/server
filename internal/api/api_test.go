@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -61,7 +62,7 @@ func createTestAPI(testDB *bolt.DB, cfg *config.Config) (*API, error) {
 	database := db.NewTestDB(testDB, cfg)
 	indexer, err := indexer.NewIndexer(cfg, database)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create indexer: %w", err)
 	}
 	f := filter.NewFilter(cfg, l)
 	gdb := cve.NewGemAdvisoryDB(cfg, l)
@@ -87,11 +88,13 @@ func TestAPITestSuite(t *testing.T) {
 
 func (suite *APITestSuite) TestInitRouterNoneAuth() {
 	cfg := config.NewConfig()
+	cfg.Dir = "/tmp"
 	cfg.Auth.Type = "none"
 	cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
 	cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
 	api, err := createTestAPI(suite.DB, cfg)
 	suite.Nil(err)
+	suite.NotNil(api)
 	var paths []string
 	for _, route := range api.router.Routes() {
 		paths = append(paths, route.Path)
@@ -137,11 +140,13 @@ func (suite *APITestSuite) TestInitRouterNoneAuth() {
 
 func (suite *APITestSuite) TestInitRouterLocalAuth() {
 	cfg := config.NewConfig()
+	cfg.Dir = "/tmp"
 	cfg.Auth.Type = "local"
 	cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
 	cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
 	api, err := createTestAPI(suite.DB, cfg)
 	suite.Nil(err)
+	suite.NotNil(api)
 	var paths []string
 	for _, route := range api.router.Routes() {
 		paths = append(paths, route.Path)
@@ -187,11 +192,13 @@ func (suite *APITestSuite) TestInitRouterLocalAuth() {
 
 func (suite *APITestSuite) TestInitRouterGitHubAuth() {
 	cfg := config.NewConfig()
+	cfg.Dir = "/tmp"
 	cfg.Auth.Type = "github"
 	cfg.ACLPath = suite.FixturesDir + "/acl/gemfast_acl.csv"
 	cfg.AuthModelPath = suite.FixturesDir + "/acl/auth_model.conf"
 	api, err := createTestAPI(suite.DB, cfg)
 	suite.Nil(err)
+	suite.NotNil(api)
 	var paths []string
 	for _, route := range api.router.Routes() {
 		paths = append(paths, route.Path)

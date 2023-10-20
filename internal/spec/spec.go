@@ -30,8 +30,8 @@ type Spec struct {
 	RubyGems         string //TODO: parse required_rubygems_version from metadata
 }
 
-func untar(full_name string, gemfile string) ([]byte, string, error) {
-	tmpdir, err := os.MkdirTemp("/tmp", full_name)
+func untar(dir, full_name, gemfile string) ([]byte, string, error) {
+	tmpdir, err := os.MkdirTemp(dir, full_name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
 		return nil, "", err
@@ -257,12 +257,12 @@ func ParseGemMetadata(yamlBytes []byte) (*GemMetadata, error) {
 	return &metadata, nil
 }
 
-func FromFile(gemfile string) (*Spec, error) {
+func FromFile(dir, gemfile string) (*Spec, error) {
 	path_chunks := strings.Split(gemfile, "/")
 	full := path_chunks[len(path_chunks)-1]
 	ogName := strings.TrimSuffix(full, ".gem")
 	log.Trace().Str("detail", gemfile).Msg("untarring gemfile")
-	sum, tmpdir, err := untar(full, gemfile)
+	sum, tmpdir, err := untar(dir, full, gemfile)
 	log.Trace().Str("detail", fmt.Sprintf("%x", sum)).Msg("checksum of gem")
 	defer os.RemoveAll(tmpdir)
 	if err != nil {

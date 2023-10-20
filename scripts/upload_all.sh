@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-gems="/var/gemfast/gems"
-cd $gems
+gems_dir="/var/gemfast/gems"
+cd $gems_dir
 for gem in *.gem; do
   [ -f "$gem" ] || break
   echo "Uploading $gem"
