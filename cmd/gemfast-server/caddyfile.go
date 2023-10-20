@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -52,14 +53,20 @@ func caddyfile() {
 		m["MetricsEnabled"] = true
 	}
 	t, err := template.New("Caddyfile").Parse(CaddyfileTemplate)
-	check(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse Caddyfile template")
+	}
 
 	var tpl bytes.Buffer
 	err = t.Execute(&tpl, m)
-	check(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to execute Caddyfile template")
+	}
 	if Output != "" {
 		err := os.WriteFile(Output, tpl.Bytes(), 0644)
-		check(err)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to write Caddyfile")
+		}
 		return
 	}
 	fmt.Println(tpl.String())

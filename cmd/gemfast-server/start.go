@@ -33,21 +33,29 @@ func start() {
 
 	// Load the license
 	license, err := license.NewLicense(cfg)
-	check(err)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to load license")
+	}
 	log.Info().Msg("starting services")
 
 	// Connect to the database
 	database, err := db.NewDB(cfg)
-	check(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to database")
+	}
 	database.Open()
 	defer database.Close()
 	database.SaveLicense(license)
 
 	// Start the indexer
 	indexer, err := indexer.NewIndexer(cfg, database)
-	check(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create indexer")
+	}
 	err = indexer.GenerateIndex()
-	check(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to generate index")
+	}
 
 	// Create the filter
 	f := filter.NewFilter(cfg, license)
@@ -55,7 +63,9 @@ func start() {
 	// Start the advisory DB updater
 	advisoryDB := cve.NewGemAdvisoryDB(cfg, license)
 	err = advisoryDB.Refresh()
-	check(err)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to refresh advisory DB")
+	}
 	ticker := time.NewTicker(24 * time.Hour)
 	quit := make(chan struct{})
 	go func(advisoryDB *cve.GemAdvisoryDB) {

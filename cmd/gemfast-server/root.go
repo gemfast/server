@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/rs/zerolog/log"
+
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
@@ -11,14 +11,10 @@ var rootCmd = &cobra.Command{
 	Short: "Gemfast is a rubygems server written in Go",
 }
 
-func check(err error) {
-	if err != nil {
-		log.Fatal().Err(err).Msg("error starting gemfast server")
-	}
-}
-
 func Execute() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	err := rootCmd.Execute()
-	check(err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to execute command")
+	}
 }
