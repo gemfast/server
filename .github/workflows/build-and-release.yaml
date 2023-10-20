@@ -205,9 +205,14 @@ jobs:
           v="${{ steps.get-version.outputs.VERSION }}-pre"
           mv *.deb gemfast-$v-amd64.deb
           echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push docker image
         run: |
-          echo ${GITHUB_TOKEN} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker load < gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
           docker tag server:${{ steps.get-version.outputs.VERSION }}-pre ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
           docker push ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
@@ -250,9 +255,14 @@ jobs:
           v="${{ steps.get-version.outputs.VERSION }}"
           mv *.deb gemfast-$v-amd64.deb
           echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push docker image
         run: |
-          echo ${GITHUB_TOKEN} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker load < gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
           docker tag server:${{ steps.get-version.outputs.VERSION }}-pre ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}
           docker push ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}
