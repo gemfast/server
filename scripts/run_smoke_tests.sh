@@ -34,7 +34,7 @@ curl -s http://localhost/admin/api/v1/backup > gemfast.db
 sudo rm -rf /var/gemfast/db/gemfast.db
 sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
 
-if [ "$BUILD_TYPE" != "omnibus" ]; then
+if [ "$BUILD_TYPE" != "docker" ]; then
   sudo chown gemfast: /var/gemfast/db/gemfast.db
 fi
 
