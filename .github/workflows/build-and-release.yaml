@@ -241,7 +241,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: gemfast-pkg
+          name: gemfast-omnibus
       - uses: actions/download-artifact@v3
         with:
           name: gemfast-docker
