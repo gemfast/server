@@ -1,5 +1,5 @@
 FROM golang:1.19
-
+LABEL org.opencontainers.image.source="https://github.com/gemfast/server"
 WORKDIR /app
 
 COPY go.mod go.sum ./

@@ -214,7 +214,7 @@ jobs:
       - name: Push docker image
         run: |
           docker load < gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
-          docker tag server:${{ steps.get-version.outputs.VERSION }}-pre ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
+          docker tag server:latest ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
           docker push ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -264,8 +264,10 @@ jobs:
       - name: Push docker image
         run: |
           docker load < gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
-          docker tag server:${{ steps.get-version.outputs.VERSION }}-pre ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}
+          docker tag server:latest ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}
           docker push ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}
+          docker tag ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }} ghcr.io/gemfast/server:latest
+          docker push ghcr.io/gemfast/server:latest
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
