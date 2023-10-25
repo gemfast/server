@@ -12,6 +12,7 @@ import (
 	"github.com/gemfast/server/internal/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
 const adminAPIPath = "/admin/api/v1"
@@ -61,7 +62,9 @@ func (api *API) loadMiddleware() {
 }
 
 func (api *API) registerRoutes() {
+	p := ginprometheus.NewPrometheus("gemfast")
 	api.router.Use(gin.Recovery())
+	p.Use(api.router)
 	ui := ui.NewUI(api.cfg, api.db)
 	api.router.SetHTMLTemplate(ui.Templates)
 	if !api.cfg.UIDisabled {
