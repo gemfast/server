@@ -14,7 +14,7 @@
   <tbody>
     {{ range .sources }}
     <tr>
-      <td hx-get="http://localhost:2020/ui/gems/{{ . }}/prefix" hx-target="#content" hx-push-url=true><a style="text-decoration: none; color: white" href="#">{{ . }}/</a></td>
+      <td hx-get="http://localhost:2020/ui/gems/{{ . }}/prefix" hx-target="#content"><a style="text-decoration: none; color: white" href="#">{{ . }}/</a></td>
     </tr>
     {{ end }}
   </tbody>

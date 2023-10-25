@@ -1,9 +1,9 @@
 {{ define "gems/inspect" }}
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems" hx-target="#content" hx-push-url=true>Gem Sources</a></li>
-    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems/{{ .source }}/prefix" hx-target="#content" hx-push-url=true>{{ .source }}</a></li>
-    <li class="breadcrumb-item active"><a href="#" hx-get="http://localhost:2020/ui/gems/{{ .source }}/prefix/{{ .prefix }}" hx-target="#content" hx-push-url=true>{{ .prefix }}</a></li>
+    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems" hx-target="#content">Gem Sources</a></li>
+    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems/{{ .source }}/prefix" hx-target="#content">{{ .source }}</a></li>
+    <li class="breadcrumb-item active"><a href="#" hx-get="http://localhost:2020/ui/gems/{{ .source }}/prefix/{{ .prefix }}" hx-target="#content">{{ .prefix }}</a></li>
     <li class="breadcrumb-item active" aria-current="page">{{ .gem }}</li>
   </ol>
 </nav>
@@ -47,7 +47,7 @@ gem install {{ .spec.Name }}
   </thead>
   <tbody>
   {{ range .gemVersions }}
-    <tr hx-get="http://localhost:2020/ui/gems/{{ $.source }}/prefix/{{ $.prefix }}/inspect/{{ .Name }}?version={{ .Number }}" hx-target="#content" hx-push-url=true>
+    <tr hx-get="http://localhost:2020/ui/gems/{{ $.source }}/prefix/{{ $.prefix }}/inspect/{{ .Name }}?version={{ .Number }}" hx-target="#content">
       <th>{{ .Number }}</th>
       <td>{{ .Platform }}</td>
       <td>{{ .Checksum }}</td>
