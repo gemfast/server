@@ -1,8 +1,8 @@
 {{ define "gems/data" }}
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems" hx-target="#content">Gem Sources</a></li>
-    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems/{{ .source }}/prefix" hx-target="#content">{{ .source }}</a></li>
+    <li class="breadcrumb-item"><a href="#" hx-get="/ui/gems" hx-target="#content" hx-push-url="true">Gem Sources</a></li>
+    <li class="breadcrumb-item"><a href="#" hx-get="/ui/gems/{{ .source }}/prefix" hx-target="#content" hx-push-url="true">{{ .source }}</a></li>
     <li class="breadcrumb-item active" aria-current="page">{{ .prefix }}</li>
   </ol>
 </nav>
@@ -16,7 +16,7 @@
   <tbody>
   {{ range .gems }}
     <tr>
-      <td hx-get="http://localhost:2020/ui/gems/{{ $.source }}/prefix/{{ $.prefix }}/inspect/{{ . }}" hx-target="#content"><a style="text-decoration: none; color: white" href="#">{{ . }}/</a></td>
+      <td hx-get="/ui/gems/{{ $.source }}/prefix/{{ $.prefix }}/inspect/{{ . }}" hx-target="#content" hx-push-url="true"><a style="text-decoration: none; color: white" href="#">{{ . }}/</a></td>
     </tr>
   {{ end }}
   </tbody>

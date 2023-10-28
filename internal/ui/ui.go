@@ -2,6 +2,7 @@ package ui
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/spec"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -39,10 +41,22 @@ func NewUI(cfg *config.Config, db *db.DB) *UI {
 }
 
 func (ui *UI) Index(c *gin.Context) {
-	c.HTML(http.StatusOK, "index", nil)
+	fmt.Println(c.GetHeader("reload"))
+	if c.GetHeader("reload") == "true" {
+		c.Header("HX-Redirect", "/ui")
+		c.Abort()
+		return
+	}
+	c.HTML(http.StatusOK, "index", gin.H{
+		"authType": ui.cfg.Auth.Type,
+	})
 }
 
 func (ui *UI) Gems(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	entries, err := os.ReadDir(ui.cfg.GemDir)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
@@ -62,6 +76,10 @@ func (ui *UI) GemsOptions(c *gin.Context) {
 }
 
 func (ui *UI) GemsByPrefix(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	source := c.Param("source")
 	fp := filepath.Join(ui.cfg.GemDir, source)
 	entries, err := os.ReadDir(ui.cfg.GemDir + "/" + source)
@@ -85,6 +103,10 @@ func (ui *UI) GemsByPrefix(c *gin.Context) {
 }
 
 func (ui *UI) GemsData(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	source := c.Param("source")
 	prefix := c.Param("prefix")
 	gems := ui.db.PrefixScanGems(source, prefix)
@@ -96,6 +118,10 @@ func (ui *UI) GemsData(c *gin.Context) {
 }
 
 func (ui *UI) GemsInspect(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	source := c.Param("source")
 	prefix := c.Param("prefix")
 	gem := c.Param("gem")
@@ -130,6 +156,7 @@ func (ui *UI) GemsInspect(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusOK, "gems/inspect", gin.H{
+		"gemfastURL":  "http://localhost:2020",
 		"gemVersions": gemVersions,
 		"source":      source,
 		"prefix":      prefix,
@@ -145,6 +172,10 @@ type SearchResults struct {
 }
 
 func (ui *UI) SearchGems(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	gem := c.PostForm("gemName")
 	private := ui.db.SearchGems(ui.cfg.PrivateGemsNamespace, gem)
 	rubygems := ui.db.SearchGems(ui.cfg.Mirrors[0].Hostname, gem)
@@ -161,10 +192,31 @@ func (ui *UI) SearchGems(c *gin.Context) {
 }
 
 func (ui *UI) UploadGem(c *gin.Context) {
-	c.HTML(http.StatusOK, "upload", nil)
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
+	c.HTML(http.StatusOK, "upload", gin.H{})
+}
+
+func (ui *UI) AccessTokens(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
+	session := sessions.Default(c)
+	sessionAuth := session.Get("authToken")
+	c.HTML(http.StatusOK, "tokens", gin.H{
+		"accessToken": sessionAuth.(string),
+		"authType":    ui.cfg.Auth.Type,
+	})
 }
 
 func (ui *UI) License(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	l, err := ui.db.GetLicense()
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())

@@ -1,0 +1,12 @@
+{{ define "github/login" }}
+<p>
+    Well, hello there!
+</p>
+<p>
+    We're going to now talk to the GitHub API. Ready?
+    <a href="https://github.com/login/oauth/authorize?scope=read:user,read:org&client_id={{ .clientID }}">Click here</a> to begin!
+</p>
+<p>
+    If that link doesn't work, remember to provide your own <a href="/apps/building-oauth-apps/authorizing-oauth-apps/">Client ID</a>!
+</p>
+{{ end }}

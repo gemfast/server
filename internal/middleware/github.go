@@ -13,11 +13,11 @@ import (
 	jmw "github.com/appleboy/gin-jwt/v2"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
+	"github.com/gin-contrib/sessions"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 
-	"github.com/akyoto/cache"
 	"github.com/gin-gonic/gin"
 	"github.com/juliangruber/go-intersect"
 	"github.com/tidwall/gjson"
@@ -31,7 +31,6 @@ type OAuthLogin struct {
 
 type GitHubMiddleware struct {
 	cfg      *config.Config
-	cache    *cache.Cache
 	acl      *ACL
 	tokenKey string
 	db       *db.DB
@@ -40,10 +39,8 @@ type GitHubMiddleware struct {
 const GitHubTokenKey = "github_token"
 
 func NewGitHubMiddleware(cfg *config.Config, acl *ACL, db *db.DB) *GitHubMiddleware {
-	cache := cache.New(5 * time.Minute)
 	return &GitHubMiddleware{
 		cfg:      cfg,
-		cache:    cache,
 		tokenKey: GitHubTokenKey,
 		acl:      acl,
 		db:       db,
@@ -89,7 +86,7 @@ func payload(user *db.User) jwt.MapClaims {
 func (ghm *GitHubMiddleware) generateJWTToken(user *db.User) (string, time.Time, error) {
 	mw, err := ghm.InitGitHubMiddleware()
 	if err != nil {
-		panic(err)
+		return "", time.Time{}, err
 	}
 	token := jwt.New(jwt.GetSigningMethod(mw.SigningAlgorithm))
 	claims := token.Claims.(jwt.MapClaims)
@@ -151,8 +148,8 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	ed := gjson.Get(json, "error_description").String()
-	eu := gjson.Get(json, "error_uri").String()
+	// ed := gjson.Get(json, "error_description").String()
+	// eu := gjson.Get(json, "error_uri").String()
 	jwt, _, err := ghm.generateJWTToken(user)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to generate JWT token")
@@ -160,11 +157,16 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	c.HTML(http.StatusOK, "github/callback", gin.H{
-		"accessToken": jwt,
-		"errorDesc":   ed,
-		"errorURI":    eu,
-	})
+	session := sessions.Default(c)
+	session.Set("authToken", jwt)
+	session.Save()
+	// c.HTML(http.StatusOK, "github/callback", gin.H{
+	// 	"accessToken": jwt,
+	// 	"errorDesc":   ed,
+	// 	"errorURI":    eu,
+	// })
+	c.Redirect(http.StatusFound, "/ui")
+	c.Abort()
 }
 
 func (ghm *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error) {
@@ -213,7 +215,6 @@ func (ghm *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error)
 			return nil, err
 		}
 	}
-	ghm.cache.Set(at, at, 5*time.Minute)
 	return user, nil
 }
 
@@ -253,45 +254,51 @@ func (ghm *GitHubMiddleware) userMemberOfRequiredOrg(at string) error {
 
 func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		auth := c.GetHeader("Authorization")
-		if auth == "" {
-			c.String(http.StatusBadRequest, "missing authorization header")
-			c.Abort()
-			return
-		}
-		authFields := strings.Split(auth, " ")
-		if len(authFields) != 2 || strings.ToLower(authFields[0]) != "bearer" {
-			c.String(http.StatusBadRequest, "unable to parse bearer token from request")
-			c.Abort()
-			return
-		}
-		jwtToken, err := jwt.Parse(authFields[1], func(t *jwt.Token) (interface{}, error) {
-			if jwt.GetSigningMethod("HS256") != t.Method {
-				return nil, jmw.ErrInvalidSigningAlgorithm
+		var jwtToken *jwt.Token
+		var err error
+		var browser bool
+		userAgent := c.GetHeader("User-Agent")
+		browser = strings.HasPrefix(userAgent, "Mozilla")
+		if browser {
+			jwtToken, err = ghm.getSessionAuth(c)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to get jwt token from session")
+				c.HTML(http.StatusOK, "github/login", gin.H{
+					"clientID": ghm.cfg.Auth.GitHubClientId,
+				})
+				c.Abort()
+				return
 			}
-			return []byte(ghm.cfg.Auth.JWTSecretKey), nil
-		})
-		if err != nil {
-			log.Error().Err(err).Msg("failed to parse jwt token from request")
-			c.String(http.StatusForbidden, "unable to parse jwt token from request")
-			c.Abort()
-			return
+		} else {
+			jwtToken, err = ghm.getHeaderAuth(c)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to get jwt token from request")
+				ghm.GitHubLoginHandler(c)
+				c.Abort()
+				return
+			}
 		}
+
 		claims := jmw.ExtractClaimsFromToken(jwtToken)
 		if len(claims) == 0 {
-			c.String(http.StatusForbidden, "unable to extract claims from request")
+			c.String(http.StatusForbidden, "unable to extract claims from jwt token")
 			c.Abort()
 			return
 		}
 		role := claims[RoleKey].(string)
 		ghAccessToken := claims[GitHubTokenKey].(string)
-		if _, found := ghm.cache.Get(ghAccessToken); !found {
-			_, err := ghm.authenticateGitHubUser(ghAccessToken)
-			if err != nil {
-				c.String(http.StatusForbidden, fmt.Sprintf("failed to fetch github user with provided token: %v", err))
+		fmt.Println(ghAccessToken)
+		_, err = ghm.authenticateGitHubUser(ghAccessToken)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to authenticate github user")
+			if browser {
+				c.HTML(http.StatusOK, "github/login", gin.H{})
 				c.Abort()
 				return
 			}
+			ghm.GitHubLoginHandler(c)
+			c.Abort()
+			return
 		}
 		ok, err := ghm.acl.Enforce(role, c.Request.URL.Path, c.Request.Method)
 		if err != nil {
@@ -306,4 +313,52 @@ func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 			return
 		}
 	}
+}
+
+func (ghm *GitHubMiddleware) GitHubLogoutHandler(c *gin.Context) {
+	session := sessions.Default(c)
+	session.Clear()
+	session.Save()
+	c.Redirect(http.StatusFound, "/ui")
+	c.Abort()
+}
+
+func (ghm *GitHubMiddleware) getHeaderAuth(c *gin.Context) (*jwt.Token, error) {
+	auth := c.GetHeader("Authorization")
+	if auth == "" {
+		return nil, fmt.Errorf("no authorization header found")
+	}
+	authFields := strings.Split(auth, " ")
+	if len(authFields) != 2 || strings.ToLower(authFields[0]) != "bearer" {
+		return nil, fmt.Errorf("invalid authorization header")
+	}
+	return ghm.stringToJWT(authFields[1])
+}
+
+func (ghm *GitHubMiddleware) getSessionAuth(c *gin.Context) (*jwt.Token, error) {
+	session := sessions.Default(c)
+	sessionAuth := session.Get("authToken")
+	switch tokenString := sessionAuth.(type) {
+	case string:
+		return ghm.stringToJWT(tokenString)
+	default:
+		return nil, fmt.Errorf("invalid session auth token")
+	}
+}
+
+func (ghm *GitHubMiddleware) stringToJWT(tokenString string) (*jwt.Token, error) {
+	jwtToken, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		if jwt.GetSigningMethod("HS256") != t.Method {
+			return nil, jmw.ErrInvalidSigningAlgorithm
+		}
+		return []byte(ghm.cfg.Auth.JWTSecretKey), nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse jwt token from request")
+		return nil, fmt.Errorf("failed to parse jwt token from request")
+	}
+	if !jwtToken.Valid {
+		return nil, fmt.Errorf("invalid jwt token")
+	}
+	return jwtToken, nil
 }

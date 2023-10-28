@@ -4,7 +4,9 @@ p, write, /admin/api/v1/refresh-token, *
 p, write, /admin/api/v1/token, *
 p, write, /admin/api/v1/*, GET
 p, write, /private/*, *
+p, write, /ui/*, *
 p, read, /admin/api/v1/refresh-token, *
 p, read, /admin/api/v1/token, *
 p, read, /admin/api/v1/*, GET
 p, read, /private/*, GET
+p, read, /ui/*, *

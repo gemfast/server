@@ -10,6 +10,8 @@ import (
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/middleware"
 	"github.com/gemfast/server/internal/ui"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -58,17 +60,14 @@ func (api *API) loadMiddleware() {
 	api.tokenMiddleware = middleware.NewTokenMiddleware(acl, api.db)
 	api.githubMiddleware = middleware.NewGitHubMiddleware(api.cfg, acl, api.db)
 	api.jwtMiddleware = middleware.NewJWTMiddleware(api.cfg, acl, api.db)
+	store := cookie.NewStore([]byte("secret"))
+	api.router.Use(sessions.Sessions("gemfast", store))
 }
 
 func (api *API) registerRoutes() {
 	api.router.Use(gin.Recovery())
 	ui := ui.NewUI(api.cfg, api.db)
 	api.router.SetHTMLTemplate(ui.Templates)
-	if !api.cfg.UIDisabled {
-		api.router.StaticFS("/ui/assets", http.FS(ui.Assets))
-		api.configureUI(ui, api.router.Group("/ui"))
-		log.Info().Str("detail", "/ui").Msg("gemfast ui enabled")
-	}
 	api.router.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/ui")
 	})
@@ -77,7 +76,7 @@ func (api *API) registerRoutes() {
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
 	case "github":
-		api.configureGitHubAuth()
+		api.configureGitHubAuth(ui)
 	case "local":
 		api.configureLocalAuth()
 	case "none":
@@ -87,7 +86,7 @@ func (api *API) registerRoutes() {
 	}
 }
 
-func (api *API) configureGitHubAuth() {
+func (api *API) configureGitHubAuth(ui *ui.UI) {
 	adminGitHubAuth := api.router.Group(adminAPIPath)
 	adminGitHubAuth.POST("/login", api.githubMiddleware.GitHubLoginHandler)
 	slash := api.router.Group("/")
@@ -95,6 +94,16 @@ func (api *API) configureGitHubAuth() {
 	adminGitHubAuth.Use(api.githubMiddleware.GitHubMiddlewareFunc())
 	{
 		api.configureAdmin(adminGitHubAuth)
+	}
+	if !api.cfg.UIDisabled {
+		api.router.StaticFS("/ui/assets", http.FS(ui.Assets))
+		uiGroup := api.router.Group("/ui")
+		uiGroup.Use(api.githubMiddleware.GitHubMiddlewareFunc())
+		{
+			api.configureUI(ui, uiGroup)
+		}
+		api.router.GET("/ui/github/logout", api.githubMiddleware.GitHubLogoutHandler)
+		log.Info().Str("detail", "/ui").Msg("gemfast ui enabled")
 	}
 	api.configurePrivate()
 }
@@ -210,6 +219,8 @@ func (api *API) configureUI(ui *ui.UI, uiPath *gin.RouterGroup) {
 	uiPath.GET("/", ui.Index)
 	uiPath.GET("/gems", ui.Gems)
 	uiPath.GET("/upload", ui.UploadGem)
+	uiPath.POST("/upload", api.rubygemsHandler.geminaboxUploadGem)
+	uiPath.GET("/tokens", ui.AccessTokens)
 	uiPath.GET("/license", ui.License)
 	uiPath.POST("/gems/search", ui.SearchGems)
 	uiPath.GET("/gems/:source/prefix", ui.GemsByPrefix)

@@ -1,0 +1,37 @@
+{{ define "tokens" }}
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">API Access Tokens</li>
+  </ol>
+</nav>
+<br>
+{{ if eq .authType "none" }}
+<p>
+    Gemfast authentication is currently set to "none". Choose a different auth strategy to enable access tokens.
+</p>
+<p>
+  See <a href="https://gemsfast.io/docs/configuration"> https://gemsfast.io/docs/configuration</a> for more information.
+</p>
+
+{{ else if eq .authType "github" }}
+<div class="container-sm">
+  {{if .accessToken }}
+  <h2 style="margin-top: 20px;">
+    Access Token:
+  </h2>
+  <br>
+  <p id="copySuccess">(click to copy)</p>
+  <div onclick="copyAccessToken()" class="alert alert-dark text-break" id="accessToken">{{ .accessToken }}</div>
+  {{else}}
+  <h2>
+    Error:
+  </h2>
+  <h2 style="color: #800000;">
+    {{ .errorDesc }}
+    <p><a href="{{ .errorURI }}">GitHub error link</a></p>
+  </h2>
+  {{end}}
+</div>
+{{ end }}
+
+{{ end }}
