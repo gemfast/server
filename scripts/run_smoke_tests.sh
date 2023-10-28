@@ -45,3 +45,8 @@ if [ "$numGems" != "$numGemsBackup" ]; then
   echo "Number of gems in backup ($numGemsBackup) does not match number of gems in original ($numGems)"
   exit 1
 fi
+
+metrics=$(curl -s localhost:2020/metrics | grep "gemfast")
+if [[ $metrics == "" ]] ; then
+  echo "Metrics endpoint is not working"
+fi
