@@ -22,8 +22,8 @@ type Config struct {
 	AuthModelPath        string `hcl:"auth_model_path,optional"`
 	PrivateGemsNamespace string `hcl:"private_gems_namespace,optional"`
 	UIDisabled           bool   `hcl:"ui_disabled,optional"`
+	MetricsDisabled      bool   `hcl:"metrics_disabled,optional"`
 
-	TrialMode   bool            `hcl:"trial_mode,optional"`
 	LicenseKey  string          `hcl:"license_key,optional"`
 	CaddyConfig *CaddyConfig    `hcl:"caddy,block"`
 	Mirrors     []*MirrorConfig `hcl:"mirror,block"`

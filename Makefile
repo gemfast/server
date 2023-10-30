@@ -10,7 +10,7 @@ omnibus:
 	cd omnibus && bundle exec omnibus build gemfast
 
 run:
-	go run -mod=mod main.go server
+	go run -mod=mod main.go start
 
 fmt:
 	go fmt ./...

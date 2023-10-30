@@ -18,7 +18,7 @@ const CaddyfileTemplate = `{{- if .AdminDisabled }}{
 {{ .Host }}:{{ .Port }} {
 	encode zstd gzip
 	{{- if .MetricsEnabled }}
-	metrics /metrics
+	metrics /caddymetrics
 	{{- end }}
 	reverse_proxy :{{ .GemfastPort }}
 }
