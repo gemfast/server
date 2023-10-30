@@ -46,7 +46,8 @@ if [ "$numGems" != "$numGemsBackup" ]; then
   exit 1
 fi
 
-metrics=$(curl -s localhost:2020/metrics | grep "gemfast")
+metrics=$(curl -s http://localhost/metrics | grep "gemfast")
 if [[ $metrics == "" ]] ; then
   echo "Metrics endpoint is not working"
+  exit 1
 fi
