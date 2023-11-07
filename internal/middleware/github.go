@@ -287,7 +287,6 @@ func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 		}
 		role := claims[RoleKey].(string)
 		ghAccessToken := claims[GitHubTokenKey].(string)
-		fmt.Println(ghAccessToken)
 		_, err = ghm.authenticateGitHubUser(ghAccessToken)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to authenticate github user")

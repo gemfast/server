@@ -5,15 +5,17 @@
   </ol>
 </nav>
 <br>
-<h2>Valid: </h2>
-{{ .license.Validated }}
+<div class="container-sm">
+  <h2>Valid: </h2>
+  {{ .license.Validated }}
 
-<hr>
-<h2>Machine: </h2>
-{{ .license.Machine }}
+  <hr>
+  <h2>Machine: </h2>
+  {{ .license.Machine }}
 
-<hr>
-<h2>Fingerprint: </h2>
-{{ .license.Fingerprint }}
+  <hr>
+  <h2>Fingerprint: </h2>
+  {{ .license.Fingerprint }}
+</div>
 
 {{ end }}

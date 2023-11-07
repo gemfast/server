@@ -2,6 +2,7 @@ package ui
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -10,11 +11,14 @@ import (
 	"path/filepath"
 	"sort"
 
+	jmw "github.com/appleboy/gin-jwt/v2"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
+	"github.com/gemfast/server/internal/middleware"
 	"github.com/gemfast/server/internal/spec"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 )
 
@@ -47,8 +51,28 @@ func (ui *UI) Index(c *gin.Context) {
 		c.Abort()
 		return
 	}
+	session := sessions.Default(c)
+	sessionAuth := session.Get("authToken")
+	jwtToken, err := jwt.Parse(sessionAuth.(string), func(t *jwt.Token) (interface{}, error) {
+		if jwt.GetSigningMethod("HS256") != t.Method {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(ui.cfg.Auth.JWTSecretKey), nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse jwt token from request")
+	}
+	if !jwtToken.Valid {
+		log.Error().Msg("invalid jwt token")
+	}
+	claims := jmw.ExtractClaimsFromToken(jwtToken)
+	username, ok := claims[middleware.IdentityKey].(string)
+	if !ok {
+		log.Error().Str("username", username).Msg("failed to get user from jwt token")
+	}
 	c.HTML(http.StatusOK, "index", gin.H{
 		"authType": ui.cfg.Auth.Type,
+		"username": username,
 	})
 }
 
@@ -206,9 +230,38 @@ func (ui *UI) AccessTokens(c *gin.Context) {
 	}
 	session := sessions.Default(c)
 	sessionAuth := session.Get("authToken")
+	jwtToken, err := jwt.Parse(sessionAuth.(string), func(t *jwt.Token) (interface{}, error) {
+		if jwt.GetSigningMethod("HS256") != t.Method {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(ui.cfg.Auth.JWTSecretKey), nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse jwt token from request")
+	}
+	if !jwtToken.Valid {
+		log.Error().Msg("invalid jwt token")
+	}
+	claims := jmw.ExtractClaimsFromToken(jwtToken)
+	username, ok := claims[middleware.IdentityKey].(string)
+	if !ok {
+		log.Error().Str("username", username).Msg("failed to get user from jwt token")
+	}
+	user, err := ui.db.GetUser(username)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get user from db")
+	}
+	rubygemsToken := user.Token
+	if rubygemsToken == "" {
+		rubygemsToken, err = ui.db.CreateUserToken(username)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create user token")
+		}
+	}
 	c.HTML(http.StatusOK, "tokens", gin.H{
-		"accessToken": sessionAuth.(string),
-		"authType":    ui.cfg.Auth.Type,
+		"accessToken":   sessionAuth.(string),
+		"authType":      ui.cfg.Auth.Type,
+		"rubygemsToken": rubygemsToken,
 	})
 }
 

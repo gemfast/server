@@ -5,13 +5,13 @@
   </ol>
 </nav>
 <br>
-<form class="form" hx-encoding="multipart/form-data">
-    <input class="form-control" type="file" name="file" />
-    <!-- <input class="form-control" type="password" name="token" /> -->
-    <br>
-    <!-- <button class="btn" style="background-color: #00ADD8; color: white" hx-post="/private/upload" hx-include="[name='file,token']"> -->
-    <button class="btn" style="background-color: #00ADD8; color: white" hx-post="/ui/upload" hx-include="[name='file']">
-      Upload Gem
-    </button>
-</form>
+<div class="container-sm">
+  <form class="form" hx-encoding="multipart/form-data">
+      <input class="form-control" type="file" name="file" />
+      <br>
+      <button class="btn" style="background-color: #00ADD8; color: white" hx-post="/ui/upload" hx-include="[name='file']">
+        Upload Gem
+      </button>
+  </form>
+</div>
 {{ end }}

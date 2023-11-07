@@ -16,11 +16,11 @@
       font-family: 'Fira Code', monospace;
     </style>
     <script>
-      function copyAccessToken() {
-        var accessToken = document.getElementById("accessToken");
-        var value = accessToken.innerText || accessToken.textContent;
+      function copyToken(t) {
+        var token = document.getElementById(t);
+        var value = token.innerText || token.textContent;
         navigator.clipboard.writeText(value);
-        var copySuccess = document.getElementById("copySuccess");
+        var copySuccess = document.getElementById(t + "CopySuccess");
         copySuccess.innerText = "copied!";
       }
     </script>
@@ -30,7 +30,7 @@
       <nav class="navbar navbar-expand-lg bg-body-tertiary">
         <div class="container-fluid">
           <a class="navbar-brand" href="/ui">Gemfast</a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
           <div class="collapse navbar-collapse" id="navbarNav">
@@ -42,7 +42,7 @@
                 <a class="nav-link" href="#" hx-get="/ui/upload" hx-target="#content" hx-push-url="true">Upload</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#" hx-get="/ui/tokens" hx-target="#content" hx-push-url="true">AccessTokens</a>
+                <a class="nav-link" href="#" hx-get="/ui/tokens" hx-target="#content" hx-push-url="true">API Tokens</a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="#" hx-get="/ui/license" hx-target="#content" hx-push-url="true">License</a>
@@ -55,10 +55,11 @@
             </div>
             {{ end }}
           </div>
+          Hello, {{ .username }}
         </div>
       </nav>
       <hr>
-      <div class="container-fluid" style="min-height: 200px;" id="content">
+      <div class="container-sm" style="min-height: 200px;" id="content">
         <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
           <ol class="breadcrumb">
             <li class="breadcrumb-item active" aria-current="page">Search</li>

@@ -14,6 +14,7 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
 const adminAPIPath = "/admin/api/v1"
@@ -62,9 +63,14 @@ func (api *API) loadMiddleware() {
 	api.jwtMiddleware = middleware.NewJWTMiddleware(api.cfg, acl, api.db)
 	store := cookie.NewStore([]byte("secret"))
 	api.router.Use(sessions.Sessions("gemfast", store))
+	if !api.cfg.MetricsDisabled {
+		p := ginprometheus.NewPrometheus("gemfast")
+		p.Use(api.router)
+	}
 }
 
 func (api *API) registerRoutes() {
+
 	api.router.Use(gin.Recovery())
 	ui := ui.NewUI(api.cfg, api.db)
 	api.router.SetHTMLTemplate(ui.Templates)
@@ -220,6 +226,7 @@ func (api *API) configureUI(ui *ui.UI, uiPath *gin.RouterGroup) {
 	uiPath.GET("/gems", ui.Gems)
 	uiPath.GET("/upload", ui.UploadGem)
 	uiPath.POST("/upload", api.rubygemsHandler.geminaboxUploadGem)
+	uiPath.GET("/download/:gem", api.rubygemsHandler.localGemHandler)
 	uiPath.GET("/tokens", ui.AccessTokens)
 	uiPath.GET("/license", ui.License)
 	uiPath.POST("/gems/search", ui.SearchGems)
