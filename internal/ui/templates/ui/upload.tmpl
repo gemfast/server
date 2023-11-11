@@ -1,14 +1,17 @@
 {{ define "upload" }}
-<form class="form" hx-encoding="multipart/form-data">
-    <h2>Select Gem to upload:</h2>
-    <br>
-
-    <input class="form-control" type="file" name="file" />
-    <!-- <input class="form-control" type="password" name="token" /> -->
-    <br>
-    <!-- <button class="btn" style="background-color: #00ADD8; color: white" hx-post="http://localhost:2020/private/upload" hx-include="[name='file,token']"> -->
-    <button class="btn" style="background-color: #00ADD8; color: white" hx-post="http://localhost:2020/private/upload" hx-include="[name='file']">
-      Upload Gem
-    </button>
-</form>
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">Upload a Gem</li>
+  </ol>
+</nav>
+<br>
+<div class="container-sm">
+  <form class="form" hx-encoding="multipart/form-data">
+      <input class="form-control" type="file" name="file" />
+      <br>
+      <button class="btn" style="background-color: #00ADD8; color: white" hx-post="/ui/upload" hx-include="[name='file']">
+        Upload Gem
+      </button>
+  </form>
+</div>
 {{ end }}

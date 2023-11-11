@@ -1,0 +1,36 @@
+{{ define "tokens" }}
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">API Tokens</li>
+  </ol>
+</nav>
+<br>
+{{ if eq .authType "none" }}
+<p>
+    Gemfast authentication is currently set to "none". Choose a different auth strategy to enable access tokens.
+</p>
+<p>
+  See <a href="https://gemsfast.io/docs/configuration"> https://gemsfast.io/docs/configuration</a> for more information.
+</p>
+
+{{ else if eq .authType "github" }}
+<div class="container-sm">
+  <h2 style="margin-top: 20px;">
+    Rubygems Token:
+  </h2>
+  <p>Use this to upload and download rubygems. <a href="https://gemfast.io/docs/private_gems/#authenticating-with-a-private-gems-token">See the docs for details.</a></p>
+  <br>
+  <p id="rubygemsTokenCopySuccess">(click to copy)</p>
+  <div onclick="copyToken('rubygemsToken')" class="alert alert-dark text-break" id="rubygemsToken">{{ .rubygemsToken }}</div>
+  <h2 style="margin-top: 20px;">
+    Admin API Token:
+  </h2>
+  <p>Use this to make API requests to /admin/api/v1 endpoints by passing the <code>Authentication: Bearer <token></code> header.</p>
+  <br>
+  <p id="accessTokenCopySuccess">(click to copy)</p>
+  <div onclick="copyToken('accessToken')" class="alert alert-dark text-break" id="accessToken">{{ .accessToken }}</div>
+  <br>
+</div>
+{{ end }}
+
+{{ end }}

@@ -5,18 +5,20 @@
   </ol>
 </nav>
 <br>
-<table class="table table-dark table-striped">
-  <thead>
-    <tr>
-      <th scope="col" style="font-size: x-large">Source</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{ range .sources }}
-    <tr>
-      <td hx-get="http://localhost:2020/ui/gems/{{ . }}/prefix" hx-target="#content" hx-push-url=true><a style="text-decoration: none; color: white" href="#">{{ . }}/</a></td>
-    </tr>
-    {{ end }}
-  </tbody>
-</table>
+<div class="container-sm">
+  <table class="table table-dark table-striped">
+    <thead>
+      <tr>
+        <th scope="col" style="font-size: x-large">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .sources }}
+      <tr>
+        <td hx-get="/ui/gems/{{ . }}/prefix" hx-target="#content" hx-push-url="true"><a style="text-decoration: none; color: white" href="#" hx-push-url="true">{{ . }}/</a></td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+</div>
 {{ end }}

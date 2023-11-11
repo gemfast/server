@@ -1,15 +1,15 @@
 {{ define "gems/inspect" }}
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems" hx-target="#content" hx-push-url=true>Gem Sources</a></li>
-    <li class="breadcrumb-item"><a href="#" hx-get="http://localhost:2020/ui/gems/{{ .source }}/prefix" hx-target="#content" hx-push-url=true>{{ .source }}</a></li>
-    <li class="breadcrumb-item active"><a href="#" hx-get="http://localhost:2020/ui/gems/{{ .source }}/prefix/{{ .prefix }}" hx-target="#content" hx-push-url=true>{{ .prefix }}</a></li>
+    <li class="breadcrumb-item"><a href="#" hx-get="/ui/gems" hx-target="#content" hx-push-url="true">Gem Sources</a></li>
+    <li class="breadcrumb-item"><a href="#" hx-get="/ui/gems/{{ .source }}/prefix" hx-target="#content" hx-push-url="true">{{ .source }}</a></li>
+    <li class="breadcrumb-item active"><a href="#" hx-get="/ui/gems/{{ .source }}/prefix/{{ .prefix }}" hx-target="#content" hx-push-url="true">{{ .prefix }}</a></li>
     <li class="breadcrumb-item active" aria-current="page">{{ .gem }}</li>
   </ol>
 </nav>
 <br>
 <h1>
-    {{ .spec.Name }} ({{ .spec.Version }}) <a role="button" class="btn" style="background-color: #00ADD8; color: white" href="http://localhost:2020/private/gems/{{ .spec.Name}}-{{ .spec.Version }}.gem">Download</a>
+    {{ .spec.Name }} ({{ .spec.Version }}) <a role="button" class="btn" style="background-color: #00ADD8; color: white" href="/ui/download/{{ .spec.Name}}-{{ .spec.Version }}.gem">Download</a>
 </h1>
 
 <hr>
@@ -47,7 +47,7 @@ gem install {{ .spec.Name }}
   </thead>
   <tbody>
   {{ range .gemVersions }}
-    <tr hx-get="http://localhost:2020/ui/gems/{{ $.source }}/prefix/{{ $.prefix }}/inspect/{{ .Name }}?version={{ .Number }}" hx-target="#content" hx-push-url=true>
+    <tr hx-get="/ui/gems/{{ $.source }}/prefix/{{ $.prefix }}/inspect/{{ .Name }}?version={{ .Number }}" hx-target="#content" hx-push-url="true">
       <th>{{ .Number }}</th>
       <td>{{ .Platform }}</td>
       <td>{{ .Checksum }}</td>

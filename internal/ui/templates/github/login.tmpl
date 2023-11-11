@@ -1,0 +1,51 @@
+{{ define "github/login" }}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Gemfast</title>
+    <link rel="icon" href="./assets/favicon.ico" type="image/x-icon">
+    <script src="./assets/htmx.org@1.3.3.min.js"></script>
+    <link href="./assets/bootstrap@5.3.1.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+    <style>
+      font-family: 'Fira Code', monospace;
+    </style>
+  </head>
+  <body style="--bs-body-font-family: 'Fira Code'">
+    <main>
+      <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="/ui">Gemfast</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+        </div>
+      </nav>
+      <hr>
+      <div class="container-sm text-center" style="min-height: 200px;" id="content">
+        <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active" aria-current="page"></li>
+            </ol>
+        </nav>
+        <br>
+        <a class="btn btn-dark" href="https://github.com/login/oauth/authorize?scope=read:user,read:org&client_id={{ .clientID }}">Login with GitHub</a>
+      </div>
+    </main>
+    <div class="container-fluid" style="margin-top: 50px">
+      <footer class="py-3 my-4">
+        <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+          <li class="nav-item"><a href="https://gemfast.io" class="nav-link px-2 text-muted">Website</a></li>
+          <li class="nav-item"><a href="https://gemfast.io/docs/installation/" class="nav-link px-2 text-muted">Documentation</a></li>
+        </ul>
+        <p class="text-center text-muted">© 2023 Gemfast</p>
+      </footer>
+    </div>
+  </body>
+</html>
+{{ end }}

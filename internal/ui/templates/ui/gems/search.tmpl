@@ -14,7 +14,7 @@
   <tbody>
   {{ range .gems }}
     <tr>
-      <td hx-get="http://localhost:2020/ui/gems/{{ .Source }}/prefix/{{ slice .Name 0 1 }}/inspect/{{ .Name }}" hx-target="#content" hx-push-url=true><a style="text-decoration: none; color: white" href="#">{{ .Source }}/{{ .Name }}/</a></td>
+      <td hx-get="/ui/gems/{{ .Source }}/prefix/{{ slice .Name 0 1 }}/inspect/{{ .Name }}" hx-target="#content" hx-push-url="true"><a style="text-decoration: none; color: white" href="#">{{ .Source }}/{{ .Name }}/</a></td>
     </tr>
   {{ end }}
   </tbody>

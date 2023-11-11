@@ -2,6 +2,8 @@ package ui
 
 import (
 	"embed"
+	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -9,10 +11,14 @@ import (
 	"path/filepath"
 	"sort"
 
+	jmw "github.com/appleboy/gin-jwt/v2"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
+	"github.com/gemfast/server/internal/middleware"
 	"github.com/gemfast/server/internal/spec"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 )
 
@@ -39,10 +45,42 @@ func NewUI(cfg *config.Config, db *db.DB) *UI {
 }
 
 func (ui *UI) Index(c *gin.Context) {
-	c.HTML(http.StatusOK, "index", nil)
+	fmt.Println(c.GetHeader("reload"))
+	if c.GetHeader("reload") == "true" {
+		c.Header("HX-Redirect", "/ui")
+		c.Abort()
+		return
+	}
+	session := sessions.Default(c)
+	sessionAuth := session.Get("authToken")
+	jwtToken, err := jwt.Parse(sessionAuth.(string), func(t *jwt.Token) (interface{}, error) {
+		if jwt.GetSigningMethod("HS256") != t.Method {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(ui.cfg.Auth.JWTSecretKey), nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse jwt token from request")
+	}
+	if !jwtToken.Valid {
+		log.Error().Msg("invalid jwt token")
+	}
+	claims := jmw.ExtractClaimsFromToken(jwtToken)
+	username, ok := claims[middleware.IdentityKey].(string)
+	if !ok {
+		log.Error().Str("username", username).Msg("failed to get user from jwt token")
+	}
+	c.HTML(http.StatusOK, "index", gin.H{
+		"authType": ui.cfg.Auth.Type,
+		"username": username,
+	})
 }
 
 func (ui *UI) Gems(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	entries, err := os.ReadDir(ui.cfg.GemDir)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
@@ -62,6 +100,10 @@ func (ui *UI) GemsOptions(c *gin.Context) {
 }
 
 func (ui *UI) GemsByPrefix(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	source := c.Param("source")
 	fp := filepath.Join(ui.cfg.GemDir, source)
 	entries, err := os.ReadDir(ui.cfg.GemDir + "/" + source)
@@ -85,6 +127,10 @@ func (ui *UI) GemsByPrefix(c *gin.Context) {
 }
 
 func (ui *UI) GemsData(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	source := c.Param("source")
 	prefix := c.Param("prefix")
 	gems := ui.db.PrefixScanGems(source, prefix)
@@ -96,6 +142,10 @@ func (ui *UI) GemsData(c *gin.Context) {
 }
 
 func (ui *UI) GemsInspect(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	source := c.Param("source")
 	prefix := c.Param("prefix")
 	gem := c.Param("gem")
@@ -130,6 +180,7 @@ func (ui *UI) GemsInspect(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusOK, "gems/inspect", gin.H{
+		"gemfastURL":  "http://localhost:2020",
 		"gemVersions": gemVersions,
 		"source":      source,
 		"prefix":      prefix,
@@ -145,6 +196,10 @@ type SearchResults struct {
 }
 
 func (ui *UI) SearchGems(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	gem := c.PostForm("gemName")
 	private := ui.db.SearchGems(ui.cfg.PrivateGemsNamespace, gem)
 	rubygems := ui.db.SearchGems(ui.cfg.Mirrors[0].Hostname, gem)
@@ -161,10 +216,60 @@ func (ui *UI) SearchGems(c *gin.Context) {
 }
 
 func (ui *UI) UploadGem(c *gin.Context) {
-	c.HTML(http.StatusOK, "upload", nil)
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
+	c.HTML(http.StatusOK, "upload", gin.H{})
+}
+
+func (ui *UI) AccessTokens(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
+	session := sessions.Default(c)
+	sessionAuth := session.Get("authToken")
+	jwtToken, err := jwt.Parse(sessionAuth.(string), func(t *jwt.Token) (interface{}, error) {
+		if jwt.GetSigningMethod("HS256") != t.Method {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(ui.cfg.Auth.JWTSecretKey), nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse jwt token from request")
+	}
+	if !jwtToken.Valid {
+		log.Error().Msg("invalid jwt token")
+	}
+	claims := jmw.ExtractClaimsFromToken(jwtToken)
+	username, ok := claims[middleware.IdentityKey].(string)
+	if !ok {
+		log.Error().Str("username", username).Msg("failed to get user from jwt token")
+	}
+	user, err := ui.db.GetUser(username)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get user from db")
+	}
+	rubygemsToken := user.Token
+	if rubygemsToken == "" {
+		rubygemsToken, err = ui.db.CreateUserToken(username)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create user token")
+		}
+	}
+	c.HTML(http.StatusOK, "tokens", gin.H{
+		"accessToken":   sessionAuth.(string),
+		"authType":      ui.cfg.Auth.Type,
+		"rubygemsToken": rubygemsToken,
+	})
 }
 
 func (ui *UI) License(c *gin.Context) {
+	if c.GetHeader("HX-Request") != "true" {
+		c.Redirect(http.StatusFound, "/ui")
+		return
+	}
 	l, err := ui.db.GetLicense()
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
