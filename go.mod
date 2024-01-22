@@ -23,7 +23,7 @@ require (
 	github.com/tidwall/gjson v1.14.4
 	github.com/zsais/go-gin-prometheus v0.1.0
 	go.etcd.io/bbolt v1.3.6
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	gopkg.in/yaml.v3 v3.0.1
 )
