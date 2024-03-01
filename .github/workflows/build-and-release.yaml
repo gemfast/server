@@ -50,7 +50,7 @@ jobs:
           sudo chown -R $USER: /var/cache/omnibus
           cd omnibus
           bundle exec omnibus build gemfast
-          sha512sum pkg/*.deb > "pkg/gemfast_${{ steps.get-version.outputs.VERSION }}-pre_checksums.txt"
+          sha512sum pkg/*.deb > "pkg/gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Upload omnibus package
         uses: actions/upload-artifact@v3
         with:
@@ -202,9 +202,8 @@ jobs:
           echo "version=${v}" >> "$GITHUB_OUTPUT"
       - name: Rename omnibus artifact
         run: |
-          v="${{ steps.get-version.outputs.VERSION }}-pre"
-          mv *.deb gemfast-$v-amd64.deb
-          echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
+          mv *.deb "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-amd64.deb"
+          mv *.txt "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-checksums.txt"
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -216,15 +215,13 @@ jobs:
           docker load < gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
           docker tag server:latest ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
           docker push ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          title: "${{ steps.get-version.outputs.VERSION }} Pre-Release"
-          files: |
-            *.deb
-            *.txt
+      - name: Create pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create --prerelease --generate-notes --title "${{ steps.get-version.outputs.VERSION }} Pre-Release" \
+            "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-amd64.deb" \
+            "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-checksums.txt"
     
   tagged-release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -255,9 +252,8 @@ jobs:
           echo "version=${v}" >> "$GITHUB_OUTPUT"
       - name: Rename omnibus artifact
         run: |
-          v="${{ steps.get-version.outputs.VERSION }}"
-          mv *.deb gemfast-$v-amd64.deb
-          echo "VERSION=${v}" >> "$GITHUB_OUTPUT"
+          mv *.deb "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb"
+          mv *.txt "gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -271,6 +267,13 @@ jobs:
           docker push ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}
           docker tag ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }} ghcr.io/gemfast/server:latest
           docker push ghcr.io/gemfast/server:latest
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create --latest --generate-notes --title "${{ steps.get-version.outputs.VERSION }}" \
+            "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb" \
+            "gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
