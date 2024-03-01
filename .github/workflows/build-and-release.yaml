@@ -215,6 +215,8 @@ jobs:
           docker tag server:latest ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
           docker push ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }}-pre
       - name: Create pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create --latest --generate-notes --title "${{ steps.get-version.outputs.VERSION }} Pre-Release" --prerelease \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb" \
@@ -264,6 +266,8 @@ jobs:
           docker tag ghcr.io/gemfast/server:${{ steps.get-version.outputs.VERSION }} ghcr.io/gemfast/server:latest
           docker push ghcr.io/gemfast/server:latest
       - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create --latest --generate-notes --title "${{ steps.get-version.outputs.VERSION }}" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb" \
