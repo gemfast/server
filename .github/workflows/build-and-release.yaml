@@ -50,7 +50,7 @@ jobs:
           sudo chown -R $USER: /var/cache/omnibus
           cd omnibus
           bundle exec omnibus build gemfast
-          sha512sum pkg/*.deb > "pkg/gemfast_${{ steps.get-version.outputs.VERSION }}-pre_checksums.txt"
+          sha512sum pkg/*.deb > "pkg/gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Upload omnibus package
         uses: actions/upload-artifact@v3
         with:
@@ -203,6 +203,7 @@ jobs:
       - name: Rename omnibus artifact
         run: |
           mv *.deb "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-amd64.deb"
+          mv *.txt "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-checksums.txt"
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -219,8 +220,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create --latest --generate-notes --title "${{ steps.get-version.outputs.VERSION }} Pre-Release" --prerelease \
-            "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb" \
-            "gemfast-${{ steps.get-version.outputs.VERSION }}_checksums.txt"
+            "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-amd64.deb" \
+            "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-checksums.txt"
     
   tagged-release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -252,6 +253,7 @@ jobs:
       - name: Rename omnibus artifact
         run: |
           mv *.deb "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb"
+          mv *.txt "gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -271,7 +273,7 @@ jobs:
         run: |
           gh release create --latest --generate-notes --title "${{ steps.get-version.outputs.VERSION }}" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb" \
-            "gemfast-${{ steps.get-version.outputs.VERSION }}_checksums.txt"
+            "gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
