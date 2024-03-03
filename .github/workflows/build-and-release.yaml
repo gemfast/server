@@ -220,6 +220,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create --prerelease --generate-notes --title "${{ steps.get-version.outputs.VERSION }} Pre-Release" \
+            "v${{ steps.get-version.outputs.VERSION }}-pre" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-amd64.deb" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-pre-checksums.txt"
     
@@ -272,6 +273,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create --latest --generate-notes --title "${{ steps.get-version.outputs.VERSION }}" \
+            "v${{ steps.get-version.outputs.VERSION }}" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - uses: "marvinpinto/action-automatic-releases@latest"
