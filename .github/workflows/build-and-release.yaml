@@ -254,7 +254,6 @@ jobs:
       - name: Rename omnibus artifact
         run: |
           mv *.deb "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb"
-          mv *.txt "gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
