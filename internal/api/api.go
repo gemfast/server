@@ -228,7 +228,6 @@ func (api *API) configureUI(ui *ui.UI, uiPath *gin.RouterGroup) {
 	uiPath.POST("/upload", api.rubygemsHandler.geminaboxUploadGem)
 	uiPath.GET("/download/:gem", api.rubygemsHandler.localGemHandler)
 	uiPath.GET("/tokens", ui.AccessTokens)
-	uiPath.GET("/license", ui.License)
 	uiPath.POST("/gems/search", ui.SearchGems)
 	uiPath.GET("/gems/:source/prefix", ui.GemsByPrefix)
 	uiPath.GET("/gems/:source/prefix/:prefix", ui.GemsData)

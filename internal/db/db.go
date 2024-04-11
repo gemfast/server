@@ -1,7 +1,6 @@
 package db
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,17 +8,15 @@ import (
 	"strconv"
 
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/license"
 	"github.com/rs/zerolog/log"
 	"go.etcd.io/bbolt"
 	bolt "go.etcd.io/bbolt"
 )
 
 const (
-	GemBucket     = "gems"
-	KeyBucket     = "keys"
-	LicenseBucket = "license"
-	UserBucket    = "users"
+	GemBucket  = "gems"
+	KeyBucket  = "keys"
+	UserBucket = "users"
 )
 
 type DB struct {
@@ -51,7 +48,6 @@ func (db *DB) Open() {
 	db.boltDB = boltDB
 	db.createBucket(GemBucket)
 	db.createBucket(KeyBucket)
-	db.createBucket(LicenseBucket)
 	db.createBucket(UserBucket)
 }
 
@@ -78,7 +74,6 @@ func (db *DB) BucketStats() map[string]bbolt.BucketStats {
 	db.boltDB.View(func(tx *bolt.Tx) error {
 		bucketStatsMap[GemBucket] = tx.Bucket([]byte(GemBucket)).Stats()
 		bucketStatsMap[KeyBucket] = tx.Bucket([]byte(KeyBucket)).Stats()
-		bucketStatsMap[LicenseBucket] = tx.Bucket([]byte(LicenseBucket)).Stats()
 		bucketStatsMap[UserBucket] = tx.Bucket([]byte(UserBucket)).Stats()
 		return nil
 	})
@@ -111,44 +106,4 @@ func (db *DB) createBucket(bucket string) *bolt.Bucket {
 		log.Fatal().Err(err).Msg(fmt.Sprintf("could not create %s bucket", bucket))
 	}
 	return b
-}
-
-func (db *DB) GetLicense() (*license.License, error) {
-	l := &license.License{}
-	err := db.boltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(LicenseBucket))
-		v := b.Get([]byte("license"))
-		err := json.Unmarshal(v, l)
-		if err != nil {
-			log.Error().Err(err).Msg("could not unmarshal license")
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("could not get license")
-		return nil, err
-	}
-	return l, nil
-}
-
-func (db *DB) SaveLicense(l *license.License) error {
-	err := db.boltDB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(LicenseBucket))
-		licenseBytes, err := json.Marshal(l)
-		if err != nil {
-			return fmt.Errorf("could not marshal gem to json: %v", err)
-		}
-		err = b.Put([]byte("license"), []byte(licenseBytes))
-		if err != nil {
-			log.Error().Err(err).Msg("could not persist license")
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("could not persist license")
-		return err
-	}
-	return nil
 }

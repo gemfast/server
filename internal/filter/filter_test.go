@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/license"
 )
 
 func TestIsAllowed(t *testing.T) {
@@ -14,7 +13,7 @@ func TestIsAllowed(t *testing.T) {
 		Regex:   []string{"webmock*"},
 		Action:  "deny",
 	}
-	f := NewFilter(cfg, &license.License{Validated: true})
+	f := NewFilter(cfg)
 	allowed := f.IsAllowed("webmock-3.18.1.gem")
 	if allowed {
 		t.Errorf("DenyList: expected webmock-3.18.1.gem to be denied")
@@ -25,7 +24,7 @@ func TestIsAllowed(t *testing.T) {
 	}
 
 	cfg.Filter.Action = "allow"
-	f = NewFilter(cfg, &license.License{Validated: true})
+	f = NewFilter(cfg)
 	allowed = f.IsAllowed("webmock-3.18.1.gem")
 	if !allowed {
 		t.Errorf("AllowList: expected webmock-3.18.1.gem to be allowed")

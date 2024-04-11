@@ -1,14 +1,14 @@
 name "caddy"
-default_version "2.6.4"
+default_version "2.7.6"
 
 license "Apache-2.0"
 skip_transitive_dependency_licensing true
 
 if arm?
-  version("2.6.4") { source sha512: "6513d40365c0570ff72c751db2d5f898d4ee9abe9241e73c3ad1062e21128745071b4efd3cc3443fc04fae2da49b69f06f70aadbe79d6a5327cc677fb86fb982" }
+  version("2.7.6") { source sha512: "6513d40365c0570ff72c751db2d5f898d4ee9abe9241e73c3ad1062e21128745071b4efd3cc3443fc04fae2da49b69f06f70aadbe79d6a5327cc677fb86fb982" }
   source url: "https://github.com/caddyserver/caddy/releases/download/v#{version}/caddy_#{version}_linux_arm64.tar.gz"
 else
-  version("2.6.4") { source sha512: "eed413b035ffacedfaf751a8431285c5d9a0a81a2a861444f4b95dd4c7508eabe2f3fcba6c5b8e6c70e30c9351dfa96ba39def47fa0879334d965dae3a869f1a" }
+  version("2.7.6") { source sha512: "b74311ec8263f30f6d36e5c8be151e8bc092b377789a55300d5671238b9043de5bd6db2bcefae32aa1e6fe94c47bbf02982c44a7871e5777b2596fdb20907cbf" }
   source url: "https://github.com/caddyserver/caddy/releases/download/v#{version}/caddy_#{version}_linux_amd64.tar.gz"
 end
 

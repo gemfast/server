@@ -13,7 +13,6 @@ import (
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
-	"github.com/gemfast/server/internal/license"
 	"github.com/stretchr/testify/suite"
 	bolt "go.etcd.io/bbolt"
 )
@@ -55,17 +54,13 @@ func (suite *APITestSuite) SetupTest() {
 }
 
 func createTestAPI(testDB *bolt.DB, cfg *config.Config) (*API, error) {
-	l, err := license.NewLicense(cfg)
-	if err != nil {
-		return nil, err
-	}
 	database := db.NewTestDB(testDB, cfg)
 	indexer, err := indexer.NewIndexer(cfg, database)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create indexer: %w", err)
 	}
-	f := filter.NewFilter(cfg, l)
-	gdb := cve.NewGemAdvisoryDB(cfg, l)
+	f := filter.NewFilter(cfg)
+	gdb := cve.NewGemAdvisoryDB(cfg)
 	apiV1Handler := NewAPIV1Handler(cfg, database, indexer, f, gdb)
 	rubygemsHandler := NewRubyGemsHandler(cfg, database, indexer, f, gdb)
 	api := NewAPI(cfg, database, apiV1Handler, rubygemsHandler)

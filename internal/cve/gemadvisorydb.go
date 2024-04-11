@@ -11,7 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/license"
 	git "github.com/go-git/go-git/v5"
 
 	"github.com/akyoto/cache"
@@ -41,8 +40,8 @@ type GemAdvisoryDB struct {
 	cfg *config.Config
 }
 
-func NewGemAdvisoryDB(cfg *config.Config, l *license.License) *GemAdvisoryDB {
-	if !cfg.CVE.Enabled || !l.Validated {
+func NewGemAdvisoryDB(cfg *config.Config) *GemAdvisoryDB {
+	if !cfg.CVE.Enabled {
 		log.Trace().Msg("ruby advisory db disabled")
 	}
 	advisoryDB := cache.New(24 * time.Hour)

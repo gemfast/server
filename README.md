@@ -22,7 +22,7 @@ Gemfast has the following unique benefits:
 * There is no need to install/upgrade/manage a version of Ruby on the server
 * Go is generally faster and requires less memory then Ruby (still :heart: Ruby though)
 * There are no external server dependencies like postgres, redis or memcached
-* Gemfast can allow/deny gems based on CVE severity or a regex list (license version only)
+* Gemfast can allow/deny gems based on CVE severity or a regex list
 
 ## Installing
 
@@ -51,15 +51,11 @@ When running Gemfast as a container, its important to mount the following direct
 * /etc/gemfast - The directory for the gemfast.hcl config file
 * /var/gemfast - The directory for the Gemfast data including gems and database
 
-If using a licensed version of gemfast, also mount:
-* /etc/machine-id - Used when registering a license key
-
 ```bash
 docker run -d --name gemfast-server \
   -p 2020:2020 \
   -v /etc/gemfast:/etc/gemfast \
   -v /var/gemfast:/var/gemfast \
-  -v /etc/machine-id:/etc/machine-id \
   ghcr.io/gemfast/server:latest
 ```
 
@@ -94,9 +90,18 @@ ui_disabled = true
 
 ## License
 
-Gemfast is source available software licensed under the Elastic License 2.0 (ELv2) License. The license restricts users from:
+Gemfast is open source software licensed under the Apache 2.0 License.
 
-* Providing the software to third parties as a hosted or managed service
-* Circumventing the license key functionality
+```text
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-Users who purchase a license key will get access to all Gemfast features, support from the Gemfast creator and a commercial friendly license.
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License..
+```

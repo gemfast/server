@@ -1,7 +1,7 @@
 name "gemfast"
 default_version "local_source"
 
-license "Commercial"
+license "Apache-2.0"
 skip_transitive_dependency_licensing true
 
 version("local_source") do
