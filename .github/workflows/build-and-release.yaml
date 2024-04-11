@@ -275,14 +275,6 @@ jobs:
             "v${{ steps.get-version.outputs.VERSION }}" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-amd64.deb" \
             "gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-          title: "${{ steps.get-version.outputs.VERSION }}"
-          files: |
-            *.deb
-            *.txt
         
   cleanup:
     runs-on: ubuntu-latest

@@ -9,7 +9,6 @@ import (
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
-	"github.com/gemfast/server/internal/license"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -30,12 +29,6 @@ func init() {
 func start() {
 	// Load the config
 	cfg := config.NewConfig()
-
-	// Load the license
-	license, err := license.NewLicense(cfg)
-	if err != nil {
-		log.Warn().Err(err).Msg("failed to load license")
-	}
 	log.Info().Msg("starting services")
 
 	// Connect to the database
@@ -45,7 +38,6 @@ func start() {
 	}
 	database.Open()
 	defer database.Close()
-	database.SaveLicense(license)
 
 	// Start the indexer
 	indexer, err := indexer.NewIndexer(cfg, database)
@@ -58,10 +50,10 @@ func start() {
 	}
 
 	// Create the filter
-	f := filter.NewFilter(cfg, license)
+	f := filter.NewFilter(cfg)
 
 	// Start the advisory DB updater
-	advisoryDB := cve.NewGemAdvisoryDB(cfg, license)
+	advisoryDB := cve.NewGemAdvisoryDB(cfg)
 	err = advisoryDB.Refresh()
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to refresh advisory DB")

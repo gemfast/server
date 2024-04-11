@@ -264,18 +264,3 @@ func (ui *UI) AccessTokens(c *gin.Context) {
 		"rubygemsToken": rubygemsToken,
 	})
 }
-
-func (ui *UI) License(c *gin.Context) {
-	if c.GetHeader("HX-Request") != "true" {
-		c.Redirect(http.StatusFound, "/ui")
-		return
-	}
-	l, err := ui.db.GetLicense()
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-	c.HTML(http.StatusOK, "license", gin.H{
-		"license": l,
-	})
-}

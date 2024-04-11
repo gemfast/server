@@ -4,7 +4,6 @@ import (
 	"regexp"
 
 	"github.com/gemfast/server/internal/config"
-	"github.com/gemfast/server/internal/license"
 	"github.com/rs/zerolog/log"
 )
 
@@ -14,9 +13,9 @@ type RegexFilter struct {
 	enabled bool
 }
 
-func NewFilter(cfg *config.Config, l *license.License) *RegexFilter {
+func NewFilter(cfg *config.Config) *RegexFilter {
 	enabled := false
-	if cfg.Filter.Enabled && l.Validated {
+	if cfg.Filter.Enabled {
 		log.Trace().Msg("gem filter enabled")
 		enabled = true
 	}

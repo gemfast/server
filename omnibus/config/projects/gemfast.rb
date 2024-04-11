@@ -2,8 +2,7 @@ name "gemfast"
 friendly_name "Gemfast Server"
 maintainer "Greg Schofield <greg@gemfast.io>"
 homepage "https://www.gemfast.io"
-license "GEMFAST EULA"
-license_file "GEMFAST-EULA.md"
+license "Apache-2.0"
 
 build_iteration 1
 current_file ||= __FILE__
