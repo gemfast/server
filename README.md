@@ -19,10 +19,14 @@ Gemfast was created for users who need to self-host their rubygems and want some
 
 Gemfast has the following unique benefits:
 
-* There is no need to install/upgrade/manage a version of Ruby on the server
+* Two installation methods: [Debian Package](#debian-package) and [Docker Image](#docker)
+* No need to install/upgrade/manage a version of Ruby on the server
+* No external server dependencies like postgres, redis or memcached
+* Automatic HTTPS via Caddy
+* User login via GitHub oAuth
+* No external server dependencies like postgres, redis or memcached
+* Allow/Deny gems based on CVE severity or a regex list using the [ruby-advisory-db](https://github.com/rubysec/ruby-advisory-db)
 * Go is generally faster and requires less memory then Ruby (still :heart: Ruby though)
-* There are no external server dependencies like postgres, redis or memcached
-* Gemfast can allow/deny gems based on CVE severity or a regex list
 
 ## Installing
 
