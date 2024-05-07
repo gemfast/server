@@ -35,6 +35,35 @@ type UI struct {
 	Assets    fs.FS
 }
 
+func getUser(c *gin.Context, ui *UI) (string, error) {
+	if ui.cfg.Auth.Type == "github" {
+		session := sessions.Default(c)
+		sessionAuth := session.Get("authToken")
+		jwtToken, err := jwt.Parse(sessionAuth.(string), func(t *jwt.Token) (interface{}, error) {
+			if jwt.GetSigningMethod("HS256") != t.Method {
+				return nil, errors.New("invalid signing method")
+			}
+			return []byte(ui.cfg.Auth.JWTSecretKey), nil
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("failed to parse jwt token from request")
+			return "", err
+		}
+		if !jwtToken.Valid {
+			log.Error().Msg("invalid jwt token")
+			return "", err
+		}
+		claims := jmw.ExtractClaimsFromToken(jwtToken)
+		username, ok := claims[middleware.IdentityKey].(string)
+		if !ok {
+			log.Error().Str("username", username).Msg("failed to get user from jwt token")
+			return "", err
+		}
+		return username, nil
+	}
+	return "anon", nil
+}
+
 func NewUI(cfg *config.Config, db *db.DB) *UI {
 	static, err := fs.Sub(assets, "assets")
 	if err != nil {
@@ -51,24 +80,10 @@ func (ui *UI) Index(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	session := sessions.Default(c)
-	sessionAuth := session.Get("authToken")
-	jwtToken, err := jwt.Parse(sessionAuth.(string), func(t *jwt.Token) (interface{}, error) {
-		if jwt.GetSigningMethod("HS256") != t.Method {
-			return nil, errors.New("invalid signing method")
-		}
-		return []byte(ui.cfg.Auth.JWTSecretKey), nil
-	})
+	username, err := getUser(c, ui)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to parse jwt token from request")
-	}
-	if !jwtToken.Valid {
-		log.Error().Msg("invalid jwt token")
-	}
-	claims := jmw.ExtractClaimsFromToken(jwtToken)
-	username, ok := claims[middleware.IdentityKey].(string)
-	if !ok {
-		log.Error().Str("username", username).Msg("failed to get user from jwt token")
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	c.HTML(http.StatusOK, "index", gin.H{
 		"authType": ui.cfg.Auth.Type,

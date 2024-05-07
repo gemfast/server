@@ -41,12 +41,11 @@
               <li class="nav-item">
                 <a class="nav-link" href="#" hx-get="/ui/upload" hx-target="#content" hx-push-url="true">Upload</a>
               </li>
+              {{ if eq .authType "github" }}
               <li class="nav-item">
                 <a class="nav-link" href="#" hx-get="/ui/tokens" hx-target="#content" hx-push-url="true">API Tokens</a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#" hx-get="/ui/license" hx-target="#content" hx-push-url="true">License</a>
-              </li>
+              {{ end }}
             </ul>
             <br>
             {{ if eq .authType "github" }}
@@ -77,7 +76,7 @@
           <li class="nav-item"><a href="https://gemfast.io" class="nav-link px-2 text-muted">Website</a></li>
           <li class="nav-item"><a href="https://gemfast.io/docs/installation/" class="nav-link px-2 text-muted">Documentation</a></li>
         </ul>
-        <p class="text-center text-muted">© 2023 Gemfast</p>
+        <p class="text-center text-muted">Built with <a href="https://htmx.org/">htmx</a></p>
       </footer>
     </div>
   </body>
