@@ -1,4 +1,4 @@
-FROM golang:1.19
+FROM golang:1.22
 LABEL org.opencontainers.image.source="https://github.com/gemfast/server"
 WORKDIR /app
 

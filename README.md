@@ -80,6 +80,8 @@ For more information see: https://gemfast.io/docs/configuration/
 
 ## UI
 
+🚧 **The UI feature is currently under construction and is considered experimental** 🚧
+
 ![Dashboard UI](https://github.com/gemfast/server/raw/main/SCREENSHOT.png)
 
 Gemfast includes a basic ui which is accessible from `my.server.url/ui`. For example, running it locally you can access it at `http://localhost:2020/ui`.
