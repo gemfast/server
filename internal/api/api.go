@@ -49,7 +49,7 @@ func (api *API) Run() {
 	if api.cfg.Mirrors[0].Enabled {
 		log.Info().Str("detail", api.cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
 	}
-	log.Info().Str("detail", port).Msg("gemfast server listening on port")
+	log.Info().Str("detail", fmt.Sprintf("http://localhost%s", port)).Msg("gemfast server started")
 	err := api.router.Run(port)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start server")
@@ -86,7 +86,7 @@ func (api *API) registerRoutes() {
 	case "local":
 		api.configureLocalAuth()
 	case "none":
-		api.configureNoneAuth()
+		api.configureNoneAuth(ui)
 	default:
 		log.Fatal().Msg(fmt.Sprintf("invalid auth type: %s", authMode))
 	}
@@ -137,7 +137,7 @@ func (api *API) configureLocalAuth() {
 	api.configurePrivate()
 }
 
-func (api *API) configureNoneAuth() {
+func (api *API) configureNoneAuth(ui *ui.UI) {
 	if api.cfg.Mirrors[0].Enabled {
 		mirror := api.router.Group("/")
 		api.configureMirror(mirror)
@@ -147,6 +147,12 @@ func (api *API) configureNoneAuth() {
 	api.configurePrivateWrite(private)
 	admin := api.router.Group(adminAPIPath)
 	api.configureAdmin(admin)
+	if !api.cfg.UIDisabled {
+		api.router.StaticFS("/ui/assets", http.FS(ui.Assets))
+		uiGroup := api.router.Group("/ui")
+		api.configureUI(ui, uiGroup)
+		log.Info().Str("detail", "/ui").Msg("gemfast ui enabled")
+	}
 }
 
 // /

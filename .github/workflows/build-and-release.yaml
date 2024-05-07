@@ -9,11 +9,14 @@ on:
   pull_request:
     branches: [ main ]
     
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
-  GO_VERSION: 1.19.8
-  RUBY_VERSION: 3.1.2
-  BUNDLER_VERSION: 2.3.7
+  GO_VERSION: 1.22.1
+  RUBY_VERSION: 3.3.1
+  BUNDLER_VERSION: 2.5.9
 
 jobs:
   build:

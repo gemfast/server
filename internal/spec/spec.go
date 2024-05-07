@@ -30,8 +30,8 @@ type Spec struct {
 	RubyGems         string //TODO: parse required_rubygems_version from metadata
 }
 
-func untar(dir, full_name, gemfile string) ([]byte, string, error) {
-	tmpdir, err := os.MkdirTemp(dir, full_name)
+func untar(dir, fullName, gemfile string) ([]byte, string, error) {
+	tmpdir, err := os.MkdirTemp(dir, fullName)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create tmpdir")
 		return nil, "", err
@@ -62,7 +62,7 @@ func untar(dir, full_name, gemfile string) ([]byte, string, error) {
 			if err == io.EOF {
 				break
 			}
-			log.Error().Err(err).Str("detail", full_name).Msg("bad header")
+			log.Error().Err(err).Str("detail", fullName).Msg("bad header")
 			return nil, "", err
 		}
 
@@ -105,10 +105,10 @@ func untar(dir, full_name, gemfile string) ([]byte, string, error) {
 }
 
 func GunzipMetadata(path string) (string, error) {
-	fname := fmt.Sprintf("%s/metadata.gz", path)
-	file, err := os.Open(fname)
+	meta := fmt.Sprintf("%s/metadata.gz", path)
+	file, err := os.Open(meta)
 	if err != nil {
-		log.Error().Err(err).Str("detail", fname).Msg("failed to open file")
+		log.Error().Err(err).Str("detail", meta).Msg("failed to open file")
 		return "", err
 	}
 	defer file.Close()
@@ -116,13 +116,13 @@ func GunzipMetadata(path string) (string, error) {
 	var fileReader io.ReadCloser = file
 	gzreader, err := gzip.NewReader(fileReader)
 	if err != nil {
-		log.Error().Err(err).Str("detail", fname).Msg("failed to create gzip reader")
+		log.Error().Err(err).Str("detail", meta).Msg("failed to create gzip reader")
 		return "", err
 	}
 
 	output, err := io.ReadAll(gzreader)
 	if err != nil {
-		log.Error().Err(err).Str("detail", fname).Msg("failed to read gzip content")
+		log.Error().Err(err).Str("detail", meta).Msg("failed to read gzip content")
 		return "", err
 	}
 
@@ -258,8 +258,8 @@ func ParseGemMetadata(yamlBytes []byte) (*GemMetadata, error) {
 }
 
 func FromFile(dir, gemfile string) (*Spec, error) {
-	path_chunks := strings.Split(gemfile, "/")
-	full := path_chunks[len(path_chunks)-1]
+	chunks := strings.Split(gemfile, "/")
+	full := chunks[len(chunks)-1]
 	ogName := strings.TrimSuffix(full, ".gem")
 	log.Trace().Str("detail", gemfile).Msg("untarring gemfile")
 	sum, tmpdir, err := untar(dir, full, gemfile)

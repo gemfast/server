@@ -1,6 +1,8 @@
 module github.com/gemfast/server
 
-go 1.19
+go 1.22
+
+toolchain go1.22.1
 
 require (
 	github.com/akyoto/cache v1.0.6
