@@ -397,7 +397,6 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 	)
 	if err != nil {
 		log.Error().Err(err).Str("detail", dest).Msg("failed to create destination spec index file")
-		panic(err)
 	}
 	defer file.Close()
 
@@ -405,7 +404,6 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 	bytesWritten, err := file.Write(dump)
 	if err != nil {
 		log.Error().Err(err).Str("detail", dest).Msg("failed to write destination spec index file")
-		panic(err)
 	}
 	log.Info().Str("detail", src).Int("len", len(uniqSpecsIdx)).Msg("updated index")
 	ch <- bytesWritten
