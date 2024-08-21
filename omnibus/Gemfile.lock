@@ -107,8 +107,8 @@ GEM
     plist (3.7.0)
     public_suffix (5.0.3)
     rainbow (3.1.1)
-    rexml (3.2.8)
-      strscan (>= 3.0.9)
+    rexml (3.3.3)
+      strscan
     ruby-progressbar (1.13.0)
     strscan (3.1.0)
     thor (1.2.2)
