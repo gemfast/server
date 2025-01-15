@@ -1,14 +1,18 @@
 package middleware
 
 import (
-	"fmt"
+	"embed"
 	"path/filepath"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gemfast/server/internal/config"
 	u "github.com/gemfast/server/internal/utils"
+	casbin_fs_adapter "github.com/naucon/casbin-fs-adapter"
 	"github.com/rs/zerolog/log"
 )
+
+//go:embed casbin/auth_model.conf casbin/gemfast_acl.csv
+var fs embed.FS
 
 type ACL struct {
 	casbin *casbin.Enforcer
@@ -50,8 +54,17 @@ func NewACL(cfg *config.Config) *ACL {
 		}
 	}
 
-	if policyPath == "" || authPath == "" {
-		log.Fatal().Err(fmt.Errorf("unable to locate auth_model and gemfast_acl")).Msg("failed to find acl files")
+	if policyPath == "" && authPath == "" {
+		model, err := casbin_fs_adapter.NewModel(fs, "auth_model.conf")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load casbin model")
+		}
+		policies := casbin_fs_adapter.NewAdapter(fs, "gemfast_acl.csv")
+		enforcer, err := casbin.NewEnforcer(model, policies)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create casbin enforcer")
+		}
+		return &ACL{casbin: enforcer, cfg: cfg}
 	}
 	acl, err := casbin.NewEnforcer(authPath, policyPath)
 	if err != nil {

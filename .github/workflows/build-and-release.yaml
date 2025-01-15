@@ -27,7 +27,7 @@ jobs:
     env:
       BUNDLE_GEMFILE: ${{ github.workspace }}/omnibus/Gemfile
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -55,7 +55,7 @@ jobs:
           bundle exec omnibus build gemfast
           sha512sum pkg/*.deb > "pkg/gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Upload omnibus package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gemfast-omnibus
           path: omnibus/pkg/
@@ -66,7 +66,7 @@ jobs:
           docker tag server:${{ steps.get-version.outputs.VERSION }}-pre server:latest
           docker save server:latest > gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
       - name: Upload docker image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gemfast-docker
           path: gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
@@ -80,15 +80,15 @@ jobs:
       matrix:
         pkg: [omnibus, docker]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: rails/rails
           path: clones/rails
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Smoke test
@@ -104,11 +104,11 @@ jobs:
       matrix:
         pkg: [omnibus, docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: CVE test
@@ -124,11 +124,11 @@ jobs:
       matrix:
         pkg: [omnibus, docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Filter test
@@ -144,11 +144,11 @@ jobs:
       matrix:
         pkg: [omnibus, docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Private gems test
@@ -164,11 +164,11 @@ jobs:
       matrix:
         pkg: [omnibus, docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Private gems test
@@ -189,13 +189,13 @@ jobs:
       - private-gems-test
       - auth-test
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-omnibus
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-docker
       - name: Get version
@@ -240,13 +240,13 @@ jobs:
       - private-gems-test
       - auth-test
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-omnibus
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-docker
       - name: Get version
