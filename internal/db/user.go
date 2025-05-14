@@ -139,16 +139,20 @@ func (db *DB) CreateLocalUsers() error {
 		log.Trace().Msg("no local users to add")
 		return nil
 	}
-	var usernames []string
+	var users map[string]*User = make(map[string]*User)
 	db.boltDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(UserBucket))
 		if b == nil {
 			return fmt.Errorf("get bucket: FAILED")
 		}
 		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if string(k) != "admin" {
-				usernames = append(usernames, string(k))
+				user, err := userFromBytes(v)
+				if err != nil {
+					return fmt.Errorf("failed reading existing local users: %v", err)
+				}
+				users[string(k)] = user
 			}
 		}
 		return nil
@@ -168,14 +172,22 @@ func (db *DB) CreateLocalUsers() error {
 			if err != nil {
 				panic(err)
 			}
-			userToAdd := User{
-				Username: username,
-				Password: pwbytes,
-				Role:     role,
-				Type:     "local",
+
+			userData, exists := users[username]
+			if exists {
+				userData.Password = pwbytes
+				userData.Role = role
+				userData.Type = "local"
+			} else {
+				userData = &User{
+					Username: username,
+					Password: pwbytes,
+					Role:     role,
+					Type:     "local",
+				}
 			}
 			m[username] = true
-			userBytes, err := json.Marshal(userToAdd)
+			userBytes, err := json.Marshal(userData)
 			if err != nil {
 				return fmt.Errorf("could not marshal user to json: %v", err)
 			}
@@ -186,7 +198,7 @@ func (db *DB) CreateLocalUsers() error {
 			log.Trace().Str("detail", username).Msg("added or modified user")
 		}
 		b = tx.Bucket([]byte(UserBucket))
-		for _, username := range usernames {
+		for username := range users {
 			if !m[username] {
 				log.Trace().Str("detail", username).Msg("removed user")
 				b.Delete([]byte(username))

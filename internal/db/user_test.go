@@ -1,6 +1,8 @@
 package db
 
 import (
+	"testing"
+
 	"github.com/gemfast/server/internal/config"
 )
 
@@ -56,6 +58,54 @@ func (suite *ModelsTestSuite) TestCreateUser() {
 	suite.Nil(err)
 	suite.NotNil(user)
 	suite.Equal("read", user.Role)
+}
+
+func (suite *ModelsTestSuite) TestCreateLocalUsers() {
+	cfg := config.NewConfig()
+	db := NewTestDB(suite.db, cfg)
+
+	suite.T().Run("CreateNewLocalUsers", func(t *testing.T) {
+		cfg.Auth.LocalUsers = []config.LocalUser{
+			{Username: "localuser1", Password: "password1", Role: "read"},
+			{Username: "localuser2", Password: "password2", Role: "write"},
+		}
+		err := db.CreateLocalUsers()
+		suite.Nil(err)
+
+		user1, err := db.GetUser("localuser1")
+		suite.Nil(err)
+		suite.NotNil(user1)
+		suite.Equal("read", user1.Role)
+
+		user2, err := db.GetUser("localuser2")
+		suite.Nil(err)
+		suite.NotNil(user2)
+		suite.Equal("write", user2.Role)
+	})
+
+	suite.T().Run("TokenNotOverwrittenForLocalUsers", func(t *testing.T) {
+		cfg.Auth.LocalUsers = []config.LocalUser{
+			{Username: "existinglocaluser", Password: "password", Role: "read"},
+		}
+
+		err := db.CreateLocalUsers()
+		suite.Nil(err)
+		token, err := db.CreateUserToken("existinglocaluser")
+		suite.Nil(err)
+		suite.NotNil(token)
+
+		cfg.Auth.LocalUsers = []config.LocalUser{
+			{Username: "existinglocaluser", Password: "newpassword", Role: "write"},
+		}
+		err = db.CreateLocalUsers()
+		suite.Nil(err)
+
+		updatedUser, err := db.GetUser("existinglocaluser")
+		suite.Nil(err)
+		suite.NotNil(updatedUser)
+		suite.Equal("write", updatedUser.Role)
+		suite.Equal(token, updatedUser.Token)
+	})
 }
 
 func (suite *ModelsTestSuite) TestCreateAdminUserIfNotExists() {
