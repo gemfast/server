@@ -55,7 +55,7 @@ jobs:
           bundle exec omnibus build gemfast
           sha512sum pkg/*.deb > "pkg/gemfast-${{ steps.get-version.outputs.VERSION }}-checksums.txt"
       - name: Upload omnibus package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gemfast-omnibus
           path: omnibus/pkg/
@@ -66,7 +66,7 @@ jobs:
           docker tag server:${{ steps.get-version.outputs.VERSION }}-pre server:latest
           docker save server:latest > gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
       - name: Upload docker image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gemfast-docker
           path: gemfast-${{ steps.get-version.outputs.VERSION }}-pre.tar
@@ -88,7 +88,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Smoke test
@@ -108,7 +108,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: CVE test
@@ -128,7 +128,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Filter test
@@ -148,7 +148,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Private gems test
@@ -168,7 +168,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-${{ matrix.pkg }}
       - name: Private gems test
@@ -192,10 +192,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 1
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-omnibus
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-docker
       - name: Get version
@@ -243,10 +243,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 1
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-omnibus
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: gemfast-docker
       - name: Get version
@@ -292,6 +292,6 @@ jobs:
       - tagged-release
     if: ${{ always() && !cancelled() && needs.build.result == 'success' }}
     steps:
-      - uses: geekyeggo/delete-artifact@v2
+      - uses: geekyeggo/delete-artifact@v5
         with:
           name: gemfast-${{ matrix.pkg }}
