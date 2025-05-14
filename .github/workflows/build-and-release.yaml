@@ -292,6 +292,6 @@ jobs:
       - tagged-release
     if: ${{ always() && !cancelled() && needs.build.result == 'success' }}
     steps:
-      - uses: geekyeggo/delete-artifact@v2
+      - uses: geekyeggo/delete-artifact@v5
         with:
           name: gemfast-${{ matrix.pkg }}
