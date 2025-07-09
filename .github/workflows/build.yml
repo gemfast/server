@@ -15,6 +15,10 @@ on:
         type: string
         default: ${{ github.ref }}
 
+env:
+  GO_VERSION: '1.22'
+  RUBY_VERSION: '3.4'
+
 jobs:
 
   build:
@@ -28,7 +32,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: ${{ env.GO_VERSION }}
     - name: Set up ko
       uses: ko-build/setup-ko@v0.9
     - name: Go format check
@@ -50,10 +54,10 @@ jobs:
         args: release --skip validate --skip archive --clean --snapshot
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        KO_DOCKER_REPO: goreleaser.ko.local/gemfast
+        KO_DOCKER_REPO: goreleaser.ko.local
     - name: Save docker image
       run: |
-        docker save goreleaser.ko.local/gemfast/server:latest > gemfast-PR-${{ github.sha }}.tar
+        docker save goreleaser.ko.local/server:latest > gemfast-PR-${{ github.sha }}.tar
     - name: Upload docker image
       uses: actions/upload-artifact@v4
       with:

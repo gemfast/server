@@ -12,10 +12,6 @@ gem update --system
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-caddy {
-  port = 80
-  host = "http://localhost"
-}
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 filter {
@@ -35,17 +31,13 @@ source "https://rubygems.org"
 gem "stringio", "~> 3.0", ">= 3.0.7"
 CONFIG
 
-bundle config mirror.https://rubygems.org http://localhost
+bundle config mirror.https://rubygems.org http://localhost:2020
 bundle
 
 popd
 
 sudo rm -rf /etc/gemfast/gemfast.hcl
 sudo tee /etc/gemfast/gemfast.hcl > /dev/null <<'CONFIG'
-caddy {
-  port = 80
-  host = "http://localhost"
-}
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 filter {
@@ -66,7 +58,7 @@ source "https://rubygems.org"
 gem "activesupport", "~> 7.0", ">= 7.0.5"
 CONFIG
 
-bundle config mirror.https://rubygems.org http://localhost
+bundle config mirror.https://rubygems.org http://localhost:2020
 if [[ $(bundle 2>&1 | grep "405") ]]; then
     echo "gemfast is filtering activesupport 7.0.5"
 else

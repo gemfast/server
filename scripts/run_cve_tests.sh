@@ -12,10 +12,6 @@ gem update --system
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-caddy {
-  port = 80
-  host = "http://localhost"
-}
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 cve {
@@ -34,7 +30,7 @@ source "https://rubygems.org"
 gem "activerecord", "4.2.0"
 CONFIG
 
-bundle config mirror.https://rubygems.org http://localhost
+bundle config mirror.https://rubygems.org http://localhost:2020
 if [[ $(bundle 2>&1 | grep "405") ]]; then
     echo "cve is blocking activerecord 4.2.0"
 else
