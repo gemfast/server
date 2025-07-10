@@ -5,7 +5,10 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"path/filepath"
+	"runtime"
 
+	"github.com/gemfast/server/internal/utils"
 	"github.com/hashicorp/hcl/v2/hclsimple"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -13,22 +16,22 @@ import (
 )
 
 type Config struct {
-	Port                 int    `hcl:"port,optional"`
-	LogLevel             string `hcl:"log_level,optional"`
-	Dir                  string `hcl:"dir,optional"`
-	GemDir               string `hcl:"gem_dir,optional"`
-	DBDir                string `hcl:"db_dir,optional"`
-	ACLPath              string `hcl:"acl_path,optional"`
-	AuthModelPath        string `hcl:"auth_model_path,optional"`
-	PrivateGemsNamespace string `hcl:"private_gems_namespace,optional"`
-	UIDisabled           bool   `hcl:"ui_disabled,optional"`
-	MetricsDisabled      bool   `hcl:"metrics_disabled,optional"`
+	user                 *user.User `hcl:"-"`
+	Port                 int        `hcl:"port,optional"`
+	LogLevel             string     `hcl:"log_level,optional"`
+	Dir                  string     `hcl:"dir,optional"`
+	GemDir               string     `hcl:"gem_dir,optional"`
+	DBDir                string     `hcl:"db_dir,optional"`
+	ACLPath              string     `hcl:"acl_path,optional"`
+	AuthModelPath        string     `hcl:"auth_model_path,optional"`
+	PrivateGemsNamespace string     `hcl:"private_gems_namespace,optional"`
+	UIDisabled           bool       `hcl:"ui_disabled,optional"`
+	MetricsDisabled      bool       `hcl:"metrics_disabled,optional"`
 
-	LicenseKey string          `hcl:"license_key,optional"`
-	Mirrors    []*MirrorConfig `hcl:"mirror,block"`
-	Filter     *FilterConfig   `hcl:"filter,block"`
-	CVE        *CVEConfig      `hcl:"cve,block"`
-	Auth       *AuthConfig     `hcl:"auth,block"`
+	Mirrors []*MirrorConfig `hcl:"mirror,block"`
+	Filter  *FilterConfig   `hcl:"filter,block"`
+	CVE     *CVEConfig      `hcl:"cve,block"`
+	Auth    *AuthConfig     `hcl:"auth,block"`
 }
 
 type MirrorConfig struct {
@@ -70,15 +73,16 @@ type LocalUser struct {
 }
 
 func NewConfig() *Config {
-	cfg := Config{}
+	usr, err := user.Current()
+	if err != nil {
+		log.Warn().Err(err).Msg("unable to get the current linux user")
+	}
+	cfg := Config{user: usr}
 	cfgFile := os.Getenv("GEMFAST_CONFIG_FILE")
 	if cfgFile == "" {
 		cfgFileTries := []string{"/etc/gemfast/gemfast.hcl"}
-		usr, err := user.Current()
-		if err != nil {
-			log.Warn().Err(err).Msg("unable to get the current linux user")
-		} else {
-			cfgFileTries = append(cfgFileTries, fmt.Sprintf("%s/.gemfast/gemfast.hcl", usr.HomeDir))
+		if usr != nil {
+			cfgFileTries = append(cfgFileTries, fmt.Sprintf("%s/.config/gemfast/gemfast.hcl", usr.HomeDir))
 		}
 		for _, f := range cfgFileTries {
 			if _, err := os.Stat(f); err == nil {
@@ -95,7 +99,7 @@ func NewConfig() *Config {
 			return &cfg
 		}
 	}
-	err := hclsimple.DecodeFile(cfgFile, nil, &cfg)
+	err = hclsimple.DecodeFile(cfgFile, nil, &cfg)
 	if err != nil {
 		log.Error().Err(err).Msg(fmt.Sprintf("failed to load configuration file %s", cfgFile))
 		os.Exit(1)
@@ -121,7 +125,16 @@ func (c *Config) setDefaultServerConfig() {
 	}
 	configureLogLevel(c.LogLevel)
 	if c.Dir == "" {
-		c.Dir = "/var/gemfast"
+		if c.user.Username == "root" {
+			c.Dir = "/var/lib/gemfast/data"
+		} else if runtime.GOOS == "darwin" {
+			c.Dir = fmt.Sprintf("%s/Library/Application Support/gemfast", c.user.HomeDir)
+		} else if runtime.GOOS == "linux" {
+			c.Dir = fmt.Sprintf("%s/gemfast", os.Getenv("XDG_DATA_HOME"))
+			if c.Dir == "/gemfast" {
+				c.Dir = fmt.Sprintf("%s/.local/share/gemfast", c.user.HomeDir)
+			}
+		}
 	}
 	if c.GemDir == "" {
 		c.GemDir = fmt.Sprintf("%s/gems", c.Dir)
@@ -174,13 +187,15 @@ func readJWTSecretKeyFromPath(keyPath string) string {
 	log.Info().Msg("generating a new JWT secret key")
 	pw, err := password.Generate(64, 10, 0, false, true)
 	if err != nil {
-		log.Error().Err(err).Msg("unable to generate a new jwt secret key")
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("unable to generate a new jwt secret key")
+	}
+	err = utils.MkDirs(filepath.Dir(keyPath))
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to create directory for JWT secret key file")
 	}
 	file, err := os.Create(keyPath)
 	if err != nil {
-		log.Error().Err(err).Msg("unable to create JWT secret key file")
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("unable to create JWT secret key file")
 	}
 	defer file.Close()
 	_, err = file.WriteString(pw)
@@ -193,7 +208,7 @@ func readJWTSecretKeyFromPath(keyPath string) string {
 }
 
 func (c *Config) setDefaultAuthConfig() {
-	defaultJWTSecretKeyPath := ".jwt_secret_key"
+	defaultJWTSecretKeyPath := fmt.Sprintf("%s/.jwt_secret_key", c.Dir)
 	if c.Auth == nil {
 		c.Auth = &AuthConfig{
 			Type:               "local",
@@ -252,6 +267,6 @@ func (c *Config) setDefaultCVEConfig() {
 		c.CVE.MaxSeverity = "high"
 	}
 	if c.CVE.RubyAdvisoryDBDir == "" {
-		c.CVE.RubyAdvisoryDBDir = "ruby-advisory-db"
+		c.CVE.RubyAdvisoryDBDir = fmt.Sprintf("%s/ruby-advisory-db", c.Dir)
 	}
 }
