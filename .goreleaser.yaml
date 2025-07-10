@@ -1,0 +1,46 @@
+version: 2
+
+project_name: gemfast-server
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: amd64
+
+kos:
+  - repositories: 
+      - ghcr.io/gemfast
+    base_image: cgr.dev/chainguard/wolfi-base
+    base_import_paths: true
+    sbom: none
+    local_domain: "goreleaser.ko.local"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    bare: false
+    tags:
+      - "{{ .Tag }}"
+      - latest
+
+archives:
+  - formats: ["tar.gz"]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^scripts:"

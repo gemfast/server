@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os"
 	"time"
 
 	"github.com/gemfast/server/internal/api"
@@ -22,11 +23,17 @@ var startCmd = &cobra.Command{
 	},
 }
 
+var configPath string
+
 func init() {
+	startCmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to the config file")
 	rootCmd.AddCommand(startCmd)
 }
 
 func start() {
+	if configPath != "" {
+		os.Setenv("GEMFAST_CONFIG_FILE", configPath)
+	}
 	// Load the config
 	cfg := config.NewConfig()
 	log.Info().Msg("starting services")

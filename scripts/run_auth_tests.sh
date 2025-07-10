@@ -14,10 +14,6 @@ sudo mkdir -p /var/gemfast
 sudo chown -R $USER: /etc/gemfast
 sudo chown -R $USER: /var/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-caddy {
-  port = 80
-  host = "http://localhost"
-}
 license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "local"  {
   allow_anonymous_read = false
@@ -32,10 +28,10 @@ CONFIG
 
 start_server "$BUILD_TYPE"
 
-jwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/api/v1/login -d '{"username": "admin", "password":"foobar"}' | jq -r .token)
-token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" http://localhost:80/admin/api/v1/token | jq -r .token)
-bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:80/admin/api/v1/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
-bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:80/admin/api/v1/token | jq -r .token)
+jwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:2020/admin/api/v1/login -d '{"username": "admin", "password":"foobar"}' | jq -r .token)
+token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" http://localhost:2020/admin/api/v1/token | jq -r .token)
+bvjwt=$(curl -s -X POST -H "Content-Type: application/json" http://localhost:2020/admin/api/v1/login -d '{"username": "bobvance", "password":"mypassword"}' | jq -r .token)
+bvtoken=$(curl -s -X POST -H "Authorization: Bearer $bvjwt" -H "Content-Type: application/json" http://localhost:2020/admin/api/v1/token | jq -r .token)
 
 mkdir ./test-vendor
 pushd test-vendor
@@ -57,7 +53,7 @@ pushd vendor/cache
 for gem in *.gem; do
   [ -f "$gem" ] || break
   echo "Uploading $gem"
-  gem push "$gem" --host http://localhost:80/private -k gemfast
+  gem push "$gem" --host http://localhost:2020/private -k gemfast
 done
 sleep 5
 
@@ -76,11 +72,11 @@ cd test-private-gems
 
 # admin user
 cat << CONFIG > Gemfile
-source "http://localhost:80/private"
+source "http://localhost:2020/private"
 gem "rails"
 CONFIG
 
-bundle config http://localhost:80/private/ "admin:$token"
+bundle config http://localhost:2020/private/ "admin:$token"
 bundle
 
 # unauthorized user
@@ -92,11 +88,11 @@ bundle clean --force
 
 sudo rm -f Gemfile Gemfile.lock
 cat << CONFIG > Gemfile
-source "http://localhost:80/private"
+source "http://localhost:2020/private"
 gem "rails"
 CONFIG
 
-bundle config http://localhost:80/private/ "noauth:faketoken"
+bundle config http://localhost:2020/private/ "noauth:faketoken"
 if [[ $(bundle 2>&1 | grep "Access token could not be authenticated") ]]; then
   echo "gemfast is blocking unauthenticated access"
 else
@@ -113,9 +109,9 @@ bundle clean --force
 
 sudo rm -f Gemfile Gemfile.lock
 cat << CONFIG > Gemfile
-source "http://localhost:80/private"
+source "http://localhost:2020/private"
 gem "rails"
 CONFIG
 
-bundle config http://localhost:80/private/ "bobvance:$bvtoken"
+bundle config http://localhost:2020/private/ "bobvance:$bvtoken"
 bundle

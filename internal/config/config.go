@@ -24,19 +24,11 @@ type Config struct {
 	UIDisabled           bool   `hcl:"ui_disabled,optional"`
 	MetricsDisabled      bool   `hcl:"metrics_disabled,optional"`
 
-	LicenseKey  string          `hcl:"license_key,optional"`
-	CaddyConfig *CaddyConfig    `hcl:"caddy,block"`
-	Mirrors     []*MirrorConfig `hcl:"mirror,block"`
-	Filter      *FilterConfig   `hcl:"filter,block"`
-	CVE         *CVEConfig      `hcl:"cve,block"`
-	Auth        *AuthConfig     `hcl:"auth,block"`
-}
-
-type CaddyConfig struct {
-	AdminAPIEnabled bool   `hcl:"admin_api_enabled,optional"`
-	MetricsDisabled bool   `hcl:"metrics_disabled,optional"`
-	Host            string `hcl:"host,optional"`
-	Port            int    `hcl:"port,optional"`
+	LicenseKey string          `hcl:"license_key,optional"`
+	Mirrors    []*MirrorConfig `hcl:"mirror,block"`
+	Filter     *FilterConfig   `hcl:"filter,block"`
+	CVE        *CVEConfig      `hcl:"cve,block"`
+	Auth       *AuthConfig     `hcl:"auth,block"`
 }
 
 type MirrorConfig struct {
@@ -114,7 +106,6 @@ func NewConfig() *Config {
 
 func (c *Config) setDefaultConfig() {
 	c.setDefaultServerConfig()
-	c.setDefaultCaddyConfig()
 	c.setDefaultMirrorConfig()
 	c.setDefaultAuthConfig()
 	c.setDefaultFilterConfig()
@@ -142,25 +133,6 @@ func (c *Config) setDefaultServerConfig() {
 		c.PrivateGemsNamespace = "private"
 	}
 }
-
-func (c *Config) setDefaultCaddyConfig() {
-	if c.CaddyConfig == nil {
-		c.CaddyConfig = &CaddyConfig{
-			AdminAPIEnabled: false,
-			MetricsDisabled: false,
-			Host:            "https://localhost",
-			Port:            443,
-		}
-		return
-	}
-	if c.CaddyConfig.Port == 0 {
-		c.CaddyConfig.Port = 443
-	}
-	if c.CaddyConfig.Host == "" {
-		c.CaddyConfig.Host = fmt.Sprintf("https://localhost:%d", c.CaddyConfig.Port)
-	}
-}
-
 func configureLogLevel(ll string) {
 	level, err := zerolog.ParseLevel(ll)
 	if err != nil {
@@ -221,7 +193,7 @@ func readJWTSecretKeyFromPath(keyPath string) string {
 }
 
 func (c *Config) setDefaultAuthConfig() {
-	defaultJWTSecretKeyPath := "/opt/gemfast/etc/gemfast/.jwt_secret_key"
+	defaultJWTSecretKeyPath := ".jwt_secret_key"
 	if c.Auth == nil {
 		c.Auth = &AuthConfig{
 			Type:               "local",
@@ -272,7 +244,7 @@ func (c *Config) setDefaultCVEConfig() {
 		c.CVE = &CVEConfig{
 			Enabled:           false,
 			MaxSeverity:       "high",
-			RubyAdvisoryDBDir: "/opt/gemfast/share/ruby-advisory-db",
+			RubyAdvisoryDBDir: "ruby-advisory-db",
 		}
 		return
 	}
@@ -280,6 +252,6 @@ func (c *Config) setDefaultCVEConfig() {
 		c.CVE.MaxSeverity = "high"
 	}
 	if c.CVE.RubyAdvisoryDBDir == "" {
-		c.CVE.RubyAdvisoryDBDir = "/opt/gemfast/share/ruby-advisory-db"
+		c.CVE.RubyAdvisoryDBDir = "ruby-advisory-db"
 	}
 }

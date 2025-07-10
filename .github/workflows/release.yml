@@ -1,0 +1,48 @@
+name: Release
+run-name: Release - ${{ github.ref_name }} - ${{ github.sha }}
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  GO_VERSION: 1.22
+
+jobs:
+
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - run: git fetch --prune --unshallow
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '${{ env.GO_VERSION }}'
+      - name: Set up ko
+        uses: ko-build/setup-ko@v0.9
+      - name: Login to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KO_DOCKER_REPO: ghcr.io/gemfast

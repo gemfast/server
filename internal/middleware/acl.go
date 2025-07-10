@@ -1,14 +1,21 @@
 package middleware
 
 import (
+	_ "embed"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gemfast/server/internal/config"
-	u "github.com/gemfast/server/internal/utils"
 	"github.com/rs/zerolog/log"
 )
+
+//go:embed auth_model.conf
+var embeddedAuthModel []byte
+
+//go:embed gemfast_acl.csv
+var embeddedACL []byte
 
 type ACL struct {
 	casbin *casbin.Enforcer
@@ -26,12 +33,9 @@ func NewACL(cfg *config.Config) *ACL {
 			log.Fatal().Err(err).Msg("failed to get absolute path for acl")
 		}
 	} else {
-		for _, path := range []string{"/opt/gemfast/etc/gemfast/gemfast_acl.csv", "gemfast_acl.csv"} {
-			exists, _ := u.FileExists(path)
-			if exists {
-				policyPath = path
-				break
-			}
+		policyPath, err = writeTempFile("gemfast_acl.csv", embeddedACL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to write embedded acl to temp file")
 		}
 	}
 
@@ -41,12 +45,9 @@ func NewACL(cfg *config.Config) *ACL {
 			log.Fatal().Err(err).Msg("failed to get absolute path for auth_model")
 		}
 	} else {
-		for _, path := range []string{"/opt/gemfast/etc/gemfast/auth_model.conf", "auth_model.conf"} {
-			exists, _ := u.FileExists(path)
-			if exists {
-				authPath = path
-				break
-			}
+		authPath, err = writeTempFile("auth_model.conf", embeddedAuthModel)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to write embedded auth model to temp file")
 		}
 	}
 
@@ -56,10 +57,20 @@ func NewACL(cfg *config.Config) *ACL {
 	acl, err := casbin.NewEnforcer(authPath, policyPath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize the acl")
-	} else {
-		log.Info().Str("detail", policyPath).Msg("successfully initialized ACL enforcer")
 	}
+	log.Info().Str("detail", policyPath).Msg("successfully initialized ACL enforcer")
+
 	return &ACL{casbin: acl, cfg: cfg}
+}
+
+func writeTempFile(name string, content []byte) (string, error) {
+	tmp, err := os.CreateTemp("", name)
+	if err != nil {
+		return "", err
+	}
+	defer tmp.Close()
+	_, err = tmp.Write(content)
+	return tmp.Name(), err
 }
 
 func (acl *ACL) Enforce(role string, path string, method string) (bool, error) {

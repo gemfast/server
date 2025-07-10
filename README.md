@@ -5,9 +5,8 @@
 - [Gemfast](#gemfast)
   - [Why Gemfast](#why-gemfast)
   - [Installing](#installing)
-    - [Debian Package](#debian-package)
-      - [Debian Package SSL](#debian-package-ssl)
     - [Docker](#docker)
+    - [Prebuilt Binaries](#prebuilt-binaries)
     - [Building From Source](#building-from-source)
   - [Docs](#docs)
   - [UI](#ui)
@@ -19,41 +18,23 @@ Gemfast was created for users who need to self-host their rubygems and want some
 
 Gemfast has the following unique benefits:
 
-* Two installation methods: [Debian Package](#debian-package) and [Docker Image](#docker)
+* Two installation methods: [Docker Image](#docker) or precompiled binaries
 * No need to install/upgrade/manage a version of Ruby on the server
 * No external server dependencies like postgres, redis or memcached
-* Automatic HTTPS via Caddy
 * User login via GitHub oAuth
-* No external server dependencies like postgres, redis or memcached
 * Allow/Deny gems based on CVE severity or a regex list using the [ruby-advisory-db](https://github.com/rubysec/ruby-advisory-db)
-* Go is generally faster and requires less memory then Ruby (still :heart: Ruby though)
+* Performance benefits of Go
 
 ## Installing
 
-Gemfast is currently distributed in two different ways, a `.deb` package and a `docker` image.
-
-The `.deb` package includes a web server which proxies HTTPS traffic to Gemfast and is recommended when installing Gemfast on a virtual machine or bare-metal instance.
-
-### Debian Package
-
-To install the .deb package, download it from the latest GitHub release and install it with dpkg.
-
-```bash
-curl -L -O gemfast_<version>_amd64.deb
-sudo dpkg -i ./gemfast_<version>_amd64.deb
-sudo systemctl start gemfast.service
-```
-
-#### Debian Package SSL
-
-The Gemfast `.deb` package includes Caddy Server which will automatically generate and manage a let's encrypt SSL certificate for your server. Caddy offers a few ways to generate a valid SSL certificate, see: https://caddyserver.com/docs/automatic-https#acme-challenges. If the let's encrypt challenge fails, the server will use a self-signed certificate.
+Gemfast is currently distributed in two different ways, a `docker` image and precompiled binaries.
 
 ### Docker
 
 When running Gemfast as a container, its important to mount the following directories:
 
-* /etc/gemfast - The directory for the gemfast.hcl config file
 * /var/gemfast - The directory for the Gemfast data including gems and database
+* /etc/gemfast - The directory for the gemfast.hcl config file. It is possible to configure the config file path using `env GEMFAST_CONFIG_FILE=/path/to/my/file.hcl`
 
 ```bash
 docker run -d --name gemfast-server \
@@ -62,6 +43,16 @@ docker run -d --name gemfast-server \
   -v /var/gemfast:/var/gemfast \
   ghcr.io/gemfast/server:latest
 ```
+
+### Prebuilt Binaries
+
+Currently Prebuild binaries are available on each GitHub release for the following platforms.
+
+- linux_amd64
+- linux_arm64
+- darwin_arm64
+
+Simply download and extract the tarball to run the server.
 
 ### Building From Source
 

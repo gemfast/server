@@ -4,7 +4,7 @@ function start_server() {
     local BUILD_TYPE="$1"
     if [[ "$BUILD_TYPE" == "docker" ]]; then
         docker load -i gemfast*.tar
-        docker run -d --name gemfast-server -p 80:2020 -v /etc/gemfast:/etc/gemfast -v /var/gemfast:/var/gemfast -v /etc/machine-id:/etc/machine-id server:latest
+        docker run -d --name gemfast-server -p 2020:2020 -v /etc/gemfast:/etc/gemfast -v /var/gemfast:/var/gemfast goreleaser.ko.local/server:latest start
         sleep 5
         docker ps
         docker logs gemfast-server

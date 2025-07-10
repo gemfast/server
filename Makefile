@@ -1,22 +1,19 @@
-.PHONY: all omnibus test clean
+.PHONY: all test clean
 	
 build:
-	go build -mod=mod
-	mv server bin/gemfast-server
-	chmod +x bin/gemfast-server
-
-omnibus:
-	cd omnibus && bundle install
-	cd omnibus && bundle exec omnibus build gemfast
+	go build -o bin/gemfast-server main.go
 
 run:
-	go run -mod=mod main.go start
+	go run main.go start
 
 fmt:
 	go fmt ./...
 
 test:
-	go test -mod=mod ./...
+	go test ./...
+	
+vet:
+	go vet ./...
 
 clean:
 	go clean
