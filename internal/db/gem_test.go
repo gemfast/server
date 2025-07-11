@@ -141,10 +141,10 @@ func (suite *ModelsTestSuite) TestDeleteGemVersion() {
 func (suite *ModelsTestSuite) TestGemAllGemVersions() {
 	cfg := config.NewConfig()
 	db := NewTestDB(suite.db, cfg)
-	gemVersions, err := db.GetAllGemversions("private")
+	gemVersions, err := db.GetAllGemVersions("private")
 	suite.Nil(err)
 	suite.NotEqual(0, len(gemVersions))
-	gemVersions, err = db.GetAllGemversions("rubygems.org")
+	gemVersions, err = db.GetAllGemVersions("rubygems.org")
 	suite.Nil(err)
 	suite.NotEqual(0, len(gemVersions))
 }

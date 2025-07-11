@@ -159,7 +159,7 @@ func (db *DB) CreateLocalUsers() error {
 	})
 
 	m := make(map[string]bool)
-	db.boltDB.Batch(func(tx *bolt.Tx) error {
+	err := db.boltDB.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(UserBucket))
 		for _, u := range db.cfg.Auth.LocalUsers {
 			username := u.Username
@@ -170,7 +170,7 @@ func (db *DB) CreateLocalUsers() error {
 			}
 			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), db.cfg.Auth.BcryptCost)
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("failed to generate password for user %s: %v", username, err)
 			}
 
 			userData, exists := users[username]
@@ -206,6 +206,10 @@ func (db *DB) CreateLocalUsers() error {
 		}
 		return nil
 	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create local users")
+		return fmt.Errorf("failed to create local users: %v", err)
+	}
 	return nil
 }
 

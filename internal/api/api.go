@@ -6,8 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gemfast/server/internal/api/handlers"
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/cve"
 	"github.com/gemfast/server/internal/db"
+	"github.com/gemfast/server/internal/filter"
+	"github.com/gemfast/server/internal/indexer"
 	"github.com/gemfast/server/internal/middleware"
 	"github.com/gemfast/server/internal/ui"
 	"github.com/gin-contrib/sessions"
@@ -20,25 +24,30 @@ import (
 const adminAPIPath = "/admin/api/v1"
 
 type API struct {
-	apiV1Handler     *APIV1Handler
-	rubygemsHandler  *RubyGemsHandler
-	router           *gin.Engine
-	cfg              *config.Config
-	db               *db.DB
-	tokenMiddleware  *middleware.TokenMiddleware
-	githubMiddleware *middleware.GitHubMiddleware
-	jwtMiddleware    *middleware.JWTMiddleware
+	apiV1Handler          *handlers.APIV1Handler
+	rubygemsHandler       *handlers.RubyGemsHandler
+	rubygemsMirrorHandler *handlers.RubyGemsMirrorHandler
+	router                *gin.Engine
+	cfg                   *config.Config
+	db                    *db.DB
+	tokenMiddleware       *middleware.TokenMiddleware
+	githubMiddleware      *middleware.GitHubMiddleware
+	jwtMiddleware         *middleware.JWTMiddleware
 }
 
-func NewAPI(cfg *config.Config, db *db.DB, apiV1Handler *APIV1Handler, rubygemsHandler *RubyGemsHandler) *API {
+func NewAPI(cfg *config.Config, db *db.DB, indexer *indexer.Indexer, filter *filter.RegexFilter, advisoryDB *cve.GemAdvisoryDB) *API {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+	apiV1Handler := handlers.NewAPIV1Handler(cfg, db, indexer, filter, advisoryDB)
+	rubygemsHandler := handlers.NewRubyGemsHandler(cfg, db, indexer, filter, advisoryDB)
+	rubygemsMirrorHandler := handlers.NewRubyGemsMirrorHandler(cfg, db, indexer, filter, advisoryDB)
 	return &API{
-		apiV1Handler:    apiV1Handler,
-		rubygemsHandler: rubygemsHandler,
-		router:          router,
-		cfg:             cfg,
-		db:              db,
+		apiV1Handler:          apiV1Handler,
+		rubygemsHandler:       rubygemsHandler,
+		rubygemsMirrorHandler: rubygemsMirrorHandler,
+		router:                router,
+		cfg:                   cfg,
+		db:                    db,
 	}
 }
 
@@ -77,7 +86,7 @@ func (api *API) registerRoutes() {
 	api.router.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/ui")
 	})
-	api.router.GET("/up", api.apiV1Handler.health)
+	api.router.GET("/up", api.apiV1Handler.Health)
 	authMode := api.cfg.Auth.Type
 	log.Info().Str("detail", authMode).Msg("configuring auth strategy")
 	switch strings.ToLower(authMode) {
@@ -157,15 +166,15 @@ func (api *API) configureNoneAuth(ui *ui.UI) {
 
 // /
 func (api *API) configureMirror(mirror *gin.RouterGroup) {
-	mirror.GET("/specs.4.8.gz", api.rubygemsHandler.mirroredIndexHandler)
-	mirror.GET("/latest_specs.4.8.gz", api.rubygemsHandler.mirroredIndexHandler)
-	mirror.GET("/prerelease_specs.4.8.gz", api.rubygemsHandler.mirroredIndexHandler)
-	mirror.GET("/quick/Marshal.4.8/:gemspec.rz", api.rubygemsHandler.mirroredGemspecRzHandler)
-	mirror.GET("/gems/:gem", api.rubygemsHandler.mirroredGemHandler)
-	mirror.GET("/api/v1/dependencies", api.rubygemsHandler.mirroredDependenciesHandler)
-	mirror.GET("/api/v1/dependencies.json", api.rubygemsHandler.mirroredDependenciesJSONHandler)
-	mirror.GET("/info/*gem", api.rubygemsHandler.mirroredInfoHandler)
-	mirror.GET("/versions", api.rubygemsHandler.mirroredVersionsHandler)
+	mirror.GET("/specs.4.8.gz", api.rubygemsMirrorHandler.GetIndex)
+	mirror.GET("/latest_specs.4.8.gz", api.rubygemsMirrorHandler.GetIndex)
+	mirror.GET("/prerelease_specs.4.8.gz", api.rubygemsMirrorHandler.GetIndex)
+	mirror.GET("/quick/Marshal.4.8/:gemspec.rz", api.rubygemsMirrorHandler.GetGemspecRz)
+	mirror.GET("/gems/:gem", api.rubygemsMirrorHandler.GetGem)
+	mirror.GET("/api/v1/dependencies", api.rubygemsMirrorHandler.GetGemDependencies)
+	mirror.GET("/api/v1/dependencies.json", api.rubygemsMirrorHandler.GetGemDependenciesJSON)
+	mirror.GET("/info/*gem", api.rubygemsMirrorHandler.GetGemInfo)
+	mirror.GET("/versions", api.rubygemsMirrorHandler.GetGemVersionsCompact)
 }
 
 // /private
@@ -190,40 +199,40 @@ func (api *API) configurePrivate() {
 
 // /private
 func (api *API) configurePrivateRead(private *gin.RouterGroup) {
-	private.GET("/specs.4.8.gz", api.rubygemsHandler.localIndexHandler)
-	private.GET("/latest_specs.4.8.gz", api.rubygemsHandler.localIndexHandler)
-	private.GET("/prerelease_specs.4.8.gz", api.rubygemsHandler.localIndexHandler)
-	private.GET("/quick/Marshal.4.8/:gemspec.rz", api.rubygemsHandler.localGemspecRzHandler)
-	private.GET("/gems/:gem", api.rubygemsHandler.localGemHandler)
-	private.GET("/api/v1/dependencies", api.rubygemsHandler.localDependenciesHandler)
-	private.GET("/api/v1/dependencies.json", api.rubygemsHandler.localDependenciesJSONHandler)
-	private.GET("/versions", api.rubygemsHandler.localVersionsHandler)
-	private.GET("/info/:gem", api.rubygemsHandler.localInfoHandler)
-	private.GET("/names", api.rubygemsHandler.localNamesHandler)
+	private.GET("/specs.4.8.gz", api.rubygemsHandler.GetIndex)
+	private.GET("/latest_specs.4.8.gz", api.rubygemsHandler.GetIndex)
+	private.GET("/prerelease_specs.4.8.gz", api.rubygemsHandler.GetIndex)
+	private.GET("/quick/Marshal.4.8/:gemspec.rz", api.rubygemsHandler.GetGemspecRz)
+	private.GET("/gems/:gem", api.rubygemsHandler.GetGem)
+	private.GET("/api/v1/dependencies", api.rubygemsHandler.GetGemDependencies)
+	private.GET("/api/v1/dependencies.json", api.rubygemsHandler.GetGemDependenciesJSON)
+	private.GET("/versions", api.rubygemsHandler.GetGemVersionsCompact)
+	private.GET("/info/:gem", api.rubygemsHandler.GetGemInfo)
+	private.GET("/names", api.rubygemsHandler.GetGemNames)
 }
 
 // /private
 func (api *API) configurePrivateWrite(private *gin.RouterGroup) {
-	private.POST("/api/v1/gems", api.rubygemsHandler.localUploadGemHandler)
-	private.DELETE("/api/v1/gems/yank", api.rubygemsHandler.localYankHandler)
-	private.POST("/upload", api.rubygemsHandler.geminaboxUploadGem)
+	private.POST("/api/v1/gems", api.rubygemsHandler.UploadGem)
+	private.DELETE("/api/v1/gems/yank", api.rubygemsHandler.YankGem)
+	private.POST("/upload", api.rubygemsHandler.GeminaboxUploadGem)
 }
 
 // /admin
 func (api *API) configureAdmin(admin *gin.RouterGroup) {
-	admin.GET("/auth", api.apiV1Handler.authMode)
+	admin.GET("/auth", api.apiV1Handler.GetAuthMode)
 	admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
-	admin.GET("/gems/:source", api.apiV1Handler.listGems)
-	admin.GET("/gems/:source/:gem", api.apiV1Handler.getGem)
-	admin.GET("/gems/:source/search/:name", api.apiV1Handler.searchGems)
-	admin.GET("/gems/:source/prefix/:prefix", api.apiV1Handler.prefixScanGems)
-	admin.GET("/users", api.apiV1Handler.listUsers)
-	admin.GET("/users/:username", api.apiV1Handler.getUser)
-	admin.DELETE("/users/:username", api.apiV1Handler.deleteUser)
-	admin.PUT("/users/:username/role/:role", api.apiV1Handler.setUserRole)
-	admin.GET("/backup", api.apiV1Handler.backup)
-	admin.GET("/stats/db", api.apiV1Handler.dbStats)
-	admin.GET("/stats/bucket", api.apiV1Handler.bucketStats)
+	admin.GET("/gems/:source", api.apiV1Handler.ListGems)
+	admin.GET("/gems/:source/:gem", api.apiV1Handler.GetGem)
+	admin.GET("/gems/:source/search/:name", api.apiV1Handler.SearchGems)
+	admin.GET("/gems/:source/prefix/:prefix", api.apiV1Handler.PrefixScanGems)
+	admin.GET("/users", api.apiV1Handler.ListUsers)
+	admin.GET("/users/:username", api.apiV1Handler.GetUser)
+	admin.DELETE("/users/:username", api.apiV1Handler.DeleteUser)
+	admin.PUT("/users/:username/role/:role", api.apiV1Handler.SetUserRole)
+	admin.GET("/backup", api.apiV1Handler.Backup)
+	admin.GET("/stats/db", api.apiV1Handler.DBStats)
+	admin.GET("/stats/bucket", api.apiV1Handler.BucketStats)
 }
 
 // /ui
@@ -231,8 +240,8 @@ func (api *API) configureUI(ui *ui.UI, uiPath *gin.RouterGroup) {
 	uiPath.GET("/", ui.Index)
 	uiPath.GET("/gems", ui.Gems)
 	uiPath.GET("/upload", ui.UploadGem)
-	uiPath.POST("/upload", api.rubygemsHandler.geminaboxUploadGem)
-	uiPath.GET("/download/:gem", api.rubygemsHandler.localGemHandler)
+	uiPath.POST("/upload", api.rubygemsHandler.GeminaboxUploadGem)
+	uiPath.GET("/download/:gem", api.rubygemsHandler.GetGem)
 	uiPath.GET("/tokens", ui.AccessTokens)
 	uiPath.POST("/gems/search", ui.SearchGems)
 	uiPath.GET("/gems/:source/prefix", ui.GemsByPrefix)

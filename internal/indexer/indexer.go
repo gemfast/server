@@ -190,14 +190,17 @@ func (indexer *Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) er
 			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDir, specFName)
 		}
 
-		dump := marshal.DumpGemspecGemfast(s.GemMetadata)
+		dump, err := marshal.DumpGemspecGemfast(s.GemMetadata)
+		if err != nil {
+			return fmt.Errorf("failed to marshal gemspec %s: %w", s.OriginalName, err)
+		}
 		var b bytes.Buffer
 		rz := zlib.NewWriter(&b)
 		defer rz.Close()
 		if _, err := rz.Write(dump); err != nil {
 			return fmt.Errorf("failed to write zlib dump: %w", err)
 		}
-		err := rz.Close()
+		err = rz.Close()
 		if err != nil {
 			return fmt.Errorf("failed to close zlib writer: %w", err)
 		}
@@ -220,7 +223,10 @@ func buildModernIndex(specs []*spec.Spec, idxFile string, name string) error {
 	}
 	defer file.Close()
 
-	dump := marshal.DumpSpecs(specs)
+	dump, err := marshal.DumpSpecs(specs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal %s specs: %w", name, err)
+	}
 	_, err = file.Write(dump)
 	if err != nil {
 		return fmt.Errorf("failed to write file %s: %w", idxFile, err)
@@ -345,7 +351,12 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 	}
 	buff := bytes.NewBuffer(out)
 
-	specsIdx = marshal.LoadSpecs(buff)
+	specsIdx, err = marshal.LoadSpecs(buff)
+	if err != nil {
+		log.Error().Err(err).Str("detail", src).Msg("failed to load specs from index")
+		ch <- 0
+		return
+	}
 	log.Debug().Str("detail", src).Int("len", len(specsIdx)).Msg("loaded index")
 	for _, spec := range updated {
 		platform := spec.OriginalPlatform
@@ -400,7 +411,12 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 	}
 	defer file.Close()
 
-	dump := marshal.DumpSpecs(uniqSpecsIdx)
+	dump, err := marshal.DumpSpecs(uniqSpecsIdx)
+	if err != nil {
+		log.Error().Err(err).Str("detail", dest).Msg("failed to marshal destination spec index")
+		ch <- 0
+		return
+	}
 	bytesWritten, err := file.Write(dump)
 	if err != nil {
 		log.Error().Err(err).Str("detail", dest).Msg("failed to write destination spec index file")

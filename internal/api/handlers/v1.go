@@ -1,4 +1,4 @@
-package api
+package handlers
 
 import (
 	"net/http"
@@ -32,15 +32,15 @@ func NewAPIV1Handler(cfg *config.Config, database *db.DB, i *indexer.Indexer, f 
 	}
 }
 
-func (h *APIV1Handler) health(c *gin.Context) {
+func (h *APIV1Handler) Health(c *gin.Context) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<html><body style=\"background-color: green\"></body></html>"))
 }
 
-func (h *APIV1Handler) authMode(c *gin.Context) {
+func (h *APIV1Handler) GetAuthMode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"auth": h.cfg.Auth.Type})
 }
 
-func (h *APIV1Handler) listGems(c *gin.Context) {
+func (h *APIV1Handler) ListGems(c *gin.Context) {
 	source := c.Param("source")
 	gems, err := h.db.GetGems(source)
 	if err != nil {
@@ -60,7 +60,7 @@ func (h *APIV1Handler) listGems(c *gin.Context) {
 	c.JSON(http.StatusOK, gems)
 }
 
-func (h *APIV1Handler) searchGems(c *gin.Context) {
+func (h *APIV1Handler) SearchGems(c *gin.Context) {
 	name := c.Param("name")
 	source := c.Param("source")
 	matches := h.db.SearchGems(source, name)
@@ -71,7 +71,7 @@ func (h *APIV1Handler) searchGems(c *gin.Context) {
 	c.JSON(http.StatusOK, matches)
 }
 
-func (h *APIV1Handler) prefixScanGems(c *gin.Context) {
+func (h *APIV1Handler) PrefixScanGems(c *gin.Context) {
 	prefix := c.Param("prefix")
 	source := c.Param("source")
 	matches := h.db.PrefixScanGems(source, prefix)
@@ -90,7 +90,7 @@ func minimalGem(gem *db.Gem) {
 	gem.RubyGems = ""
 }
 
-func (h *APIV1Handler) getGem(c *gin.Context) {
+func (h *APIV1Handler) GetGem(c *gin.Context) {
 	name := c.Param("gem")
 	source := c.Param("source")
 	gemVersions, err := h.db.GetGemVersions(source, name)
@@ -102,7 +102,7 @@ func (h *APIV1Handler) getGem(c *gin.Context) {
 	c.JSON(http.StatusOK, gemVersions)
 }
 
-func (h *APIV1Handler) listUsers(c *gin.Context) {
+func (h *APIV1Handler) ListUsers(c *gin.Context) {
 	users, err := h.db.GetUsers()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get users")
@@ -119,7 +119,7 @@ func (h *APIV1Handler) listUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
-func (h *APIV1Handler) getUser(c *gin.Context) {
+func (h *APIV1Handler) GetUser(c *gin.Context) {
 	username := c.Param("username")
 	user, err := h.db.GetUser(username)
 	if err != nil {
@@ -136,7 +136,7 @@ func hidePassword(user *db.User) {
 	user.Token = ""
 }
 
-func (h *APIV1Handler) deleteUser(c *gin.Context) {
+func (h *APIV1Handler) DeleteUser(c *gin.Context) {
 	username := c.Param("username")
 	deleted, err := h.db.DeleteUser(username)
 	if err != nil {
@@ -150,7 +150,7 @@ func (h *APIV1Handler) deleteUser(c *gin.Context) {
 	c.String(http.StatusAccepted, "User deleted successfully")
 }
 
-func (h *APIV1Handler) setUserRole(c *gin.Context) {
+func (h *APIV1Handler) SetUserRole(c *gin.Context) {
 	username := c.Param("username")
 	role := c.Param("role")
 	user, err := h.db.GetUser(username)
@@ -167,7 +167,7 @@ func (h *APIV1Handler) setUserRole(c *gin.Context) {
 	c.String(http.StatusAccepted, "User role set successfully")
 }
 
-func (h *APIV1Handler) backup(c *gin.Context) {
+func (h *APIV1Handler) Backup(c *gin.Context) {
 	err := h.db.Backup(c.Writer)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to backup database")
@@ -175,10 +175,10 @@ func (h *APIV1Handler) backup(c *gin.Context) {
 	}
 }
 
-func (h *APIV1Handler) dbStats(c *gin.Context) {
+func (h *APIV1Handler) DBStats(c *gin.Context) {
 	c.JSON(http.StatusOK, h.db.Stats())
 }
 
-func (h *APIV1Handler) bucketStats(c *gin.Context) {
+func (h *APIV1Handler) BucketStats(c *gin.Context) {
 	c.JSON(http.StatusOK, h.db.BucketStats())
 }

@@ -217,7 +217,7 @@ func (db *DB) GetGems(source string) ([][]*Gem, error) {
 	return allGems, nil
 }
 
-func (db *DB) GetAllGemversions(source string) ([]string, error) {
+func (db *DB) GetAllGemVersions(source string) ([]string, error) {
 	t := time.Now()
 	rfc := t.Format(time.RFC3339)
 	arr := []string{fmt.Sprintf("created_at: %s", rfc), "---"}

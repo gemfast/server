@@ -57,7 +57,7 @@ func start() {
 	}
 
 	// Create the filter
-	f := filter.NewFilter(cfg)
+	filter := filter.NewFilter(cfg)
 
 	// Start the advisory DB updater
 	advisoryDB := cve.NewGemAdvisoryDB(cfg)
@@ -80,9 +80,6 @@ func start() {
 		}
 	}(advisoryDB)
 
-	// Start the API
-	apiV1Handler := api.NewAPIV1Handler(cfg, database, indexer, f, advisoryDB)
-	rubygemsHandler := api.NewRubyGemsHandler(cfg, database, indexer, f, advisoryDB)
-	api := api.NewAPI(cfg, database, apiV1Handler, rubygemsHandler)
+	api := api.NewAPI(cfg, database, indexer, filter, advisoryDB)
 	api.Run()
 }
