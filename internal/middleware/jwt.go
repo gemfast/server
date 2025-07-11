@@ -3,6 +3,7 @@ package middleware
 import (
 	"time"
 
+	"github.com/gemfast/server/internal/acl"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
 
@@ -18,14 +19,14 @@ type login struct {
 
 type JWTMiddleware struct {
 	cfg *config.Config
-	acl *ACL
+	acl *acl.ACL
 	db  *db.DB
 }
 
 const IdentityKey = "id"
 const RoleKey = "role"
 
-func NewJWTMiddleware(cfg *config.Config, acl *ACL, db *db.DB) *JWTMiddleware {
+func NewJWTMiddleware(cfg *config.Config, acl *acl.ACL, db *db.DB) *JWTMiddleware {
 	return &JWTMiddleware{
 		cfg: cfg,
 		acl: acl,

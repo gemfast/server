@@ -1,6 +1,6 @@
 # Gemfast
 
-[Gemfast](https://gemfast.io) is a fast and secure rubygems server written in Go. That means it can be compiled into a single binary file and work on linux, darwin and windows operating systems. Gemfast can be quickly installed on a server without any other dependencies and configured using a single HashiCorp Configuration Language (HCL) file.
+[Gemfast](https://gemfast.io) is a fast and secure rubygems server written for Ruby/Rails teams who want to self-host their own gem server for performance, security, or compliance reasons. Gemfast can be quickly installed on a server without any other dependencies and configured using a single HashiCorp Configuration Language (HCL) file.
 
 - [Gemfast](#gemfast)
   - [Why Gemfast](#why-gemfast)
@@ -14,16 +14,13 @@
 
 ## Why Gemfast
 
-Gemfast was created for users who need to self-host their rubygems and want something quick to setup and easy to manage. Gemfast allows users to mirror and cache gems from rubygems.org as well as upload their own internally developed gems which can't be distributed publically. It supports both the legacy Dependency API and the newer Compact Index API.
-
-Gemfast has the following unique benefits:
-
-* Two installation methods: [Docker Image](#docker) or precompiled binaries
-* No need to install/upgrade/manage a version of Ruby on the server
-* No external server dependencies like postgres, redis or memcached
-* User login via GitHub oAuth
-* Allow/Deny gems based on CVE severity or a regex list using the [ruby-advisory-db](https://github.com/rubysec/ruby-advisory-db)
-* Performance benefits of Go
+* Speed and Simplicity: Single static binary, no Ruby or external dependencies required.
+* Self-hosting: Lets teams mirror, cache, and serve both public and private gems.
+* Security: Integrates with the ruby-advisory-db to block gems with known vulnerabilities.
+* Modern Features: Supports both the legacy Dependency API and the newer Compact Index API.
+* Easy Setup: Configurable via a single HCL file, with Docker and prebuilt binaries available.
+* Authentication: Supports local and GitHub OAuth login, with role-based access control.
+* UI: Provides a web UI for browsing/searching gems (experimental).
 
 ## Installing
 

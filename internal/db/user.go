@@ -19,8 +19,13 @@ type User struct {
 	GitHubToken string `json:"github_token,omitempty"`
 }
 
+func (u *User) HidePassword() {
+	u.Password = []byte{}
+	u.Token = ""
+}
+
 func ValidUserRoles() []string {
-	return []string{"admin", "read", "write"}
+	return []string{"admin", "read", "write", "anonymous"}
 }
 
 func userFromBytes(data []byte) (*User, error) {
@@ -45,7 +50,7 @@ func (db *DB) AuthenticateLocalUser(incoming *User) (*User, error) {
 
 func (db *DB) GetUser(username string) (*User, error) {
 	var existing []byte
-	db.boltDB.View(func(tx *bolt.Tx) error {
+	db.BoltDB.View(func(tx *bolt.Tx) error {
 		userBytes := tx.Bucket([]byte(UserBucket)).Get([]byte(username))
 		existing = userBytes
 		return nil
@@ -63,7 +68,7 @@ func (db *DB) GetUser(username string) (*User, error) {
 
 func (db *DB) GetUsers() ([]*User, error) {
 	var users []*User
-	err := db.boltDB.View(func(tx *bolt.Tx) error {
+	err := db.BoltDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(UserBucket))
 		b.ForEach(func(k, v []byte) error {
 			user, err := userFromBytes(v)
@@ -83,7 +88,7 @@ func (db *DB) GetUsers() ([]*User, error) {
 
 func (db *DB) CreateUser(user *User) error {
 	userBytes, err := json.Marshal(user)
-	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
 		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
@@ -124,7 +129,7 @@ func (db *DB) CreateAdminUserIfNotExists() error {
 	if err != nil {
 		return fmt.Errorf("could not marshal user to json: %v", err)
 	}
-	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
 		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
@@ -140,7 +145,7 @@ func (db *DB) CreateLocalUsers() error {
 		return nil
 	}
 	var users map[string]*User = make(map[string]*User)
-	db.boltDB.View(func(tx *bolt.Tx) error {
+	db.BoltDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(UserBucket))
 		if b == nil {
 			return fmt.Errorf("get bucket: FAILED")
@@ -159,7 +164,7 @@ func (db *DB) CreateLocalUsers() error {
 	})
 
 	m := make(map[string]bool)
-	err := db.boltDB.Batch(func(tx *bolt.Tx) error {
+	err := db.BoltDB.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(UserBucket))
 		for _, u := range db.cfg.Auth.LocalUsers {
 			username := u.Username
@@ -258,7 +263,7 @@ func (db *DB) CreateUserToken(username string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not marshal user to json: %v", err)
 	}
-	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
 		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
@@ -288,7 +293,7 @@ func (db *DB) UpdateUser(user *User) error {
 	if err != nil {
 		return fmt.Errorf("could not marshal user to json: %v", err)
 	}
-	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
 		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
@@ -303,7 +308,7 @@ func (db *DB) UpdateUser(user *User) error {
 
 func (db *DB) DeleteUser(username string) (bool, error) {
 	deleted := false
-	err := db.boltDB.Update(func(tx *bolt.Tx) error {
+	err := db.BoltDB.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket([]byte(UserBucket)).Delete([]byte(username))
 		if err != nil {
 			return fmt.Errorf("could not delete: %v", err)

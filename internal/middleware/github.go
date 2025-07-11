@@ -11,6 +11,7 @@ import (
 	"time"
 
 	jmw "github.com/appleboy/gin-jwt/v2"
+	"github.com/gemfast/server/internal/acl"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gin-contrib/sessions"
@@ -31,14 +32,14 @@ type OAuthLogin struct {
 
 type GitHubMiddleware struct {
 	cfg      *config.Config
-	acl      *ACL
+	acl      *acl.ACL
 	tokenKey string
 	db       *db.DB
 }
 
 const GitHubTokenKey = "github_token"
 
-func NewGitHubMiddleware(cfg *config.Config, acl *ACL, db *db.DB) *GitHubMiddleware {
+func NewGitHubMiddleware(cfg *config.Config, acl *acl.ACL, db *db.DB) *GitHubMiddleware {
 	return &GitHubMiddleware{
 		cfg:      cfg,
 		tokenKey: GitHubTokenKey,

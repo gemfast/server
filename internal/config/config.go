@@ -22,8 +22,6 @@ type Config struct {
 	Dir                  string     `hcl:"dir,optional"`
 	GemDir               string     `hcl:"gem_dir,optional"`
 	DBDir                string     `hcl:"db_dir,optional"`
-	ACLPath              string     `hcl:"acl_path,optional"`
-	AuthModelPath        string     `hcl:"auth_model_path,optional"`
 	PrivateGemsNamespace string     `hcl:"private_gems_namespace,optional"`
 	UIDisabled           bool       `hcl:"ui_disabled,optional"`
 	MetricsDisabled      bool       `hcl:"metrics_disabled,optional"`

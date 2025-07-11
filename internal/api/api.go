@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gemfast/server/internal/acl"
 	"github.com/gemfast/server/internal/api/handlers"
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/cve"
@@ -38,7 +39,8 @@ type API struct {
 func NewAPI(cfg *config.Config, db *db.DB, indexer *indexer.Indexer, filter *filter.RegexFilter, advisoryDB *cve.GemAdvisoryDB) *API {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
-	apiV1Handler := handlers.NewAPIV1Handler(cfg, db, indexer, filter, advisoryDB)
+	aclInstance := acl.NewACL(cfg, db)
+	apiV1Handler := handlers.NewAPIV1Handler(cfg, db, indexer, filter, advisoryDB, aclInstance)
 	rubygemsHandler := handlers.NewRubyGemsHandler(cfg, db, indexer, filter, advisoryDB)
 	rubygemsMirrorHandler := handlers.NewRubyGemsMirrorHandler(cfg, db, indexer, filter, advisoryDB)
 	return &API{
@@ -58,7 +60,7 @@ func (api *API) Run() {
 	if api.cfg.Mirrors[0].Enabled {
 		log.Info().Str("detail", api.cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
 	}
-	log.Info().Str("detail", fmt.Sprintf("http://localhost%s", port)).Msg("gemfast server started")
+	log.Info().Str("detail", fmt.Sprintf("http://0.0.0.0%s", port)).Msg("gemfast server started")
 	err := api.router.Run(port)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start server")
@@ -66,7 +68,7 @@ func (api *API) Run() {
 }
 
 func (api *API) loadMiddleware() {
-	acl := middleware.NewACL(api.cfg)
+	acl := acl.NewACL(api.cfg, api.db)
 	api.tokenMiddleware = middleware.NewTokenMiddleware(acl, api.db)
 	api.githubMiddleware = middleware.NewGitHubMiddleware(api.cfg, acl, api.db)
 	api.jwtMiddleware = middleware.NewJWTMiddleware(api.cfg, acl, api.db)
@@ -220,8 +222,7 @@ func (api *API) configurePrivateWrite(private *gin.RouterGroup) {
 
 // /admin
 func (api *API) configureAdmin(admin *gin.RouterGroup) {
-	admin.GET("/auth", api.apiV1Handler.GetAuthMode)
-	admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
+
 	admin.GET("/gems/:source", api.apiV1Handler.ListGems)
 	admin.GET("/gems/:source/:gem", api.apiV1Handler.GetGem)
 	admin.GET("/gems/:source/search/:name", api.apiV1Handler.SearchGems)
@@ -230,6 +231,15 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/users/:username", api.apiV1Handler.GetUser)
 	admin.DELETE("/users/:username", api.apiV1Handler.DeleteUser)
 	admin.PUT("/users/:username/role/:role", api.apiV1Handler.SetUserRole)
+	// Auth and ACL management endpoints
+	// if api.cfg.Auth.Type != "none" {
+	admin.GET("/auth", api.apiV1Handler.GetAuthMode)
+	admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
+	admin.GET("/acl/policies", api.apiV1Handler.ListPolicies)
+	admin.POST("/acl/policies", api.apiV1Handler.AddPolicy)
+	admin.DELETE("/acl/policies", api.apiV1Handler.RemovePolicy)
+	// }
+	// Database management endpoints
 	admin.GET("/backup", api.apiV1Handler.Backup)
 	admin.GET("/stats/db", api.apiV1Handler.DBStats)
 	admin.GET("/stats/bucket", api.apiV1Handler.BucketStats)

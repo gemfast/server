@@ -16,6 +16,7 @@ require (
 	github.com/juliangruber/go-intersect v1.1.0
 	github.com/rs/zerolog v1.34.0
 	github.com/sethvargo/go-password v0.3.1
+	github.com/speza/casbin-bolt-adapter v0.0.0-20221118212250-678577ece0e0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0

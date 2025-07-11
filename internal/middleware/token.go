@@ -5,16 +5,17 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gemfast/server/internal/acl"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gin-gonic/gin"
 )
 
 type TokenMiddleware struct {
-	acl *ACL
+	acl *acl.ACL
 	db  *db.DB
 }
 
-func NewTokenMiddleware(acl *ACL, db *db.DB) *TokenMiddleware {
+func NewTokenMiddleware(acl *acl.ACL, db *db.DB) *TokenMiddleware {
 	return &TokenMiddleware{
 		acl: acl,
 		db:  db,

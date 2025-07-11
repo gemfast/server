@@ -14,19 +14,20 @@ import (
 )
 
 const (
-	GemBucket  = "gems"
-	KeyBucket  = "keys"
-	UserBucket = "users"
+	GemBucket            = "gems"
+	KeyBucket            = "keys"
+	UserBucket           = "users"
+	CasbinPoliciesBucket = "casbin_policies"
 )
 
 type DB struct {
-	boltDB *bolt.DB
+	BoltDB *bolt.DB
 	dbFile string
 	cfg    *config.Config
 }
 
 func NewTestDB(boltDB *bolt.DB, cfg *config.Config) *DB {
-	return &DB{boltDB: boltDB, cfg: cfg}
+	return &DB{BoltDB: boltDB, cfg: cfg}
 }
 
 func NewDB(cfg *config.Config) (*DB, error) {
@@ -45,18 +46,21 @@ func (db *DB) Open() {
 		log.Fatal().Err(err).Msg(fmt.Sprintf("could not open %s", db.dbFile))
 	}
 	log.Info().Str("detail", db.dbFile).Msg("successfully connected to database")
-	db.boltDB = boltDB
+	db.BoltDB = boltDB
 	db.createBucket(GemBucket)
 	db.createBucket(KeyBucket)
 	db.createBucket(UserBucket)
+	if db.cfg.Auth.Type != "none" {
+		db.createBucket(CasbinPoliciesBucket)
+	}
 }
 
 func (db *DB) Close() error {
-	return db.boltDB.Close()
+	return db.BoltDB.Close()
 }
 
 func (db *DB) Backup(w http.ResponseWriter) error {
-	return db.boltDB.View(func(tx *bolt.Tx) error {
+	return db.BoltDB.View(func(tx *bolt.Tx) error {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", `attachment; filename="gemfast.db"`)
 		w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
@@ -66,12 +70,12 @@ func (db *DB) Backup(w http.ResponseWriter) error {
 }
 
 func (db *DB) Stats() bbolt.Stats {
-	return db.boltDB.Stats()
+	return db.BoltDB.Stats()
 }
 
 func (db *DB) BucketStats() map[string]bbolt.BucketStats {
 	bucketStatsMap := make(map[string]bbolt.BucketStats)
-	db.boltDB.View(func(tx *bolt.Tx) error {
+	db.BoltDB.View(func(tx *bolt.Tx) error {
 		bucketStatsMap[GemBucket] = tx.Bucket([]byte(GemBucket)).Stats()
 		bucketStatsMap[KeyBucket] = tx.Bucket([]byte(KeyBucket)).Stats()
 		bucketStatsMap[UserBucket] = tx.Bucket([]byte(UserBucket)).Stats()
@@ -83,7 +87,7 @@ func (db *DB) BucketStats() map[string]bbolt.BucketStats {
 func (db *DB) createBucket(bucket string) *bolt.Bucket {
 	var b *bolt.Bucket
 	var err error
-	err = db.boltDB.Update(func(tx *bolt.Tx) error {
+	err = db.BoltDB.Update(func(tx *bolt.Tx) error {
 		b, err = tx.CreateBucketIfNotExists([]byte(bucket))
 		if err != nil {
 			log.Error().Err(err).Msg(fmt.Sprintf("could not create %s bucket", bucket))
