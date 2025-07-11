@@ -227,18 +227,23 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/gems/:source/:gem", api.apiV1Handler.GetGem)
 	admin.GET("/gems/:source/search/:name", api.apiV1Handler.SearchGems)
 	admin.GET("/gems/:source/prefix/:prefix", api.apiV1Handler.PrefixScanGems)
-	admin.GET("/users", api.apiV1Handler.ListUsers)
-	admin.GET("/users/:username", api.apiV1Handler.GetUser)
-	admin.DELETE("/users/:username", api.apiV1Handler.DeleteUser)
-	admin.PUT("/users/:username/role/:role", api.apiV1Handler.SetUserRole)
+
 	// Auth and ACL management endpoints
-	// if api.cfg.Auth.Type != "none" {
-	admin.GET("/auth", api.apiV1Handler.GetAuthMode)
-	admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
-	admin.GET("/acl/policies", api.apiV1Handler.ListPolicies)
-	admin.POST("/acl/policies", api.apiV1Handler.AddPolicy)
-	admin.DELETE("/acl/policies", api.apiV1Handler.RemovePolicy)
-	// }
+	if api.cfg.Auth.Type != "none" {
+		admin.GET("/users", api.apiV1Handler.ListUsers)
+		admin.GET("/users/:username", api.apiV1Handler.GetUser)
+		if api.cfg.Auth.Type == "local" {
+			admin.POST("/users", api.apiV1Handler.CreateUser)
+			admin.PUT("/users/:username/password", api.apiV1Handler.UpdateUserPassword)
+		}
+		admin.DELETE("/users/:username", api.apiV1Handler.DeleteUser)
+		admin.PUT("/users/:username/role", api.apiV1Handler.UpdateUserRole)
+		admin.GET("/auth", api.apiV1Handler.GetAuthMode)
+		admin.POST("/token", api.tokenMiddleware.CreateUserTokenHandler)
+		admin.GET("/acl/policies", api.apiV1Handler.ListPolicies)
+		admin.POST("/acl/policies", api.apiV1Handler.AddPolicy)
+		admin.DELETE("/acl/policies", api.apiV1Handler.RemovePolicy)
+	}
 	// Database management endpoints
 	admin.GET("/backup", api.apiV1Handler.Backup)
 	admin.GET("/stats/db", api.apiV1Handler.DBStats)

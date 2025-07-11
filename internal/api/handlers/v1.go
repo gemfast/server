@@ -143,21 +143,62 @@ func (h *APIV1Handler) DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusAccepted, errorMessage{"user deleted successfully"})
 }
 
-func (h *APIV1Handler) SetUserRole(c *gin.Context) {
+func (h *APIV1Handler) UpdateUserPassword(c *gin.Context) {
 	username := c.Param("username")
-	role := c.Param("role")
-	user, err := h.db.GetUser(username)
+	var user db.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, errorMessage{"invalid request body"})
+		return
+	}
+	u, err := h.db.GetUser(username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorMessage{"failed to get user"})
 		return
 	}
-	user.Role = strings.ToLower(role)
-	err = h.db.UpdateUser(user)
+	u.Password = []byte(user.Password)
+	err = h.db.UpdateUser(u)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorMessage{"failed to set user role"})
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to update user password"})
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{"message": "user role set successfully"})
+	c.JSON(http.StatusAccepted, errorMessage{"user password updated successfully"})
+}
+
+func (h *APIV1Handler) UpdateUserRole(c *gin.Context) {
+	username := c.Param("username")
+	var user db.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, errorMessage{"invalid request body"})
+		return
+	}
+	u, err := h.db.GetUser(username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to get user"})
+		return
+	}
+	u.Role = strings.ToLower(user.Role)
+	err = h.db.UpdateUser(u)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to update user role"})
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "user role updated successfully"})
+}
+
+func (h *APIV1Handler) CreateUser(c *gin.Context) {
+	var user db.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, errorMessage{"invalid request body"})
+		return
+	}
+	user.Token = "" // Prevent client from setting token
+	user.Role = strings.ToLower(user.Role)
+	err := h.db.CreateUser(&user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to create user"})
+		return
+	}
+	c.JSON(http.StatusCreated, user)
 }
 
 func (h *APIV1Handler) Backup(c *gin.Context) {
