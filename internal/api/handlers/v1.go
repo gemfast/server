@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gemfast/server/internal/acl"
@@ -280,4 +281,100 @@ func (h *APIV1Handler) RemovePolicy(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "policy removed"})
+}
+
+// Webhook endpoints
+func (h *APIV1Handler) CreateWebhook(c *gin.Context) {
+	var w db.Webhook
+	if err := c.ShouldBindJSON(&w); err != nil {
+		c.JSON(http.StatusBadRequest, errorMessage{"invalid request body"})
+		return
+	}
+	if w.URL == "" || len(w.Events) == 0 {
+		c.JSON(http.StatusBadRequest, errorMessage{"url and events are required"})
+		return
+	}
+	if err := h.db.CreateWebhook(&w); err != nil {
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to create webhook"})
+		return
+	}
+	w.Secret = ""
+	c.JSON(http.StatusCreated, w)
+}
+
+func (h *APIV1Handler) ListWebhooks(c *gin.Context) {
+	webhooks, err := h.db.ListWebhooks()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to list webhooks"})
+		return
+	}
+	for _, w := range webhooks {
+		w.Secret = ""
+	}
+	c.JSON(http.StatusOK, webhooks)
+}
+
+func (h *APIV1Handler) GetWebhook(c *gin.Context) {
+	id := c.Param("id")
+	w, err := h.db.GetWebhook(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorMessage{"webhook not found"})
+		return
+	}
+	w.Secret = ""
+	c.JSON(http.StatusOK, w)
+}
+
+func (h *APIV1Handler) UpdateWebhook(c *gin.Context) {
+	id := c.Param("id")
+	w, err := h.db.GetWebhook(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorMessage{"webhook not found"})
+		return
+	}
+	var newWebhook db.Webhook
+	if err := c.ShouldBindJSON(&newWebhook); err != nil {
+		c.JSON(http.StatusBadRequest, errorMessage{"invalid request body"})
+		return
+	}
+	if newWebhook.URL != "" {
+		w.URL = newWebhook.URL
+	}
+	if newWebhook.Secret != "" {
+		w.Secret = newWebhook.Secret
+	}
+	if len(newWebhook.Events) > 0 {
+		w.Events = newWebhook.Events
+	}
+	if err := h.db.UpdateWebhook(w); err != nil {
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to update webhook"})
+		return
+	}
+	w.Secret = ""
+	c.JSON(http.StatusOK, w)
+}
+
+func (h *APIV1Handler) DeleteWebhook(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.db.DeleteWebhook(id); err != nil {
+		c.JSON(http.StatusNotFound, errorMessage{"webhook not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "webhook deleted"})
+}
+
+func (h *APIV1Handler) WebhookHistory(c *gin.Context) {
+	id := c.Param("id")
+	limit := 20 // default
+	if l := c.Query("limit"); l != "" {
+		if n, err := strconv.Atoi(l); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	deliveries, err := h.db.ListWebhookDeliveries(id, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorMessage{"failed to get webhook history"})
+		return
+	}
+	c.JSON(http.StatusOK, deliveries)
 }

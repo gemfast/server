@@ -248,6 +248,12 @@ func (api *API) configureAdmin(admin *gin.RouterGroup) {
 	admin.GET("/backup", api.apiV1Handler.Backup)
 	admin.GET("/stats/db", api.apiV1Handler.DBStats)
 	admin.GET("/stats/bucket", api.apiV1Handler.BucketStats)
+	admin.POST("/webhooks", api.apiV1Handler.CreateWebhook)
+	admin.GET("/webhooks", api.apiV1Handler.ListWebhooks)
+	admin.GET("/webhooks/:id", api.apiV1Handler.GetWebhook)
+	admin.PUT("/webhooks/:id", api.apiV1Handler.UpdateWebhook)
+	admin.DELETE("/webhooks/:id", api.apiV1Handler.DeleteWebhook)
+	admin.GET("/webhooks/:id/history", api.apiV1Handler.WebhookHistory)
 }
 
 // /ui

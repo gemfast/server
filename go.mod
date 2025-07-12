@@ -12,6 +12,7 @@ require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/google/uuid v1.3.0
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/juliangruber/go-intersect v1.1.0
 	github.com/rs/zerolog v1.34.0

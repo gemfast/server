@@ -14,10 +14,12 @@ import (
 )
 
 const (
-	GemBucket            = "gems"
-	KeyBucket            = "keys"
-	UserBucket           = "users"
-	CasbinPoliciesBucket = "casbin_policies"
+	GemBucket             = "gems"
+	KeyBucket             = "keys"
+	UserBucket            = "users"
+	CasbinPoliciesBucket  = "casbin_policies"
+	WebhookBucket         = "webhooks"
+	WebhookDeliveryBucket = "webhook_deliveries"
 )
 
 type DB struct {
