@@ -14,7 +14,6 @@ sudo mkdir -p /var/gemfast
 sudo chown -R $USER: /etc/gemfast
 sudo chown -R $USER: /var/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "local"  {
   allow_anonymous_read = false
   admin_password = "foobar"
@@ -57,7 +56,6 @@ for gem in *.gem; do
 done
 sleep 5
 
-sudo ls -la /var/gemfast/gems
 sudo rm -f Gemfile Gemfile.lock
 cat << CONFIG > Gemfile
 source "https://rubygems.org"

@@ -12,26 +12,25 @@ gem update --system
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 CONFIG
 
 start_server "$BUILD_TYPE"
 
-cd ./clones
+pushd ./clones/rails
 
-pushd rails
 bundle config mirror.https://rubygems.org http://localhost:2020
 bundle
+popd
 
 numGems=$(curl -s http://localhost:2020/admin/api/v1/stats/bucket | jq -r '.gems.KeyN')
 curl -s http://localhost:2020/admin/api/v1/backup > gemfast.db
 
-sudo rm -rf /var/gemfast/db/gemfast.db
-sudo mv ./gemfast.db /var/gemfast/db/gemfast.db
+sudo rm -f ./data/db/gemfast.db
+sudo mv ./gemfast.db ./data/db/gemfast.db
 
 if [ "$BUILD_TYPE" != "docker" ]; then
-  sudo chown gemfast: /var/gemfast/db/gemfast.db
+  sudo chown gemfast: ./data/db/gemfast.db
 fi
 
 restart_server "$BUILD_TYPE"
