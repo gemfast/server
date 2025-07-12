@@ -12,7 +12,6 @@ gem update --system
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 private_gems_namespace = "foobar"
 CONFIG
@@ -43,7 +42,6 @@ for gem in *.gem; do
 done
 sleep 5
 
-sudo ls -la /var/gemfast/gems
 sudo rm -f Gemfile Gemfile.lock
 cat << CONFIG > Gemfile
 source "https://rubygems.org"

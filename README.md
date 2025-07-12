@@ -33,14 +33,14 @@ Gemfast is currently distributed in two different ways, a `docker` image and pre
 
 When running Gemfast as a container, its important to mount the following directories:
 
-* /var/gemfast - The directory for the Gemfast data including gems and database
-* /etc/gemfast - The directory for the gemfast.hcl config file. It is possible to configure the config file path using `env GEMFAST_CONFIG_FILE=/path/to/my/file.hcl`
+* /var/lib/gemfast/data - The directory for the Gemfast data including gems and database
+* /etc/gemfast - The directory for the gemfast.hcl config file
 
 ```bash
 docker run -d --name gemfast-server \
   -p 2020:2020 \
-  -v /etc/gemfast:/etc/gemfast \
-  -v /var/gemfast:/var/gemfast \
+  -v ./gemfast.hcl:/etc/gemfast/gemfast.hcl:ro \
+  -v ./data:/var/lib/gemfast/data \
   ghcr.io/gemfast/server:latest
 ```
 
@@ -63,11 +63,102 @@ make
 ./bin/gemfast-server
 ```
 
-## Docs
+## Configuration
 
-You can configure gemfast settings using the `/etc/gemfast/gemfast.hcl` file. There are many options all of which are listed in the documentation.
+### Configuration File
 
-For more information see: https://gemfast.io/docs/configuration/
+Gemfast is configured using an HCL file. You can customize the location of this file using the `$GEMFAST_CONFIG_FILE` environment variable or by passing the `--config` argument when starting the server.
+
+The places Gemfast automatically checks for configuration files are: `["/etc/gemfast/gemfast.hcl", "~/.config/gemfast/gemfast.hcl"]`
+
+### Configuration Options
+
+```terraform
+# ========== gemfast.hcl ==========
+
+# Port to bind the HTTP server to. Defaults to 2020.
+port = 2020
+
+# Log level (trace, debug, info, warn, error, fatal, panic)
+log_level = "info"
+
+# Base data directory for gemfast. If not set, defaults to platform-specific user data dir.
+dir = "/var/lib/gemfast/data"
+
+# Directory to store downloaded gem files.
+gem_dir = "/var/lib/gemfast/data/gems"
+
+# Directory to store SQLite database files.
+db_dir = "/var/lib/gemfast/data/db"
+
+# Optional path to an ACL file (Casbin policy).
+acl_path = "/var/lib/gemfast/data/acl.csv"
+
+# Optional path to an authorization model file (Casbin model).
+auth_model_path = "/var/lib/gemfast/data/model.conf"
+
+# Namespace prefix for private gems (default is "private").
+private_gems_namespace = "private"
+
+# Disable the web UI if true.
+ui_disabled = false
+
+# Disable Prometheus metrics endpoint if true.
+metrics_disabled = false
+
+# ==== Mirror block ====
+# Define external sources to mirror gems from.
+mirror "https://rubygems.org" {
+  enabled = true  # Set to false to disable this mirror
+  # hostname is auto-derived from upstream, but can be overridden
+  # hostname = "rubygems.org"
+}
+
+# ==== Filter block ====
+# Configure regex-based gem allow/deny logic.
+filter {
+  enabled = true        # Enable filtering
+  action  = "deny"       # Action can be "allow" or "deny"
+  regex   = ["^evil-.*", "^bad-gem$"]  # Regex list for filtering gem names
+}
+
+# ==== CVE block ====
+# Control Ruby CVE integration.
+cve {
+  enabled = true               # Enable CVE scanning
+  max_severity = "high"        # Only block gems above this severity
+  ruby_advisory_db_dir = "/var/lib/gemfast/data/ruby-advisory-db"  # Directory to store the CVE DB
+}
+
+# ==== Auth block ====
+# Configure authentication settings. You can only specify a single auth block.
+auth "local" {                  # can be local, github, or none
+  bcrypt_cost = 10              # bcrypt cost for hashing passwords
+  allow_anonymous_read = false  # Allow unauthenticated read access
+  default_user_role = "read"    # Default role for newly created users
+
+  # If no users are specified, a default admin user will be created and the password written to the logs
+  user {                        # repeat this block to add more users
+    username = "admin"
+    password = "changeme"
+    role     = "admin"
+  }
+
+  # JWT secret used to sign access tokens (you can provide one or generate it automatically)
+  secret_key_path = "/var/lib/gemfast/data/.jwt_secret_key"
+}
+
+# GitHub OAuth integration
+# auth "github" {
+  
+  # github_client_id     = ""
+  # github_client_secret = ""
+  # github_user_orgs     = ["my-org"]  # Restrict access to users in these GitHub orgs
+# }
+
+# No auth
+# auth "none" {}
+```
 
 ## UI
 

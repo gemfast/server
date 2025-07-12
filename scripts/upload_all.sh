@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-gems_dir="/var/gemfast/gems"
+gems_dir="./data/gems"
 cd $gems_dir
 for gem in *.gem; do
   [ -f "$gem" ] || break

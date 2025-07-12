@@ -3,11 +3,11 @@ package db
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/utils"
 	"github.com/rs/zerolog/log"
 	"go.etcd.io/bbolt"
 	bolt "go.etcd.io/bbolt"
@@ -30,7 +30,7 @@ func NewTestDB(boltDB *bolt.DB, cfg *config.Config) *DB {
 }
 
 func NewDB(cfg *config.Config) (*DB, error) {
-	err := os.MkdirAll(cfg.DBDir, os.ModePerm)
+	err := utils.MkDirs(cfg.DBDir)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(fmt.Sprintf("failed to create db directory %s", cfg.DBDir))
 		return nil, err
