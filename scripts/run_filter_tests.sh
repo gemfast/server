@@ -12,7 +12,6 @@ gem update --system
 sudo mkdir -p /etc/gemfast
 sudo chown -R $USER: /etc/gemfast
 cat << CONFIG > /etc/gemfast/gemfast.hcl
-license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 filter {
     enabled = true
@@ -38,7 +37,6 @@ popd
 
 sudo rm -rf /etc/gemfast/gemfast.hcl
 sudo tee /etc/gemfast/gemfast.hcl > /dev/null <<'CONFIG'
-license_key = "B7D865-DA12D3-11DA3D-DD81AE-9420D3-V3"
 auth "none" {}
 filter {
     enabled = true
