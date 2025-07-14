@@ -10,6 +10,7 @@ import (
 	"github.com/gemfast/server/internal/cve"
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/filter"
+	"github.com/gemfast/server/internal/hookshot"
 	"github.com/gemfast/server/internal/indexer"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -40,6 +41,7 @@ func NewAPIV1Handler(cfg *config.Config, database *db.DB, i *indexer.Indexer, f 
 }
 
 func (h *APIV1Handler) Health(c *gin.Context) {
+	hookshot.TriggerEvent(h.db, "lol", "{\"message\": \"Hello, world!\"}")
 	c.JSON(http.StatusOK, "{}")
 }
 
@@ -305,6 +307,7 @@ func (h *APIV1Handler) CreateWebhook(c *gin.Context) {
 func (h *APIV1Handler) ListWebhooks(c *gin.Context) {
 	webhooks, err := h.db.ListWebhooks()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to list webhooks")
 		c.JSON(http.StatusInternalServerError, errorMessage{"failed to list webhooks"})
 		return
 	}

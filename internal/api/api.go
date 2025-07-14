@@ -81,7 +81,6 @@ func (api *API) loadMiddleware() {
 }
 
 func (api *API) registerRoutes() {
-
 	api.router.Use(gin.Recovery())
 	ui := ui.NewUI(api.cfg, api.db)
 	api.router.SetHTMLTemplate(ui.Templates)

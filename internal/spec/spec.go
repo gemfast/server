@@ -291,12 +291,12 @@ func FromFile(dir, gemfile string) (*Spec, error) {
 		GemMetadata:      metadata,
 		Checksum:         fmt.Sprintf("%x", sum),
 	}
-	setRequiredRubyVersion(&s)
-	setRequiredRubyGemsVersion(&s)
+	s.setRequiredRubyVersion()
+	s.setRequiredRubyGemsVersion()
 	return &s, nil
 }
 
-func setRequiredRubyVersion(s *Spec) {
+func (s *Spec) setRequiredRubyVersion() {
 	if len(s.GemMetadata.RequiredRubyVersion.VersionConstraints) > 0 {
 		var toAdd []string
 		for _, vc := range s.GemMetadata.RequiredRubyVersion.VersionConstraints {
@@ -307,7 +307,7 @@ func setRequiredRubyVersion(s *Spec) {
 	}
 }
 
-func setRequiredRubyGemsVersion(s *Spec) {
+func (s *Spec) setRequiredRubyGemsVersion() {
 	if len(s.GemMetadata.RequiredRubyGemsVersion.VersionConstraints) > 0 {
 		var toAdd []string
 		for _, vc := range s.GemMetadata.RequiredRubyGemsVersion.VersionConstraints {

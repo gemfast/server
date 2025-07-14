@@ -4,8 +4,9 @@ prerelease_specs*
 *.gem
 !test/fixtures/gem_list/*.gem
 gemfast.db
-omnibus/pkg
 tmp
 !test/fixtures/spec/*.gem
 dist/
 bin/
+gemfast.hcl
+ruby-advisory-db/
