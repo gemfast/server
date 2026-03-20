@@ -57,9 +57,8 @@ func (ghm *GitHubMiddleware) InitGitHubMiddleware() (*jmw.GinJWTMiddleware, erro
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jmw.ExtractClaims(c)
 			return &db.User{
-				Username:    claims[IdentityKey].(string),
-				Role:        claims[RoleKey].(string),
-				GitHubToken: claims[GitHubTokenKey].(string),
+				Username: claims[IdentityKey].(string),
+				Role:     claims[RoleKey].(string),
 			}
 		},
 		TokenLookup:   "header: Authorization",
@@ -77,9 +76,8 @@ func (ghm *GitHubMiddleware) InitGitHubMiddleware() (*jmw.GinJWTMiddleware, erro
 
 func payload(user *db.User) jwt.MapClaims {
 	return jwt.MapClaims{
-		IdentityKey:    user.Username,
-		RoleKey:        user.Role,
-		GitHubTokenKey: user.GitHubToken,
+		IdentityKey: user.Username,
+		RoleKey:     user.Role,
 	}
 }
 
@@ -286,8 +284,16 @@ func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 			return
 		}
 		role := claims[RoleKey].(string)
-		ghAccessToken := claims[GitHubTokenKey].(string)
-		_, err = ghm.authenticateGitHubUser(ghAccessToken)
+		username := claims[IdentityKey].(string)
+		// Look up the GitHub token from the database instead of the JWT claims
+		user, err := ghm.db.GetUser(username)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get user from database")
+			c.String(http.StatusForbidden, "failed to get user")
+			c.Abort()
+			return
+		}
+		_, err = ghm.authenticateGitHubUser(user.GitHubToken)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to authenticate github user")
 			if browser {

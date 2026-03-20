@@ -61,7 +61,7 @@ func (api *API) loadMiddleware() {
 	api.tokenMiddleware = middleware.NewTokenMiddleware(acl, api.db)
 	api.githubMiddleware = middleware.NewGitHubMiddleware(api.cfg, acl, api.db)
 	api.jwtMiddleware = middleware.NewJWTMiddleware(api.cfg, acl, api.db)
-	store := cookie.NewStore([]byte("secret"))
+	store := cookie.NewStore([]byte(api.cfg.Auth.JWTSecretKey))
 	api.router.Use(sessions.Sessions("gemfast", store))
 	if !api.cfg.MetricsDisabled {
 		p := ginprometheus.NewPrometheus("gemfast")

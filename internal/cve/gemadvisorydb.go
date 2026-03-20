@@ -56,7 +56,8 @@ func (g *GemAdvisoryDB) Refresh() error {
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to update ruby-advisory-db")
 	}
-	g.db.Close()
+	// Replace with a fresh cache instead of closing the old one and writing to it
+	g.db = cache.New(24 * time.Hour)
 	err = g.cacheAdvisoryDB("/gems")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to cache github.com/rubysec/ruby-advisory-db")
@@ -221,7 +222,7 @@ func (g *GemAdvisoryDB) GetCVEs(gem string, version string) []GemAdvisory {
 		unaffected, cve2, _ := g.isUnaffected(gem, version)
 		if !unaffected {
 			if cve2.Cve != cve1.Cve {
-				if !g.acceptableSeverity(cve1) {
+				if !g.acceptableSeverity(cve2) {
 					cves = append(cves, cve2)
 				}
 			}
@@ -233,9 +234,7 @@ func (g *GemAdvisoryDB) GetCVEs(gem string, version string) []GemAdvisory {
 
 func severity(cve GemAdvisory) string {
 	if cve.CvssV3 != 0 {
-		if cve.CvssV3 == 0.0 {
-			return "none"
-		} else if cve.CvssV3 >= 0.1 && cve.CvssV3 <= 3.9 {
+		if cve.CvssV3 >= 0.1 && cve.CvssV3 <= 3.9 {
 			return "low"
 		} else if cve.CvssV3 >= 4.0 && cve.CvssV3 <= 6.9 {
 			return "medium"
@@ -245,7 +244,7 @@ func severity(cve GemAdvisory) string {
 			return "critical"
 		}
 	} else if cve.CvssV2 != 0 {
-		if cve.CvssV2 == 0.0 && cve.CvssV2 <= 3.9 {
+		if cve.CvssV2 <= 3.9 {
 			return "low"
 		} else if cve.CvssV2 >= 4.0 && cve.CvssV2 <= 6.9 {
 			return "medium"

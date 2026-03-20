@@ -96,7 +96,10 @@ func (db *DB) SaveGem(source string, g *Gem) error {
 			return fmt.Errorf("could not save gem: %v", err)
 		}
 	} else {
-		gemVersions, _ := GemVersionsFromBytes(existing)
+		gemVersions, err := GemVersionsFromBytes(existing)
+		if err != nil {
+			return fmt.Errorf("could not unmarshal existing gem versions: %v", err)
+		}
 		hashed := make(map[string]bool)
 		for _, gv := range gemVersions {
 			hash := gv.Number + gv.Platform
@@ -109,8 +112,11 @@ func (db *DB) SaveGem(source string, g *Gem) error {
 			infoChecksum := CalculateInfoChecksum(gemArr)
 			g.InfoChecksum = infoChecksum
 			gemVersions = append(gemVersions, g)
-			gemBytes, _ := json.Marshal(gemVersions)
-			err := db.boltDB.Update(func(tx *bolt.Tx) error {
+			gemBytes, err := json.Marshal(gemVersions)
+			if err != nil {
+				return fmt.Errorf("could not marshal gem versions to json: %v", err)
+			}
+			err = db.boltDB.Update(func(tx *bolt.Tx) error {
 				err := tx.Bucket([]byte(GemBucket)).Bucket([]byte(source)).Put([]byte(g.Name), gemBytes)
 				if err != nil {
 					return fmt.Errorf("could not set: %v", err)
@@ -170,14 +176,20 @@ func (db *DB) DeleteGemVersion(source string, toDelete *Gem) (int, error) {
 			count += 1
 		}
 	}
-	gemBytes, _ := json.Marshal(gemVersions)
-	_ = db.boltDB.Update(func(tx *bolt.Tx) error {
+	gemBytes, err := json.Marshal(gemVersions)
+	if err != nil {
+		return count, fmt.Errorf("could not marshal gem versions to json: %v", err)
+	}
+	err = db.boltDB.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket([]byte(GemBucket)).Bucket([]byte(source)).Put([]byte(toDelete.Name), gemBytes)
 		if err != nil {
 			return fmt.Errorf("could not set: %v", err)
 		}
 		return nil
 	})
+	if err != nil {
+		return count, fmt.Errorf("could not delete gem version: %v", err)
+	}
 	return count, nil
 }
 
@@ -186,7 +198,13 @@ func (db *DB) GetGemVersions(source, name string) ([]*Gem, error) {
 	var gems []*Gem
 	err := db.boltDB.View(func(tx *bolt.Tx) error {
 		g := tx.Bucket([]byte(GemBucket)).Bucket([]byte(source)).Get([]byte(name))
-		gem, _ := GemVersionsFromBytes(g)
+		if g == nil {
+			return nil
+		}
+		gem, err := GemVersionsFromBytes(g)
+		if err != nil {
+			return fmt.Errorf("could not unmarshal gem versions: %v", err)
+		}
 		gems = gem
 		return nil
 	})

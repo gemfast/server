@@ -106,6 +106,7 @@ func (h *RubyGemsHandler) localDependenciesHandler(c *gin.Context) {
 		path += gemQuery
 
 		c.Redirect(http.StatusFound, path)
+		return
 	}
 	bundlerDeps, err := marshal.DumpBundlerDeps(gemVersions)
 	if err != nil {
@@ -178,14 +179,23 @@ func (h *RubyGemsHandler) localYankHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "must provide both gem and version query parameters")
 		return
 	}
+	if p == "" {
+		p = "ruby"
+	}
 	err := h.indexer.RemoveGemFromIndex(g, v, p)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to yank gem from index")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("server failed to yank gem from index: %v", err))
 		return
 	}
-	fileName := g + "-" + v + ".gem"
-	fp := filepath.Join(h.cfg.GemDir, h.cfg.PrivateGemsNamespace, fileName)
+	var fileName string
+	if p == "ruby" {
+		fileName = g + "-" + v + ".gem"
+	} else {
+		fileName = g + "-" + v + "-" + p + ".gem"
+	}
+	fc := strings.Split(g, "")[0] // first character
+	fp := filepath.Join(h.cfg.GemDir, h.cfg.PrivateGemsNamespace, fc, fileName)
 	err = utils.RemoveFileIfExists(fp)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to delete gem file system")
@@ -393,8 +403,19 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 	}
 	fc := strings.Split(fileName, "")[0] // first character
 	fp := filepath.Join(h.cfg.GemDir, h.cfg.Mirrors[0].Hostname, fc, fileName)
+	needsDownload := false
 	info, err := os.Stat(fp)
-	if (err != nil && errors.Is(err, os.ErrNotExist)) || info.Size() == 0 {
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Error().Err(err).Str("detail", fp).Msg("failed to stat gem file")
+			c.String(http.StatusInternalServerError, "Failed to stat gem file")
+			return
+		}
+		needsDownload = true
+	} else if info.Size() == 0 {
+		needsDownload = true
+	}
+	if needsDownload {
 		utils.MkDirs(path.Dir(fp))
 		out, err := os.Create(fp)
 		if err != nil {
@@ -419,6 +440,8 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 		if resp.StatusCode != 200 {
 			log.Info().Str("detail", path).Msg("upstream returned a non 200 status code")
 			c.String(resp.StatusCode, "Failure returned from upstream")
+			out.Close()
+			os.Remove(fp)
 			return
 		}
 		_, err = io.Copy(out, resp.Body)

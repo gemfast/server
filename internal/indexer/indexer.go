@@ -176,6 +176,23 @@ func (indexer *Indexer) mapGemsToSpecs(gems []string) ([]*spec.Spec, error) {
 	return specs, nil
 }
 
+func writeMarshalGemspec(marshalName string, metadata *spec.GemMetadata) error {
+	dump := marshal.DumpGemspecGemfast(metadata)
+	var b bytes.Buffer
+	rz := zlib.NewWriter(&b)
+	defer rz.Close()
+	if _, err := rz.Write(dump); err != nil {
+		return fmt.Errorf("failed to write zlib dump: %w", err)
+	}
+	if err := rz.Close(); err != nil {
+		return fmt.Errorf("failed to close zlib writer: %w", err)
+	}
+	if err := os.WriteFile(marshalName, b.Bytes(), 0666); err != nil {
+		return fmt.Errorf("failed to write marshal file: %w", err)
+	}
+	return nil
+}
+
 func (indexer *Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) error {
 	for _, s := range specs {
 		specFName := fmt.Sprintf("%s.gemspec.rz", s.OriginalName)
@@ -190,20 +207,8 @@ func (indexer *Indexer) buildMarshalGemspecs(specs []*spec.Spec, update bool) er
 			marshalName = fmt.Sprintf("%s/%s", indexer.quickMarshalDir, specFName)
 		}
 
-		dump := marshal.DumpGemspecGemfast(s.GemMetadata)
-		var b bytes.Buffer
-		rz := zlib.NewWriter(&b)
-		defer rz.Close()
-		if _, err := rz.Write(dump); err != nil {
-			return fmt.Errorf("failed to write zlib dump: %w", err)
-		}
-		err := rz.Close()
-		if err != nil {
-			return fmt.Errorf("failed to close zlib writer: %w", err)
-		}
-		err = os.WriteFile(marshalName, b.Bytes(), 0666)
-		if err != nil {
-			return fmt.Errorf("failed to write marshal file: %w", err)
+		if err := writeMarshalGemspec(marshalName, s.GemMetadata); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -274,12 +279,22 @@ func (indexer *Indexer) buildIndicies() error {
 		log.Error().Err(err).Msg("failed to map gems to specs")
 		return err
 	}
-	indexer.buildMarshalGemspecs(specs, false)
+	if err = indexer.buildMarshalGemspecs(specs, false); err != nil {
+		return fmt.Errorf("failed to build marshal gemspecs: %w", err)
+	}
 	pre, rel, latest := spec.PartitionSpecs(specs)
-	buildModernIndex(rel, indexer.specsIdx, "specs")
-	buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs")
-	buildModernIndex(pre, indexer.prereleaseSpecsIdx, "prerelease specs")
-	indexer.compressIndicies()
+	if err = buildModernIndex(rel, indexer.specsIdx, "specs"); err != nil {
+		return fmt.Errorf("failed to build specs index: %w", err)
+	}
+	if err = buildModernIndex(latest, indexer.latestSpecsIdx, "latest specs"); err != nil {
+		return fmt.Errorf("failed to build latest specs index: %w", err)
+	}
+	if err = buildModernIndex(pre, indexer.prereleaseSpecsIdx, "prerelease specs"); err != nil {
+		return fmt.Errorf("failed to build prerelease specs index: %w", err)
+	}
+	if err = indexer.compressIndicies(); err != nil {
+		return fmt.Errorf("failed to compress indices: %w", err)
+	}
 	return nil
 }
 
@@ -360,6 +375,7 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 		specMap := make(map[string]*spec.Spec)
 		for _, spec := range specsIdx {
 			if specMap[spec.Name] != nil {
+				// TODO: use proper semver comparison instead of lexicographic string comparison
 				if specMap[spec.Name].Version < spec.Version {
 					specMap[spec.Name] = spec
 				}

@@ -331,6 +331,7 @@ func PartitionSpecs(specs []*Spec) ([]*Spec, []*Spec, []*Spec) {
 		} else {
 			released = append(released, s)
 			if hash[s.Name] != nil {
+				// TODO: use proper semver comparison instead of lexicographic string comparison
 				if hash[s.Name].Version < s.Version {
 					hash[s.Name] = s
 				}
@@ -368,7 +369,7 @@ func FindIndexOf(specs []*Spec, s *Spec) int {
 	}
 	for i := idx; i < len(specs); i++ {
 		spec := specs[i]
-		log.Warn().Str("detail", fmt.Sprintf("%s %s %s", spec.Name, spec.Version, spec.OriginalPlatform)).Msg("spec")
+		log.Trace().Str("detail", fmt.Sprintf("%s %s %s", spec.Name, spec.Version, spec.OriginalPlatform)).Msg("spec")
 		if spec.Name != s.Name {
 			break
 		} else if spec.Version == s.Version && spec.OriginalPlatform == s.OriginalPlatform {

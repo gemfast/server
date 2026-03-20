@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"strings"
@@ -46,7 +47,7 @@ func (t *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		ok = (user.Token == token)
+		ok = subtle.ConstantTimeCompare([]byte(user.Token), []byte(token)) == 1
 		if ok {
 			ok, err = t.acl.Enforce(user.Role, c.Request.URL.Path, c.Request.Method)
 			if err != nil {

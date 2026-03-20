@@ -83,6 +83,9 @@ func (db *DB) GetUsers() ([]*User, error) {
 
 func (db *DB) CreateUser(user *User) error {
 	userBytes, err := json.Marshal(user)
+	if err != nil {
+		return fmt.Errorf("could not marshal user to json: %v", err)
+	}
 	err = db.boltDB.Update(func(tx *bolt.Tx) error {
 		err = tx.Bucket([]byte(UserBucket)).Put([]byte(user.Username), userBytes)
 		if err != nil {
@@ -119,7 +122,6 @@ func (db *DB) CreateAdminUserIfNotExists() error {
 		Role:     "admin",
 		Type:     "local",
 	}
-	log.Trace().Msg("here")
 	userBytes, err := json.Marshal(user)
 	if err != nil {
 		return fmt.Errorf("could not marshal user to json: %v", err)
@@ -131,7 +133,7 @@ func (db *DB) CreateAdminUserIfNotExists() error {
 		}
 		return nil
 	})
-	return nil
+	return err
 }
 
 func (db *DB) CreateLocalUsers() error {
@@ -159,7 +161,7 @@ func (db *DB) CreateLocalUsers() error {
 	})
 
 	m := make(map[string]bool)
-	db.boltDB.Batch(func(tx *bolt.Tx) error {
+	err := db.boltDB.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(UserBucket))
 		for _, u := range db.cfg.Auth.LocalUsers {
 			username := u.Username
@@ -170,7 +172,7 @@ func (db *DB) CreateLocalUsers() error {
 			}
 			pwbytes, err := bcrypt.GenerateFromPassword([]byte(pw), db.cfg.Auth.BcryptCost)
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("failed to hash password for user %s: %v", username, err)
 			}
 
 			userData, exists := users[username]
@@ -206,7 +208,7 @@ func (db *DB) CreateLocalUsers() error {
 		}
 		return nil
 	})
-	return nil
+	return err
 }
 
 func (db *DB) getAdminPassword() ([]byte, error) {
@@ -234,7 +236,7 @@ func generatePassword() (string, error) {
 		return "", err
 	}
 	log.Warn().Msg("generating admin password because admin_password not set")
-	log.Info().Str("detail", pw).Msg("generated admin password")
+	fmt.Printf("Generated admin password: %s\n", pw)
 	return pw, nil
 }
 

@@ -9,7 +9,6 @@ import (
 	"github.com/gemfast/server/internal/config"
 	"github.com/gemfast/server/internal/utils"
 	"github.com/rs/zerolog/log"
-	"go.etcd.io/bbolt"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -65,12 +64,12 @@ func (db *DB) Backup(w http.ResponseWriter) error {
 	})
 }
 
-func (db *DB) Stats() bbolt.Stats {
+func (db *DB) Stats() bolt.Stats {
 	return db.boltDB.Stats()
 }
 
-func (db *DB) BucketStats() map[string]bbolt.BucketStats {
-	bucketStatsMap := make(map[string]bbolt.BucketStats)
+func (db *DB) BucketStats() map[string]bolt.BucketStats {
+	bucketStatsMap := make(map[string]bolt.BucketStats)
 	db.boltDB.View(func(tx *bolt.Tx) error {
 		bucketStatsMap[GemBucket] = tx.Bucket([]byte(GemBucket)).Stats()
 		bucketStatsMap[KeyBucket] = tx.Bucket([]byte(KeyBucket)).Stats()

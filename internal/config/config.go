@@ -233,7 +233,7 @@ func (c *Config) setDefaultAuthConfig() {
 		c.Auth.JWTSecretKeyPath = defaultJWTSecretKeyPath
 	}
 	if c.Auth.JWTSecretKey == "" {
-		readJWTSecretKeyFromPath(defaultJWTSecretKeyPath)
+		c.Auth.JWTSecretKey = readJWTSecretKeyFromPath(c.Auth.JWTSecretKeyPath)
 	}
 }
 
@@ -250,7 +250,7 @@ func (c *Config) setDefaultFilterConfig() {
 		c.Filter.Action = "allow"
 	}
 	if c.Filter.Regex == nil {
-		c.Filter.Regex = []string{"*"}
+		c.Filter.Regex = []string{".*"}
 	}
 }
 

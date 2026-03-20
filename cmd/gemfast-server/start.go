@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gemfast/server/internal/api"
@@ -79,6 +81,17 @@ func start() {
 			}
 		}
 	}(advisoryDB)
+
+	// Handle graceful shutdown
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		sig := <-sigCh
+		log.Info().Str("detail", sig.String()).Msg("received shutdown signal")
+		close(quit)
+		database.Close()
+		os.Exit(0)
+	}()
 
 	// Start the API
 	apiV1Handler := api.NewAPIV1Handler(cfg, database, indexer, f, advisoryDB)
