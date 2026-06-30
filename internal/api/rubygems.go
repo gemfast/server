@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -19,10 +20,19 @@ import (
 	"github.com/gemfast/server/internal/indexer"
 	"github.com/gemfast/server/internal/marshal"
 	"github.com/gemfast/server/internal/spec"
+	"github.com/gemfast/server/internal/telemetry"
 	"github.com/gemfast/server/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
+
+// upstreamHTTPClient propagates trace context and emits a client span per call
+// to the upstream mirror (rubygems.org by default).
+var upstreamHTTPClient = &http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
 type RubyGemsHandler struct {
 	cfg        *config.Config
@@ -73,6 +83,11 @@ func (h *RubyGemsHandler) localGemspecRzHandler(c *gin.Context) {
 
 func (h *RubyGemsHandler) localGemHandler(c *gin.Context) {
 	fileName := c.Param("gem")
+	span := trace.SpanFromContext(c.Request.Context())
+	span.SetAttributes(
+		attribute.String("gem.filename", fileName),
+		attribute.String("gem.source", h.cfg.PrivateGemsNamespace),
+	)
 	fc := strings.Split(fileName, "")[0] // first character
 	fp := filepath.Join(h.cfg.GemDir, h.cfg.PrivateGemsNamespace, fc, fileName)
 	c.FileAttachment(fp, fileName)
@@ -85,7 +100,12 @@ func (h *RubyGemsHandler) localIndexHandler(c *gin.Context) {
 }
 
 func (h *RubyGemsHandler) localDependenciesHandler(c *gin.Context) {
+	span := trace.SpanFromContext(c.Request.Context())
 	gemQuery := c.Query("gems")
+	span.SetAttributes(
+		attribute.String("gem.source", h.cfg.PrivateGemsNamespace),
+		attribute.Int("gem.query.count", strings.Count(gemQuery, ",")+1),
+	)
 	log.Trace().Str("detail", gemQuery).Msg("received gems")
 	if gemQuery == "" {
 		c.Status(http.StatusOK)
@@ -144,12 +164,20 @@ func (h *RubyGemsHandler) localDependenciesJSONHandler(c *gin.Context) {
 }
 
 func (h *RubyGemsHandler) localUploadGemHandler(c *gin.Context) {
+	span := trace.SpanFromContext(c.Request.Context())
+	span.SetAttributes(
+		attribute.String("upload.path", "rubygems-push"),
+		attribute.String("gem.source", h.cfg.PrivateGemsNamespace),
+	)
 	var bodyBytes []byte
 	if c.Request.Body != nil {
 		bodyBytes, _ = io.ReadAll(c.Request.Body)
 	}
+	span.SetAttributes(attribute.Int("upload.size_bytes", len(bodyBytes)))
 	tmpfile, err := os.CreateTemp(h.cfg.Dir+"/tmp", "*.gem")
 	if err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-upload-create-tmpfile"))
 		log.Error().Err(err).Msg("failed to create tmp file")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to index gem: %v", err))
 		return
@@ -158,11 +186,15 @@ func (h *RubyGemsHandler) localUploadGemHandler(c *gin.Context) {
 
 	err = os.WriteFile(tmpfile.Name(), bodyBytes, 0644)
 	if err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-upload-write-tmpfile"))
 		log.Error().Err(err).Str("detail", tmpfile.Name()).Msg("failed to save uploaded file")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
 	}
-	if err = h.saveAndReindexLocalGem(h.cfg.PrivateGemsNamespace, tmpfile); err != nil {
+	if err = h.saveAndReindexLocalGem(c.Request.Context(), h.cfg.PrivateGemsNamespace, tmpfile); err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-upload-save-reindex"))
 		log.Error().Err(err).Msg("failed to reindex gem")
 		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to index gem: %v", err))
 		return
@@ -171,10 +203,18 @@ func (h *RubyGemsHandler) localUploadGemHandler(c *gin.Context) {
 }
 
 func (h *RubyGemsHandler) localYankHandler(c *gin.Context) {
+	span := trace.SpanFromContext(c.Request.Context())
 	g := c.Query("gem")
 	v := c.Query("version")
 	p := c.Query("platform")
+	span.SetAttributes(
+		attribute.String("gem.name", g),
+		attribute.String("gem.version", v),
+		attribute.String("gem.platform", p),
+		attribute.String("gem.source", h.cfg.PrivateGemsNamespace),
+	)
 	if g == "" || v == "" {
+		span.SetAttributes(attribute.String("exception.slug", "err-yank-missing-params"))
 		c.String(http.StatusBadRequest, "must provide both gem and version query parameters")
 		return
 	}
@@ -244,14 +284,27 @@ func (h *RubyGemsHandler) localInfoHandler(c *gin.Context) {
 }
 
 func (h *RubyGemsHandler) geminaboxUploadGem(c *gin.Context) {
+	span := trace.SpanFromContext(c.Request.Context())
+	span.SetAttributes(
+		attribute.String("upload.path", "geminabox"),
+		attribute.String("gem.source", h.cfg.PrivateGemsNamespace),
+	)
 	file, err := c.FormFile("file")
 	if err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-upload-form-file-missing"))
 		log.Error().Err(err).Msg("failed to read form file")
 		c.String(http.StatusBadRequest, "failed to read form file parameter")
 		return
 	}
+	span.SetAttributes(
+		attribute.String("upload.filename", file.Filename),
+		attribute.Int64("upload.size_bytes", file.Size),
+	)
 	tmpfile, err := os.CreateTemp(h.cfg.Dir+"/tmp", "*.gem")
 	if err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-upload-create-tmpfile"))
 		log.Error().Err(err).Msg("failed to create tmp file")
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
@@ -259,11 +312,15 @@ func (h *RubyGemsHandler) geminaboxUploadGem(c *gin.Context) {
 	defer os.Remove(tmpfile.Name())
 
 	if err = c.SaveUploadedFile(file, tmpfile.Name()); err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-upload-save-uploaded-file"))
 		log.Error().Err(err).Str("detail", tmpfile.Name()).Msg("failed to save uploaded file")
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
 	}
-	if err = h.saveAndReindexLocalGem(h.cfg.PrivateGemsNamespace, tmpfile); err != nil {
+	if err = h.saveAndReindexLocalGem(c.Request.Context(), h.cfg.PrivateGemsNamespace, tmpfile); err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-upload-save-reindex"))
 		log.Error().Err(err).Msg("failed to reindex gem")
 		c.String(http.StatusInternalServerError, "failed to index gem")
 		return
@@ -291,12 +348,30 @@ func (h *RubyGemsHandler) fetchGemVersions(source, gemQuery string) ([]*db.Gem, 
 	return gemVersions, nil
 }
 
-func (h *RubyGemsHandler) saveAndReindexLocalGem(source string, tmpfile *os.File) error {
+func (h *RubyGemsHandler) saveAndReindexLocalGem(ctx context.Context, source string, tmpfile *os.File) error {
+	ctx, span := telemetry.Tracer().Start(ctx, "rubygems.saveAndReindexLocalGem")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("gem.source", source),
+		attribute.String("gem.action", "upload"),
+	)
 	s, err := spec.FromFile(h.cfg.Dir+"/tmp", tmpfile.Name())
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "spec.FromFile failed")
+		span.SetAttributes(attribute.String("exception.slug", "err-save-reindex-spec-parse"))
 		log.Error().Err(err).Msg("failed to read spec from tmpfile")
 		return err
 	}
+	span.SetAttributes(
+		attribute.String("gem.name", s.Name),
+		attribute.String("gem.version", s.Version),
+		attribute.String("gem.platform", s.OriginalPlatform),
+	)
+	span.AddEvent("spec.parsed", trace.WithAttributes(
+		attribute.String("gem.name", s.Name),
+		attribute.String("gem.version", s.Version),
+	))
 	fc := strings.Split(s.Name, "")[0] // first character
 	var fp string
 	if s.OriginalPlatform == "ruby" {
@@ -307,14 +382,25 @@ func (h *RubyGemsHandler) saveAndReindexLocalGem(source string, tmpfile *os.File
 	utils.MkDirs(path.Dir(fp))
 	err = os.Rename(tmpfile.Name(), fp)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "rename tmpfile failed")
+		span.SetAttributes(attribute.String("exception.slug", "err-save-reindex-rename"))
 		log.Error().Err(err).Str("detail", fp).Msg("failed to rename tmpfile")
 		return err
 	}
+	span.AddEvent("gem.file.persisted", trace.WithAttributes(
+		attribute.String("path", fp),
+	))
+	span.AddEvent("indexer.add.start")
 	err = h.indexer.AddGemToIndex(source, fp)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "AddGemToIndex failed")
+		span.SetAttributes(attribute.String("exception.slug", "err-save-reindex-add-index"))
 		log.Error().Err(err).Str("detail", s.Name).Msg("failed to add gem to index")
 		return err
 	}
+	span.AddEvent("indexer.add.complete")
 	return nil
 }
 
@@ -349,7 +435,13 @@ func (h *RubyGemsHandler) mirroredGemspecRzHandler(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "Failed to fetch quick marshal")
 			return
 		}
-		resp, err := http.Get(path)
+		req, err := http.NewRequestWithContext(c.Request.Context(), "GET", path, nil)
+		if err != nil {
+			log.Error().Err(err).Str("detail", path).Msg("failed to build upstream request")
+			c.String(http.StatusInternalServerError, "Failed to build upstream request")
+			return
+		}
+		resp, err := upstreamHTTPClient.Do(req)
 		if err != nil {
 			log.Error().Err(err).Str("detail", path).Msg("failed to connect to upstream")
 			c.String(http.StatusInternalServerError, "Failed to connect to upstream")
@@ -409,7 +501,13 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "Failed to fetch gem file from upstream")
 			return
 		}
-		resp, err := http.Get(path)
+		req, err := http.NewRequestWithContext(c.Request.Context(), "GET", path, nil)
+		if err != nil {
+			log.Error().Err(err).Str("detail", path).Msg("failed to build upstream request")
+			c.String(http.StatusInternalServerError, "Failed to build upstream request")
+			return
+		}
+		resp, err := upstreamHTTPClient.Do(req)
 		if err != nil {
 			log.Error().Err(err).Str("detail", path).Msg("failed to connect to upstream")
 			c.String(http.StatusInternalServerError, "Failed to connect to upstream")

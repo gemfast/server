@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"context"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -22,7 +23,10 @@ import (
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/marshal"
 	"github.com/gemfast/server/internal/spec"
+	"github.com/gemfast/server/internal/telemetry"
 	"github.com/gemfast/server/internal/utils"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
@@ -104,6 +108,9 @@ func NewIndexer(cfg *config.Config, db *db.DB) (*Indexer, error) {
 }
 
 func (indexer *Indexer) GenerateIndex() error {
+	ctx, span := telemetry.Tracer().Start(context.Background(), "indexer.GenerateIndex")
+	defer span.End()
+	_ = ctx
 	utils.MkDirs(indexer.quickMarshalDir)
 	utils.MkDirs(indexer.cfg.GemDir)
 	utils.MkDirs(indexer.cfg.GemDir + "/" + indexer.cfg.PrivateGemsNamespace)
@@ -112,7 +119,9 @@ func (indexer *Indexer) GenerateIndex() error {
 	_, specsMissing := os.Stat(fmt.Sprintf("%s/specs.4.8.gz", indexer.cfg.Dir))
 	_, prereleaseSpecsMissing := os.Stat(fmt.Sprintf("%s/prerelease_specs.4.8.gz", indexer.cfg.Dir))
 	_, latestSpecsMissing := os.Stat(fmt.Sprintf("%s/latest_specs.4.8.gz", indexer.cfg.Dir))
-	if specsMissing != nil || prereleaseSpecsMissing != nil || latestSpecsMissing != nil {
+	indexBuilt := specsMissing != nil || prereleaseSpecsMissing != nil || latestSpecsMissing != nil
+	span.SetAttributes(attribute.Bool("indexer.built_from_scratch", indexBuilt))
+	if indexBuilt {
 		indexer.buildIndicies()
 		indexer.installIndicies()
 	}
@@ -411,6 +420,13 @@ func (indexer *Indexer) updateSpecsIndex(updated []*spec.Spec, src string, dest 
 
 // TODO: refactor this to not reopen the gemspec files that have been uploaded
 func (indexer *Indexer) UpdateIndex(source string, updatedGems []string) error {
+	_, span := telemetry.Tracer().Start(context.Background(), "indexer.UpdateIndex")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("gem.source", source),
+		attribute.Int("gem.updated_count", len(updatedGems)),
+	)
+
 	lock.Lock()
 	defer lock.Unlock()
 	defer os.RemoveAll(indexer.dir)
@@ -418,12 +434,18 @@ func (indexer *Indexer) UpdateIndex(source string, updatedGems []string) error {
 
 	specs, err := indexer.mapGemsToSpecs(updatedGems)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "mapGemsToSpecs failed")
+		span.SetAttributes(attribute.String("exception.slug", "err-indexer-map-gems-to-specs"))
 		log.Error().Err(err).Str("detail", source).Msg("failed to update index - unable to map gems to specs")
 		return err
 	}
 
 	err = indexer.db.SaveGemVersions(source, specs)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "SaveGemVersions failed")
+		span.SetAttributes(attribute.String("exception.slug", "err-indexer-save-gem-versions"))
 		log.Error().Err(err).Str("detail", source).Msg("failed to update index - unable to save gem dependencies")
 		return err
 	}
@@ -431,6 +453,11 @@ func (indexer *Indexer) UpdateIndex(source string, updatedGems []string) error {
 	indexer.buildMarshalGemspecs(specs, true)
 
 	pre, rel, latest := spec.PartitionSpecs(specs)
+	span.SetAttributes(
+		attribute.Int("gem.specs.release_count", len(rel)),
+		attribute.Int("gem.specs.latest_count", len(latest)),
+		attribute.Int("gem.specs.prerelease_count", len(pre)),
+	)
 	// TODO: capture errors from these goroutines
 	ch := make(chan int, 3)
 	go indexer.updateSpecsIndex(rel, indexer.destSpecsIdx, indexer.specsIdx, ch)
@@ -530,6 +557,13 @@ func (indexer *Indexer) compressAndMoveIndices() error {
 }
 
 func (indexer *Indexer) RemoveGemFromIndex(name string, version string, platform string) error {
+	_, span := telemetry.Tracer().Start(context.Background(), "indexer.RemoveGemFromIndex")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("gem.name", name),
+		attribute.String("gem.version", version),
+		attribute.String("gem.platform", platform),
+	)
 	lock.Lock()
 	defer lock.Unlock()
 	if platform == "" {

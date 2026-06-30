@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,7 +22,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/juliangruber/go-intersect"
 	"github.com/tidwall/gjson"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
+
+// tracedHTTPClient returns an http.Client whose transport propagates the
+// W3C traceparent header and creates a client span per request.
+var tracedHTTPClient = &http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
 type OAuthLogin struct {
 	ClientID     string `json:"client_id"`
@@ -115,7 +121,7 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	login := OAuthLogin{ClientID: ghm.cfg.Auth.GitHubClientId, ClientSecret: ghm.cfg.Auth.GitHubClientSecret, Code: code}
 	jsonData, _ := json.Marshal(login)
 	bodyReader := bytes.NewBuffer(jsonData)
-	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", bodyReader)
+	req, err := http.NewRequestWithContext(c.Request.Context(), "POST", "https://github.com/login/oauth/access_token", bodyReader)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create POST login/oauth/access_token request")
 		c.String(http.StatusInternalServerError, "failed to create POST login/oauth/access_token request")
@@ -124,7 +130,7 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	}
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res, err := http.DefaultClient.Do(req)
+	res, err := tracedHTTPClient.Do(req)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get an access token from github")
 		c.String(http.StatusInternalServerError, "failed to get an access token from github")
@@ -141,7 +147,7 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	}
 	json := string(body)
 	at := gjson.Get(json, "access_token").String()
-	user, err := ghm.authenticateGitHubUser(at)
+	user, err := ghm.authenticateGitHubUser(c.Request.Context(), at)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to authenticate github user")
 		c.String(http.StatusForbidden, fmt.Sprintf("failed to fetch github user with provided token: %v", err))
@@ -169,13 +175,13 @@ func (ghm *GitHubMiddleware) GitHubCallbackHandler(c *gin.Context) {
 	c.Abort()
 }
 
-func (ghm *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
+func (ghm *GitHubMiddleware) authenticateGitHubUser(ctx context.Context, at string) (*db.User, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GET user request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+at)
-	res, err := http.DefaultClient.Do(req)
+	res, err := tracedHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	} else if res.StatusCode >= 400 {
@@ -191,7 +197,7 @@ func (ghm *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error)
 	if username == "" {
 		return nil, fmt.Errorf("user login not returned from github")
 	}
-	err = ghm.userMemberOfRequiredOrg(at)
+	err = ghm.userMemberOfRequiredOrg(ctx, at)
 	if err != nil {
 		return nil, err
 	}
@@ -218,13 +224,13 @@ func (ghm *GitHubMiddleware) authenticateGitHubUser(at string) (*db.User, error)
 	return user, nil
 }
 
-func (ghm *GitHubMiddleware) userMemberOfRequiredOrg(at string) error {
-	req, err := http.NewRequest("GET", "https://api.github.com/user/orgs", nil)
+func (ghm *GitHubMiddleware) userMemberOfRequiredOrg(ctx context.Context, at string) error {
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user/orgs", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create GET user/orgs request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+at)
-	res, err := http.DefaultClient.Do(req)
+	res, err := tracedHTTPClient.Do(req)
 	if err != nil {
 		return err
 	} else if res.StatusCode >= 400 {
@@ -287,7 +293,7 @@ func (ghm *GitHubMiddleware) GitHubMiddlewareFunc() gin.HandlerFunc {
 		}
 		role := claims[RoleKey].(string)
 		ghAccessToken := claims[GitHubTokenKey].(string)
-		_, err = ghm.authenticateGitHubUser(ghAccessToken)
+		_, err = ghm.authenticateGitHubUser(c.Request.Context(), ghAccessToken)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to authenticate github user")
 			if browser {

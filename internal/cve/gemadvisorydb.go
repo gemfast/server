@@ -1,6 +1,7 @@
 package cve
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -11,7 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/gemfast/server/internal/config"
+	"github.com/gemfast/server/internal/telemetry"
 	git "github.com/go-git/go-git/v5"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/akyoto/cache"
 	ggv "github.com/aquasecurity/go-gem-version"
@@ -52,13 +56,21 @@ func NewGemAdvisoryDB(cfg *config.Config) *GemAdvisoryDB {
 }
 
 func (g *GemAdvisoryDB) Refresh() error {
+	_, span := telemetry.Tracer().Start(context.Background(), "advisorydb.Refresh")
+	defer span.End()
+	span.SetAttributes(attribute.Bool("advisorydb.enabled", g.cfg.CVE.Enabled))
 	err := g.updateAdvisoryRepo()
 	if err != nil {
+		span.RecordError(err)
+		span.SetAttributes(attribute.String("exception.slug", "err-advisorydb-update-repo"))
 		log.Warn().Err(err).Msg("failed to update ruby-advisory-db")
 	}
 	g.db.Close()
 	err = g.cacheAdvisoryDB("/gems")
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "cacheAdvisoryDB failed")
+		span.SetAttributes(attribute.String("exception.slug", "err-advisorydb-cache"))
 		log.Error().Err(err).Msg("failed to cache github.com/rubysec/ruby-advisory-db")
 		return fmt.Errorf("failed to cache github.com/rubysec/ruby-advisory-db: %w", err)
 	}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -10,9 +11,13 @@ import (
 	"github.com/gemfast/server/internal/db"
 	"github.com/gemfast/server/internal/filter"
 	"github.com/gemfast/server/internal/indexer"
+	"github.com/gemfast/server/internal/telemetry"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
+
+// serviceVersion is overridable at link time (-ldflags "-X .../cmd.serviceVersion=v1.2.3").
+var serviceVersion = "dev"
 
 var startCmd = &cobra.Command{
 	Use:   "start",
@@ -40,6 +45,19 @@ func start() {
 	// Load the config
 	cfg := config.NewConfig()
 	log.Info().Msg("starting services")
+
+	// Initialize OpenTelemetry tracing (exports to Honeycomb by default).
+	ctx := context.Background()
+	shutdownTracer, err := telemetry.Init(ctx, serviceVersion, cfg)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize tracing; continuing without it")
+	} else {
+		defer func() {
+			if err := shutdownTracer(context.Background()); err != nil {
+				log.Warn().Err(err).Msg("error shutting down tracer provider")
+			}
+		}()
+	}
 
 	// Connect to the database
 	database, err := db.NewDB(cfg)
