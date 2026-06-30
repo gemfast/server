@@ -9,6 +9,10 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "gemfast-server",
 	Short: "Gemfast is a rubygems server written in Go",
+	// When invoked with no subcommand, default to running the server (same as "start").
+	Run: func(cmd *cobra.Command, args []string) {
+		start()
+	},
 }
 
 func Execute() {

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -46,6 +47,11 @@ func (api *API) Run() {
 	api.loadMiddleware()
 	api.registerRoutes()
 	port := fmt.Sprintf(":%d", api.cfg.Port)
+	// Honor the PORT env var (e.g. injected by Vercel) when set, falling back
+	// to the configured/default port otherwise.
+	if p := os.Getenv("PORT"); p != "" {
+		port = ":" + p
+	}
 	if api.cfg.Mirrors[0].Enabled {
 		log.Info().Str("detail", api.cfg.Mirrors[0].Upstream).Msg("mirroring upstream gem server")
 	}

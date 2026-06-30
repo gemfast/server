@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 
 	"github.com/gemfast/server/internal/utils"
 	"github.com/hashicorp/hcl/v2/hclsimple"
@@ -125,16 +124,10 @@ func (c *Config) setDefaultServerConfig() {
 	}
 	configureLogLevel(c.LogLevel)
 	if c.Dir == "" {
-		if c.user.Username == "root" {
-			c.Dir = "/var/lib/gemfast/data"
-		} else if runtime.GOOS == "darwin" {
-			c.Dir = fmt.Sprintf("%s/Library/Application Support/gemfast", c.user.HomeDir)
-		} else if runtime.GOOS == "linux" {
-			c.Dir = fmt.Sprintf("%s/gemfast", os.Getenv("XDG_DATA_HOME"))
-			if c.Dir == "/gemfast" {
-				c.Dir = fmt.Sprintf("%s/.local/share/gemfast", c.user.HomeDir)
-			}
-		}
+		// NOTE: hardcoded to /tmp for the Vercel test deployment, where /tmp
+		// is the only writable location. This is intentionally not
+		// platform-specific for now.
+		c.Dir = "/tmp/gemfast"
 	}
 	if c.GemDir == "" {
 		c.GemDir = fmt.Sprintf("%s/gems", c.Dir)
