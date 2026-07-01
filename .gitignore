@@ -9,3 +9,5 @@ tmp
 !test/fixtures/spec/*.gem
 dist/
 bin/
+.vercel
+.env*

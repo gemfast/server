@@ -27,6 +27,9 @@ var configPath string
 
 func init() {
 	startCmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to the config file")
+	// Expose the same flag on the root command so it works when invoking
+	// gemfast-server with no subcommand (defaults to start).
+	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to the config file")
 	rootCmd.AddCommand(startCmd)
 }
 
