@@ -1,9 +1,6 @@
 package middleware
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-
 	"github.com/gemfast/server/internal/db"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/attribute"
@@ -11,12 +8,12 @@ import (
 )
 
 // OtelEnrich attaches investigation-useful attributes to the active server span
-// after the handler runs: authenticated user identity (when present), an opaque
-// session id hash, and an error.category derived from the final HTTP status.
+// after the handler runs: authenticated user identity (when present) and an
+// error.category derived from the final HTTP status.
 //
 // Must be installed AFTER otelgin (so a span exists) but ordering relative to
 // auth middleware does not matter — c.Next() drains the chain before we read
-// identity, status, or cookies.
+// identity or status.
 func OtelEnrich() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
@@ -37,11 +34,6 @@ func OtelEnrich() gin.HandlerFunc {
 				}
 				span.SetAttributes(attrs...)
 			}
-		}
-
-		if cookie, err := c.Cookie("gemfast"); err == nil && cookie != "" {
-			sum := sha256.Sum256([]byte(cookie))
-			span.SetAttributes(attribute.String("session.id_hash", hex.EncodeToString(sum[:8])))
 		}
 
 		if cat := categorizeStatus(c.Writer.Status()); cat != "" {

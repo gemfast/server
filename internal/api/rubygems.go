@@ -421,7 +421,12 @@ func (h *RubyGemsHandler) mirroredGemspecRzHandler(c *gin.Context) {
 		}
 	}
 	fp := filepath.Join(h.cfg.Dir, "quick/Marshal.4.8", fileName)
+	span := trace.SpanFromContext(c.Request.Context())
 	if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
+		span.SetAttributes(
+			attribute.Bool("mirror.cache_hit", false),
+			attribute.String("mirror.source", "upstream"),
+		)
 		out, err := os.Create(fp)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to create gemspec.rz file")
@@ -462,6 +467,10 @@ func (h *RubyGemsHandler) mirroredGemspecRzHandler(c *gin.Context) {
 			return
 		}
 	} else {
+		span.SetAttributes(
+			attribute.Bool("mirror.cache_hit", true),
+			attribute.String("mirror.source", "local"),
+		)
 		log.Trace().Msg("serving existing gemspec.rz")
 	}
 	c.FileAttachment(fp, fileName)
@@ -485,8 +494,13 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 	}
 	fc := strings.Split(fileName, "")[0] // first character
 	fp := filepath.Join(h.cfg.GemDir, h.cfg.Mirrors[0].Hostname, fc, fileName)
+	span := trace.SpanFromContext(c.Request.Context())
 	info, err := os.Stat(fp)
 	if (err != nil && errors.Is(err, os.ErrNotExist)) || info.Size() == 0 {
+		span.SetAttributes(
+			attribute.Bool("mirror.cache_hit", false),
+			attribute.String("mirror.source", "upstream"),
+		)
 		utils.MkDirs(path.Dir(fp))
 		out, err := os.Create(fp)
 		if err != nil {
@@ -534,6 +548,10 @@ func (h *RubyGemsHandler) mirroredGemHandler(c *gin.Context) {
 			return
 		}
 	} else {
+		span.SetAttributes(
+			attribute.Bool("mirror.cache_hit", true),
+			attribute.String("mirror.source", "local"),
+		)
 		log.Trace().Msg("serving existing gem")
 	}
 	c.FileAttachment(fp, fileName)
