@@ -1,0 +1,67 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Transform #1: enrich every span with a marker proving traffic went through
+  # the collector and tag the pipeline's deployment env.
+  attributes/enrich:
+    actions:
+      - key: collector.processed
+        value: true
+        action: insert
+      - key: collector.deployment_env
+        value: ${env:DEPLOYMENT_ENV}
+        action: insert
+
+  # Transform #2: tail-based sampling — buffer complete traces, then keep
+  # interesting ones (errors + slow) and sample healthy ones at 10%.
+  tail_sampling:
+    decision_wait: 5s
+    num_traces: 50000
+    expected_new_traces_per_sec: 100
+    policies:
+      - name: keep-errors
+        type: status_code
+        status_code: { status_codes: [ERROR] }
+      - name: keep-slow-traces
+        type: latency
+        latency: { threshold_ms: 500 }
+      - name: keep-uploads
+        type: string_attribute
+        string_attribute:
+          key: gem.action
+          values: ["upload"]
+      - name: sample-healthy
+        type: probabilistic
+        probabilistic: { sampling_percentage: 10 }
+
+  batch:
+    send_batch_size: 512
+    timeout: 1s
+
+exporters:
+  otlphttp/honeycomb:
+    endpoint: https://api.honeycomb.io
+    headers:
+      x-honeycomb-team: ${env:HONEYCOMB_API_KEY}
+
+  # Mirror to stdout for local debugging.
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [attributes/enrich, tail_sampling, batch]
+      exporters: [otlphttp/honeycomb, debug]

@@ -55,6 +55,9 @@ func (t *TokenMiddleware) TokenMiddlewareFunc() gin.HandlerFunc {
 				return
 			}
 			if ok {
+				// Make identity available to downstream handlers/middleware
+				// (e.g. OtelEnrich attributes).
+				c.Set(IdentityKey, user)
 				c.Next()
 			} else {
 				c.String(http.StatusForbidden, fmt.Sprintf("user does not have access to the request %s %s", c.Request.Method, c.Request.URL.Path))

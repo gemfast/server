@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 const adminAPIPath = "/admin/api/v1"
@@ -63,6 +64,11 @@ func (api *API) Run() {
 }
 
 func (api *API) loadMiddleware() {
+	// Order matters - otelgin should come first in the chain
+	api.router.Use(otelgin.Middleware("gemfast-server"))
+	// Enriches the otelgin span with user identity, session hash, and
+	// error.category once the handler chain completes.
+	api.router.Use(middleware.OtelEnrich())
 	acl := middleware.NewACL(api.cfg)
 	api.tokenMiddleware = middleware.NewTokenMiddleware(acl, api.db)
 	api.githubMiddleware = middleware.NewGitHubMiddleware(api.cfg, acl, api.db)

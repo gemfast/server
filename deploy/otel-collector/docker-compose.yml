@@ -1,0 +1,14 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    container_name: gemfast-otel-collector
+    command: ["--config=/etc/otel/collector.yaml"]
+    volumes:
+      - ./collector.yaml:/etc/otel/collector.yaml:ro
+    environment:
+      HONEYCOMB_API_KEY: ${HONEYCOMB_API_KEY:?HONEYCOMB_API_KEY must be set (e.g. in .env)}
+      DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-local}
+    ports:
+      - "4317:4317" # OTLP/gRPC
+      - "4318:4318" # OTLP/HTTP
+      - "13133:13133" # health_check
