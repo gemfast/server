@@ -10,7 +10,7 @@ require (
 	github.com/casbin/casbin/v2 v2.109.0
 	github.com/gin-contrib/sessions v1.0.4
 	github.com/gin-gonic/gin v1.10.1
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/juliangruber/go-intersect v1.1.0
